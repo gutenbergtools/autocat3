@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xmlns:og="http://opengraphprotocol.org/schema/"
+      py:strip="">
+
+  <?python
+    from six.moves import urllib
+
+    def p (params):
+        return urllib.parse.urlencode (params).replace ('+', '%20')
+  ?>
+
+
+  <py:def function="fb_share(url, title, description, picture)">
+    <?python
+      params = {
+	  'link': url,
+	  'app_id': cherrypy.config['facebook_app_id'],
+	  'name': title,
+	  'description': description,
+	  'redirect_uri': 'https://www.gutenberg.org/fb_redirect.html',
+	  }
+      if picture is not None:
+          params['picture'] = picture
+    ?>
+    <div class="social-button fb-share-button" i18n:comment="Share on Facebook.">
+      <a href="https://www.facebook.com/dialog/feed?${p (params)}"
+	 title="Share on Facebook"
+	 onclick="open_share_popup(this.href, this.target, 1024, 560)" target="_fb_share_popup">
+	<span class="icon icon_facebook" />
+      </a>
+    </div>
+  </py:def>
+
+
+  <py:def function="gplus_share(url)">
+    <!-- share without javascript -->
+    <?python
+      params = {
+	  'url': url,
+	  }
+    ?>
+    <div class="social-button gplus-share-button">
+      <!--! https://developers.google.com/+/web/share/#sharelink -->
+      <a href="https://plus.google.com/share?${p (params)}"
+	 title="Share on Google+"
+	 onclick="open_share_popup(this.href, this.target, 640, 320)"
+	 target="_gplus_share_popup">
+ 	<span class="icon icon_gplus" />
+      </a>
+    </div>
+  </py:def>
+
+
+  <py:def function="tw_share(url, text)">
+    <!-- tweet without javascript -->
+    <?python
+      params = {
+	  'url': url,
+	  'text': text.encode ('utf-8'),
+	  'count': 'none',
+	  'lang': os.twitter_lang,
+	  'related': "gutenberg_new:Project Gutenberg New Books"
+	  }
+    ?>
+    <div class="social-button twitter-share-button">
+      <!--! https://dev.twitter.com/docs/tweet-button -->
+      <a href="https://twitter.com/share?${p (params)}"
+	 title="Share on Twitter"
+	 onclick="open_share_popup(this.href, this.target, 640, 320)"
+	 target="_tw_share_popup">
+ 	<span class="icon icon_twitter" />
+      </a>
+    </div>
+  </py:def>
+
+
+  <py:def function="rss_follow()">
+    <div class="social-button rss-follow-button">
+      <a href="/feeds/today.rss"
+	 title="Subscribe to the New Books RSS feed.">
+	<span class="icon icon_rss" />
+	<span class="alt" i18n:comment="Subscribe to RSS feed.">Subscribe</span>
+      </a>
+    </div>
+  </py:def>
+
+</html>

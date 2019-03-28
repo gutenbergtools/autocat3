@@ -1,0 +1,49 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+"repoze.lru" = "*"
+Babel = "*"
+chardet = "*"
+CherryPy = "*"
+colorama = "*"
+#command-not-found = "*"
+Genshi = "*"
+html5lib = "*"
+isodate = "*"
+#language-selector = "*"
+libgutenberg = "*"
+netaddr = "*"
+oauth = "*"
+oauthlib = "*"
+Pillow = "*"
+psycopg2 = "*"
+#pycurl = "*"
+#PyGObject = "*"
+pyparsing = "*"
+#python-apt = "*"
+pytz = "*"
+qrcode = "*"
+rdflib = "*"
+recaptcha-client = "*"
+regex = "*"
+requests = "*"
+requests-oauthlib = "*"
+Routes = "*"
+simplejson = "*"
+six = "*"
+SQLAlchemy = "*"
+#ufw = "*"
+#unattended-upgrades = "*"
+urllib3 = "*"
+adns = "==1.4-py0"
+
+[requires]
+python_version = "3.6"
+
+[pipenv]
+allow_prereleases = true

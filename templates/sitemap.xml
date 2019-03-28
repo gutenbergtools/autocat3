@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--! support.google.com/webmasters/bin/answer.py?hl=en&answer=183668&topic=8476&ctx=topic -->
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0"
+	xmlns:xi="http://www.w3.org/2001/XInclude"
+	xmlns:py="http://genshi.edgewall.org/"
+	>
+
+  <url py:for="u in data.urls"> 
+    <loc>${u.loc}</loc>
+  </url>
+
+</urlset>

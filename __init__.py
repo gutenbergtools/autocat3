@@ -1,0 +1,2 @@
+""" Package """
+name = "autocat3"

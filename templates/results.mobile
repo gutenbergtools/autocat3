@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+
+DON'T USE THIS PAGE FOR SCRAPING.
+
+Seriously. You'll only get your IP blocked.
+
+Download http://www.gutenberg.org/feeds/catalog.rdf.bz2 instead,
+which contains *all* Project Gutenberg metadata in one RDF/XML file.
+
+-->
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xml:lang="${os.lang}">
+
+  <?python
+  import re
+
+  from libgutenberg import GutenbergGlobals as gg
+  old_header = ''
+
+  def help_page (s = ''):
+      s = s.replace (' ', '_')
+      return '%s#%s' % ('/wiki/Gutenberg:Help_on_Bibliographic_Record_Page', s)
+  ?>
+
+  <xi:include href="site-layout.mobile" />
+
+  <head profile="http://a9.com/-/spec/opensearch/1.1/">
+    ${site_head ()}
+
+    <title>${os.title}</title>
+
+    <meta name="totalResults" content="${os.total_results}" />
+    <meta name="startIndex"   content="${os.start_index}" />
+    <meta name="itemsPerPage" content="${os.items_per_page}" />
+  </head>
+
+  <body>
+
+    <div class="content" i18n:comment="On the page of results of a search.">
+      <ol class="results">
+
+	${search_box ()}
+
+	<py:for each="n, e in enumerate (os.entries)">
+	  <py:if test="e.header and old_header != e.header">
+	    <li class="header">${e.header}</li>
+	  </py:if>
+	  <?python old_header = e.header ?>
+
+	  <py:if test="isinstance (e, bs.DC)">
+	    <li class="bibrec">
+	      <div class="table">
+		<div class="row">
+		  <div class="cell leftcell">
+		    <div class="icon icon_${e.icon}" />
+		  </div>
+		  <div class="cell content">
+		    <!--! get coverpage first, it floats to the right -->
+		    <img py:if="e.cover_image" class="coverpage"
+			 src="${e.cover_image.url}" alt="[Coverpage]" />
+		    <p py:for="author in e.authors">${author.role}: ${author.name_and_dates}</p>
+		    <py:for each="marc in e.marcs">
+		      <py:choose test="">
+			<p py:when="marc.code[0]=='5'">
+			  <?python
+			    text = gg.xmlspecialchars (marc.text)
+			    text = re.sub (r'(//\S+)', r'<a href="\1">\1</a>', text)
+			    text = re.sub (r'#(\d+)',
+			    r'<a href="/ebooks/\1.mobile">#\1</a>', text)
+			  ?>
+			  ${marc.caption}:
+			  ${ Markup (gg.insert_breaks (text)) }
+			</p>
+			<p py:otherwise="">
+			  ${marc.caption}:
+			  ${ Markup (gg.insert_breaks (gg.xmlspecialchars (marc.text))) }
+			</p>
+		      </py:choose>
+		    </py:for>
+		    <p>Ebook No.: ${e.project_gutenberg_id}</p>
+		    <p>Published: ${e.hr_release_date}</p>
+		    <p>Downloads: ${e.downloads}</p>
+		    <p py:for="language in e.languages">Language: ${language.language}</p>
+		    <p py:for="subject in e.subjects">Subject: ${subject.subject}</p>
+		    <p py:for="locc in e.loccs">LoCC: ${locc.locc}</p>
+		    <p py:for="category in e.categories">Category: ${category}</p>
+		    <p>Rights: ${e.rights}</p>
+		  </div>
+		</div>
+	      </div>
+	    </li>
+	  </py:if>
+
+	  <py:if test="isinstance (e, bs.Cat)">
+	    <py:choose test="">
+	      <py:when test="e.rel == '__statusline__'" />
+
+	      <py:otherwise>
+		<li class="${e.class_}">
+		  <a class="table link" href="${e.url}" accesskey="${str (n % 10)}">
+		    <span class="row">
+		      <span class="cell leftcell">
+			<span class="icon icon_${e.icon}" />
+		      </span>
+		      <span class="cell content">
+			<span py:if="e.title" class="title">${e.title}</span>
+			<span py:if="e.subtitle" class="subtitle">${e.subtitle}</span>
+			<span py:if="e.extra" class="extra">${e.extra}</span>
+		      </span>
+		      <span py:if="e.icon2" class="cell rightcell">
+			<span class="icon icon_${e.icon2}" />
+		      </span>
+		    </span>
+		  </a>
+		</li>
+	      </py:otherwise>
+	    </py:choose>
+	  </py:if>
+	</py:for>
+
+	<py:if test="os.show_next_page_link">
+	  <li class="navlink more grayed">
+	    <a class="table link"
+	       href="${os.url_carry (start_index = os.next_page_index)}">
+	      <span class="row">
+		<span class="cell leftcell">
+		  <span class="icon icon_more" />
+		</span>
+	        <span class="cell content">
+		  <span class="title"><span>Next Page</span>…</span>
+		</span>
+		<span class="cell rightcell">
+		  <span class="icon spinner" />
+		</span>
+	      </span>
+	    </a>
+	  </li>
+	</py:if>
+      </ol>
+    </div>
+
+    ${site_footer ()}
+
+  </body>
+</html>

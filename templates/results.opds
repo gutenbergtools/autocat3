@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+
+DON'T USE THIS PAGE FOR SCRAPING.
+
+Seriously. You'll only get your IP blocked.
+
+Download http://www.gutenberg.org/feeds/catalog.rdf.bz2 instead,
+which contains *all* Project Gutenberg metadata in one RDF/XML file.
+
+-->
+
+<?python
+  import re
+  from libgutenberg import GutenbergGlobals as gg
+
+  if os.format == 'stanza':
+     os.type_opds = "application/atom+xml"
+     opds_relations = {
+     'cover':   'x-stanza-cover-image',
+     'thumb':   'x-stanza-cover-image-thumbnail',
+     }
+  else:
+     opds_relations = {
+     'new':         'http://opds-spec.org/sort/new',
+     'popular':     'http://opds-spec.org/sort/popular',
+     'cover':       'http://opds-spec.org/image',
+     'thumb':       'http://opds-spec.org/image/thumbnail',
+     'acquisition': 'http://opds-spec.org/acquisition',
+     }
+
+?>
+
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:opds="http://opds-spec.org/2010/catalog"
+      xmlns:dcterms="http://purl.org/dc/terms/"
+      xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/"
+      xmlns:relevance="http://a9.com/-/opensearch/extensions/relevance/1.0/"
+      xmlns:py="http://genshi.edgewall.org/">
+
+  <id>${os.url_carry (host = os.host, start_index = os.start_index)}</id>
+
+  <updated>${os.now}</updated>
+  <title>${os.title}</title>
+  <subtitle>Free ebooks since 1971.</subtitle>
+  <author>
+    <name>Marcello Perathoner</name>
+    <uri>http://www.gutenberg.org</uri>
+    <email>webmaster@gutenberg.org</email>
+  </author>
+  <icon>${os.qualify ('/pics/favicon.png')}</icon>
+
+  <py:choose test="os.opensearch_support">
+    <py:when test="2">
+      <!--! fake opensearch support in Stanza and Aldiko -->
+
+      <!--! The next 2 links are for Stanza that can't read the standard opensearch description.
+	  Stanza even requires unescaped '{' and '}' which are not valid characters in urls! AARGH!!
+	  Aldiko needs fully qualified urls here!
+      -->
+      <link rel="search"
+	    type="${os.type_opds}"
+	    title="${os.placeholder}"
+	    href="${os.add_amp (os.url ('search', host = os.host))}query={searchTerms}" />
+      <!--! routes would quote the invalid '{' and '}' -->
+
+      <link rel="x-stanza-search-suggestions"
+	    type="application/x-suggestions+json"
+	    href="${os.add_amp (os.url ('suggest', host = os.host, format = None))}query={searchTerms}" />
+      <!--! routes would quote '{' and '}' -->
+    </py:when>
+
+    <py:when test="1">
+      <!--! real opensearch support -->
+
+      <link rel="search"
+	    type="application/opensearchdescription+xml"
+	    title="Project Gutenberg Catalog Search"
+	    href="${os.osd_url}" />
+    </py:when>
+  </py:choose>
+
+  <link rel="self"
+	title="This Page"
+	type="${os.type_opds}"
+	href="${os.url_carry (start_index = os.start_index)}" />
+
+  <link rel="alternate"
+	type="text/html"
+	title="HTML Page"
+	href="${os.url_carry (format = 'html', start_index = os.start_index)}" />
+
+  <link rel="start"
+	title="Start Page"
+	type="${os.type_opds}"
+	href="${os.url ('start')}" />
+
+  <link py:if="os.show_prev_page_link"
+	rel="first"
+	title="First Page"
+	type="${os.type_opds}"
+	href="${os.url_carry (start_index = 1)}" />
+
+  <link py:if="os.show_prev_page_link"
+	rel="previous"
+	title="Previous Page"
+	type="${os.type_opds}"
+	href="${os.url_carry (start_index = os.prev_page_index)}" />
+
+  <!--! Coolreader sucks up to 1000 entries without user paging. See:
+        http://crengine.git.sourceforge.net/git/gitweb.cgi?p=crengine/crengine;a=blob;f=android/src/org/coolreader/crengine/OPDSUtil.java
+	We give it one page. That's enough.
+  -->
+
+  <link py:if="os.show_next_page_link and not os.user_agent.startswith ('CoolReader/')"
+	rel="next"
+	title="Next Page"
+	type="${os.type_opds}"
+	href="${os.url_carry (start_index = os.next_page_index)}" />
+
+  <py:for each="e in os.entries">
+    <py:if test="isinstance (e, bs.Cat) and e.rel in opds_relations">
+      <link rel="${opds_relations[e.rel]}"
+	    title="${e.title}"
+	    type="${e.type or os.type_opds}"
+	    href="${e.url}" />
+    </py:if>
+  </py:for>
+
+  <opensearch:itemsPerPage>${os.items_per_page}</opensearch:itemsPerPage>
+  <opensearch:startIndex>${os.start_index}</opensearch:startIndex>
+
+<!--!
+  <opensearch:totalResults>${os.total_results}</opensearch:totalResults>
+  <opensearch:Query role="request"
+		    searchTerms="${os.search_terms}"
+		    startIndex="${os.start_index}" />
+-->
+
+  <py:for each="e in os.entries">
+
+    <!--! Navigation feed entry -->
+
+    <py:if test="isinstance (e, bs.Cat)">
+      <py:choose>
+	<py:when test="e.rel == '__statusline__'" />
+
+	<py:otherwise>
+	  <entry>
+	    <updated>${os.now}</updated>
+	    <id>${os.qualify (e.url)}</id>
+	    <title>${e.title}</title>
+	    <!--! according to spec type defaults to text but quickreader doesn't think so -->
+	    <content py:if="e.subtitle or e.extra" type="text">${e.subtitle or e.extra}</content>
+	    <category py:if="os.format == 'stanza' and e.header" label="${e.header}"
+		      scheme="http://lexcycle.com/stanza/header" term="free" />
+
+	    <link type="${e.type or os.type_opds}"
+		  rel="${opds_relations.get (e.rel, 'subsection')}"
+		  href='${e.url}' />
+
+	    <py:for each="link in e.links">
+	      <link type="${link.type}"
+		    rel="${opds_relations.get (link.rel, 'subsection')}"
+		    title="${link.title}"
+		    length="${link.length}"
+		    href="${link.url}" />
+	    </py:for>
+	  </entry>
+	</py:otherwise>
+      </py:choose>
+    </py:if>
+
+    <!--! Acquisition feed entry -->
+
+    <py:if test="isinstance (e, bs.DC)">
+      <entry>
+	<updated>${os.now}</updated>
+	<title>${re.sub (r'[\r\n].*', '', e.title)}</title>
+
+	<content type="xhtml">
+	  <div xmlns="http://www.w3.org/1999/xhtml" >
+	    <py:choose test="e.image_flags">
+	      <p py:when="3">This edition has images.</p>
+	      <p py:when="2">This edition had all images removed.</p>
+	    </py:choose>
+	    <py:for each="marc in e.marcs">
+	      <py:choose test="">
+		<p py:when="marc.code[0]=='5'">
+		  <?python
+		    text = gg.xmlspecialchars (marc.text)
+		    text = re.sub (r'(//\S+)', r'<a href="\1">\1</a>', text)
+		    text = re.sub (r'#(\d+)',
+		    r'<a href="/ebooks/\1.bibrec.mobile">#\1</a>', text)
+		  ?>
+		  ${marc.caption}:
+		  ${ Markup (gg.insert_breaks (text)) }
+		</p>
+		<p py:otherwise="">
+		  ${marc.caption}:
+		  ${ Markup (gg.insert_breaks (gg.xmlspecialchars (marc.text))) }
+		</p>
+	      </py:choose>
+	    </py:for>
+	    <p py:for="author in e.authors">${author.role}: ${author.name_and_dates}</p>
+	    <p>Ebook No.: ${e.project_gutenberg_id}</p>
+	    <p>Published: ${e.hr_release_date}</p>
+	    <p>Downloads: ${e.downloads}</p>
+	    <p py:for="language in e.languages">Language: ${language.language}</p>
+	    <p py:for="subject in e.subjects">Subject: ${subject.subject}</p>
+	    <p py:for="locc in e.loccs">LoCC: ${locc.locc}</p>
+	    <p py:for="category in e.categories">Category: ${category}</p>
+	    <p>Rights: ${e.rights}</p>
+	  </div>
+	</content>
+
+	<id>urn:gutenberg:${e.project_gutenberg_id}:${e.image_flags}</id>
+	<published>${e.xsd_release_date_time}</published>
+	<rights>${e.rights}</rights>
+
+	<py:for each="author in reversed (e.authors)">
+	  <author py:if="author.marcrel in ('cre', 'aut')">
+	    <name>${author.name}</name>
+	  </author>
+
+	  <contributor py:if="author.marcrel not in ('cre', 'aut')">
+	    <name>${author.name}</name>
+	  </contributor>
+	</py:for>
+
+	<category py:if="os.format == 'stanza' and e.header"
+		  scheme="http://lexcycle.com/stanza/header"
+		  term="free"
+		  label="${e.header}" />
+	<category py:for="subject in e.subjects"
+		  scheme="http://purl.org/dc/terms/LCSH"
+		  term="${subject.subject}" />
+	<category py:for="locc in e.loccs"
+		  scheme="http://purl.org/dc/terms/LCC"
+		  term="${locc.id}"
+		  label="${locc.locc}" />
+	<category py:for="category in e.categories"
+		  scheme="http://purl.org/dc/terms/DCMIType"
+		  term="$category" />
+
+	<dcterms:language py:for="language in e.languages">${language.id}</dcterms:language>
+
+	<py:for each="marc in e.marcs">
+	  <dcterms:identifier py:if="marc.code == '010'">urn:lccn:${marc.text}</dcterms:identifier>
+	</py:for>
+
+	<relevance:score py:if="hasattr (e, 'score')">${e.score}</relevance:score>
+
+	<py:for each="link in e.links">
+	  <link type="${link.type}"
+		rel="${opds_relations.get (link.rel, 'acquisition')}"
+		title="${link.title}"
+		length="${link.length}"
+		href="${link.url}" />
+	</py:for>
+
+	<link type="${os.type_opds}"
+	      rel="related"
+	      href="${os.url ('also', id = e.project_gutenberg_id)}"
+	      title="Readers also downloaded…" />
+
+	<py:for each="author in e.authors">
+	  <link type="${os.type_opds}"
+		rel="related"
+		href="${os.url ('author', id = author.id)}"
+		title="${_('By {author}').format (author = author.name)}…"/>
+	</py:for>
+
+	<py:for each="subject in e.subjects">
+	  <link type="${os.type_opds}"
+		rel="related"
+		href="${os.url ('subject', id = subject.id)}"
+		title="${_('On {subject}').format (subject = subject.subject)}…"/>
+	</py:for>
+
+	<py:for each="bookshelf in e.bookshelves">
+	  <link type="${os.type_opds}"
+		rel="related"
+		href="${os.url ('bookshelf', id = bookshelf.id)}"
+		title="${_('In {bookshelf}').format (bookshelf = bookshelf.bookshelf)}…"/>
+	</py:for>
+      </entry>
+    </py:if>
+  </py:for>
+
+</feed>

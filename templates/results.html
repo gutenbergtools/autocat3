@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+
+DON'T USE THIS PAGE FOR SCRAPING.
+
+Seriously. You'll only get your IP blocked.
+
+Download http://www.gutenberg.org/feeds/catalog.rdf.bz2 instead,
+which contains *all* Project Gutenberg metadata in one RDF/XML file.
+
+-->
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xmlns:dcterms="http://purl.org/dc/terms/"
+      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+      xmlns:ebook="http://www.gutenberg.org/ebooks/"
+      xmlns:marcrel="http://www.loc.gov/loc.terms/relators/"
+      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+      xmlns:og="http://opengraphprotocol.org/schema/"
+      xmlns:fb="http://www.facebook.com/2008/fbml"
+      xml:lang="${os.lang}"
+      version="XHTML+RDFa 1.0">
+
+  <?python
+  old_header = os.title
+  os.status_line = ''
+  ?>
+
+  <xi:include href="site-layout.html" />
+  <xi:include href="social-functions.html" />
+
+  <head profile="http://a9.com/-/spec/opensearch/1.1/">
+    ${site_head ()}
+
+    <title>${os.title} - ${os.pg}</title>
+
+    <link rel="self"
+	  i18n:comment="Link pointing to the same page the user is viewing."
+	  title="This Page"
+	  href="${os.url ('search', start_index = os.start_index)}" />
+
+    <link py:if="os.show_prev_page_link"
+	  rel="first"
+	  title="First Page"
+	  href="${os.url ('search')}" />
+
+    <link py:if="os.show_prev_page_link"
+	  rel="previous"
+	  title="Previous Page"
+	  href="${os.url ('search', start_index = os.prev_page_index)}" />
+
+    <link py:if="os.show_next_page_link"
+	  rel="next"
+	  title="Next Page"
+	  href="${os.url ('search', start_index = os.next_page_index)}" />
+
+    <meta name="totalResults" content="${os.total_results}" />
+    <meta name="startIndex"   content="${os.start_index}" />
+    <meta name="itemsPerPage" content="${os.items_per_page}" />
+
+  </head>
+
+  <body>
+    <div id="mw-head-dummy" class="noprint" />
+
+    <div id="content" i18n:comment="On the page of results of a search.">
+      <div class="header">
+	<h1><span class="icon icon_${os.title_icon}" />${os.title}</h1>
+      </div>
+
+      <div class="body">
+	<div>
+	  <ul class="results">
+	    <py:for each="n, e in enumerate (os.entries)">
+
+	      <py:if test="e.header and old_header != e.header">
+		<li class="h2">
+		  <h2 class="padded">${e.header}</h2>
+		</li>
+		<?python old_header = e.header ?>
+	      </py:if>
+
+	      <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
+		<py:choose test="">
+		  <py:when test="e.rel == '__statusline__'">
+		    <li class="statusline">
+		      <div class="padded">
+			<span>${e.title}</span> ${prev_next_links ()}
+		      </div>
+		    </li>
+		    <?python os.status_line = e.title ?>
+		  </py:when>
+
+		  <py:otherwise>
+		    <li class="${e.class_}">
+		      <a class="link" href="${e.url}" accesskey="${str (n % 10)}">
+			<span class="cell leftcell${' with-cover' if e.thumb_url else ' without-cover'}">
+			  <span py:if="not e.thumb_url" class="icon-wrapper">
+			    <span class="icon icon_${e.icon}" />
+			  </span>
+			  <img py:if="e.thumb_url"
+			       class="cover-thumb" src="${e.thumb_url}" alt="" />
+			</span>
+			<span class="cell content">
+			  <span py:if="e.title" class="title">${e.title}</span>
+			  <span py:if="e.subtitle" class="subtitle">${e.subtitle}</span>
+			  <span py:if="e.extra" class="extra">${e.extra}</span>
+			</span>
+			<span class="hstrut" />
+		      </a>
+		    </li>
+		  </py:otherwise>
+
+		</py:choose>
+	      </py:if>
+	    </py:for>
+
+	    <py:if test="os.status_line != ''">
+	      <li class="statusline">
+		<div class="padded">
+		  ${os.status_line} ${prev_next_links ()}
+		</div>
+	      </li>
+	    </py:if>
+
+	  </ul>
+	</div>
+
+      </div> <!--! body -->
+
+      ${site_footer ()}
+
+    </div>
+
+    ${site_top ()}
+
+  </body>
+</html>

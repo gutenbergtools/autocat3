@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--! recaptcha is broken with application/xhtml+xml -->
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xml:lang="${os.lang}">
+
+  <xi:include href="site-layout.mobile" />
+
+  <head>
+    ${site_head ()}
+
+    <title>Captcha</title>
+
+    <style type="text/css">
+      #recaptcha_response_field {
+        margin-top: 1em;
+        margin-bottom: 1em;
+        width: 300px;
+      }
+      .recaptcha_only_if_incorrect_sol {
+        color: red;
+      }
+    </style>
+
+    <script type="application/javascript" src="//www.google.com/recaptcha/api/js/recaptcha_ajax.js" />
+    <script type="application/javascript">
+      function on_recaptcha_loaded () {
+	 $('#need_javascript').hide ();
+         Recaptcha.focus_response_field ();
+      }
+      var RecaptchaOptions = {
+        theme: "custom",
+        custom_theme_widget: "recaptcha_widget",
+        callback: on_recaptcha_loaded
+      };
+
+      require (
+      [
+	'jquery',
+	'jquery.cookie/jquery.cookie'
+      ],
+      function (jquery, cookie) {
+        if (jquery.cookie ('session_id')) {
+          jquery ('#need_cookies').hide ();
+        }
+        Recaptcha.create ("${os.recaptcha_public_key}", "id_captcha", RecaptchaOptions);
+      });
+    </script>
+  </head>
+
+  <body>
+
+    <div class="content">
+
+      <p>You have used Project Gutenberg quite a lot today or clicked through it really fast. To make sure you are human, we ask you to resolve this captcha:</p>
+
+      <form method="post" action="/w/captcha/answer/">
+	<div id="recaptcha_widget">
+	  <div id="recaptcha_image"></div>
+	  <p class="recaptcha_only_if_incorrect_sol">Incorrect please try again</p>
+	  <p class="recaptcha_only_if_image">Enter the words you see:</p>
+	  <p class="recaptcha_only_if_audio">Enter the numbers you hear:</p>
+	  <input type="text" id="recaptcha_response_field" name="recaptcha_response_field" />
+	  <input type="submit" name="SubmitButton" value="Submit" />
+	  <input type="button" name="ReloadButton" value="Get another captcha"
+		 onclick="Recaptcha.reload ()" />
+	  <input type="button" name="AudioButton" value="Get an audio captcha"
+		 class="recaptcha_only_if_image" onclick="Recaptcha.switch_type ('audio')" />
+	  <input type="button" name="ImageButton" value="Get an image captcha"
+		 class="recaptcha_only_if_audio" onclick="Recaptcha.switch_type ('image')" />
+	  <input type="button" name="HelpButton"   value="Help"
+		 onclick="Recaptcha.showhelp ()" />
+	  <p id="need_cookies">Project Gutenberg works better with cookies enabled.</p>
+	</div>
+      </form>
+
+      <p id="need_javascript">You need javascript for this.</p>
+
+    </div>
+
+    ${site_footer ()}
+
+  </body>
+
+</html>

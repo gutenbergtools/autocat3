@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      py:strip="">
+
+  <py:def function="site_head">
+    <style type="text/css">
+      .icon { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
+    </style>
+    <link rel="stylesheet" type="text/css"
+	  href="/css/pg-mobile-one.css?${cherrypy.config['css_mtime']}" />
+
+    <script type="application/javascript"><![CDATA[
+    var mobile_search = "${os.add_amp (os.mobile_search)}query=";
+    var json_search   = "${os.json_search}";
+    var msg_load_more = "${_('Load More Results…')}";
+    var do_animations = ${'true' if os.do_animations else 'false'};
+    ]]>
+    </script>
+
+    <script type="application/javascript"
+	    src="/js/pg-mobile-one.js?${cherrypy.config['js_mtime']}" />
+
+    <meta http-equiv="Content-Type"       content="application/xhtml+xml; charset=UTF-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+    <meta http-equiv="Content-Language"   content="${os.lang}" />
+
+    <meta name="description"              content="The Project Gutenberg ebook catalog for mobile devices." />
+    <meta name="keywords"                 content="free ebooks, free books, free audio books" />
+    <meta name="classification"           content="public" />
+
+    <link rel="icon" href="/pics/favicon" />
+
+    <link rel="canonical" href="${os.canonical_url}" />
+
+    <link rel="search"
+	  type="application/opensearchdescription+xml"
+	  title="Search Project Gutenberg"
+	  href="${os.osd_url}" />
+
+    <link rel="alternate nofollow"
+	  type="${os.type_opds}"
+	  title="OPDS feed"
+	  href="${os.url_carry (format = 'opds')}" />
+
+    <link py:if="os.touch_icon"             rel="apple-touch-icon"             href="${os.touch_icon}" />
+    <link py:if="os.touch_icon_precomposed" rel="apple-touch-icon-precomposed" href="${os.touch_icon_precomposed}" />
+    <meta py:if="os.viewport"               name="viewport"                    content="${os.viewport}" />
+  </py:def>
+
+  <py:def function="search_box">
+    <li class="grayed" id="searchlist">
+      <div class="table link">
+	<div class="row">
+	  <div class="cell leftcell">
+	    <div class="icon icon_search" id="${cherrypy.tools.rate_limiter.get_challenge ()}" />
+	  </div>
+	  <div class="cell content">
+	    <form id="search" method="get" action="${os.mobile_search}"
+		  enctype="multipart/form-data">
+	      <div id="query-clear-wrapper">
+		<div id="query-wrapper">
+		  <input id="query" name="query"
+			 type="text"
+			 inputmode="latin"
+			 value="${os.search_terms}"
+			 title="${os.placeholder}" />
+		</div>
+	      </div>
+	    </form>
+	  </div>
+	  <!--! <div class="cell cancelcell">
+	    <button type="reset" id="clear" class="icon icon_cancel"
+		    title="Clear" i18n:comment="Reset Form Button" />
+	  </div> -->
+	  <div class="cell rightcell">
+	    <button type="button" id="help"
+		    title="Help" onclick="toggle_help ()" i18n:comment="Help about search button">
+	      <div class="icon icon_help" />
+	    </button>
+	  </div>
+	</div>
+      </div>
+    </li>
+    <li class="grayed" id="helpbox"
+	style="display: none" onclick="clear_help ()">
+      <div class="helpbox">
+	<xi:include href="help.html" />
+      </div>
+    </li>
+    <py:if test="os.page != 'start' and os.start_index == 1">
+      <li class="navlink grayed">
+	<a class="table link" href="${os.url ('start')}" accesskey="h">
+	  <span class="row">
+	    <span class="cell leftcell">
+	      <span class="icon icon_internal" />
+	    </span>
+	    <span class="cell content">
+	      <span class="title">Search Start Page</span>
+	    </span>
+	    <span class="cell rightcell">
+	      <span class="icon icon_next" />
+	    </span>
+	  </span>
+	</a>
+      </li>
+    </py:if>
+  </py:def>
+
+  <py:def function="site_footer">
+    <div class="footer">
+      <div class="copyright">
+	© 2003–2012 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
+      </div>
+    </div>
+  </py:def>
+
+</html>

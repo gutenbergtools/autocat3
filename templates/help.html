@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<div xmlns="http://www.w3.org/1999/xhtml"
+     xmlns:i18n="http://genshi.edgewall.org/i18n"
+     i18n:comment="The help menu for the search box.">
+
+<p>Enter your search terms separated by spaces,
+then press &lt;Enter&gt;.
+Avoid punctuation except as indicated below:</p>
+
+<table class="helpbox">
+  <tr>
+    <th>Suffixes</th>
+    <th xml:lang="en">.</th>
+    <td>exact match</td>
+  </tr>
+  <tr>
+    <th rowspan="7">Prefixes</th>
+    <th xml:lang="en">a.</th>
+    <td>author</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">t.</th>
+    <td>title</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">s.</th>
+    <td>subject</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">l.</th>
+    <td>language</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">#</th>
+    <td>ebook no.</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">n.</th>
+    <td>ebook no.</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">cat.</th>
+    <td>category</td>
+  </tr>
+  <tr>
+    <th rowspan="3" style="width: 8em">
+      Operators
+      <small>Always put spaces around these.</small>
+    </th>
+    <th xml:lang="en">|</th>
+    <td>or</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">!</th>
+    <td>not</td>
+  </tr>
+  <tr>
+    <th xml:lang="en">( )</th>
+    <td>grouping</td>
+  </tr>
+</table>
+
+<table class="helpbox">
+  <tr>
+    <th>this query</th>
+    <th>finds</th>
+  </tr>
+  <tr>
+    <td xml:lang="en">shakespeare hamlet</td>
+    <td>"Hamlet" by Shakespeare</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">qui.</td>
+    <td>"qui", not "Quixote"</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">love stories</td>
+    <td>love stories</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">a.shakespeare</td>
+    <td>by Shakespeare</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">s.shakespeare</td>
+    <td>about Shakespeare</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">#74</td>
+    <td>ebook no. 74</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">juvenile l.german</td>
+    <td>juvenile lit in German</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">verne ( l.fr | l.it )</td>
+    <td>by Verne in French or Italian</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">love stories ! austen</td>
+    <td>love stories not by Austen</td>
+  </tr>
+  <tr>
+    <td xml:lang="en">jane austen cat.audio</td>
+    <td>audio books by Jane Austen</td>
+  </tr>
+</table>
+
+</div>

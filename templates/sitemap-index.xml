@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--! support.google.com/webmasters/bin/answer.py?hl=en&answer=71453&topic=8476&ctx=topic -->
+
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+	      xmlns:xi="http://www.w3.org/2001/XInclude"
+	      xmlns:py="http://genshi.edgewall.org/"
+	      >
+
+   <sitemap py:for="s in data.sitemaps">
+      <loc>${s.loc}</loc>
+      <lastmod>${s.lastmod}</lastmod>
+   </sitemap>
+
+</sitemapindex>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xml:lang="en">
+
+      <!--! xml:lang avoids extraction for translation -->
+
+  <?python
+    from libgutenberg.GutenbergGlobals import xmlspecialchars as esc
+  ?>
+
+  <py:def function="print_session">
+    <?python
+      from __future__ import unicode_literals
+
+      hostname = ''
+      whois = ''
+      tags = []
+      bad_tags = []
+
+      ips = d.ips
+      info = ips.ipinfo
+      if info is not None:
+         hostname = info.hostname
+         whois = ' - '.join (filter (None, info.whois.values ()))
+         if info.is_dialup ():
+            tags.append ('DUL')
+         bad_tags = sorted (info.tags & info.blackhat_tags)
+
+      if d['blocked'] == 9:
+          tags.append ('->DB')
+      if d['css_ok'] == False:
+          bad_tags.append ('NO_CSS')
+      session_cnt = len (d.sessions)
+    ?>
+    <span class='ip'>${str (ips)}</span>
+    -
+    <span class='hits'>${d['hits']}</span> hits
+    <span py:if="d['dhits'] > 0"><span class='dhits'>${d['dhits']}</span> denied</span>
+    <span class='rhits'>(${d['rhits']}/${d['rhits_max']})</span>
+    <span py:if='session_cnt > 1' class='sessions'>${session_cnt} sess.</span>
+    <span class='host'>${hostname}</span>
+    <span class='tags'>${' '.join (sorted (tags))}</span>
+    <span class='bad_tags'>${' '.join (sorted (bad_tags))}</span>
+    <span class='whois'>${whois}</span>
+    <span class="ua">${' -- '.join (sorted (
+      [rl.ua_decode (ua) for ua in d['user_agents']]
+      ))[:1000]}</span>
+    <span class="ua-sig">${' -- '.join (sorted (
+      [rl.ua_decode (sig) for sig in d['signatures']]
+      ))[:1000]}</span>
+    <a href="/webmaster/stats/block/?ip=${ips.get_ip_to_block ()}">block</a>
+    <a href="/webmaster/stats/unblock/?ip=${ips.get_ip_to_block ()}">unblock</a>
+  </py:def>
+
+  <py:def function="print_requests">
+    <ul class="requests">
+      <li py:for="request in d['requests']">${request}</li>
+    </ul>
+  </py:def>
+
+  <head>
+    <title>AppServer Status</title>
+    <style type="text/css">
+      .ip          { font-weight: bold }
+      .hits        { font-weight: bold }
+      .dhits       { font-weight: bold; color: red }
+      .rhits       { color: blue }
+      .host        { font-weight: bold }
+      .sessions    { font-weight: bold; color: red }
+      .whois       { color: grey }
+      .tags        { font-weight: bold; color: green }
+      .bad_tags    { font-weight: bold; color: red }
+      .ua          { color: blue }
+      .ua-sig      { color: #808 }
+      .requests    { list-style-type: none; font-size: small; color: grey }
+      .requests li { display: inline }
+      .requests li:before { content: ' - ' }
+      .whitelisted { color: green }
+      .nagios      { display: none }
+    </style>
+  </head>
+
+  <body>
+    <h1>Stats</h1>
+
+    <p>
+      RHits Max: ${rl.rhits_max}.
+      Captchas: ${rl.captchas_max}.
+      Cleanup Frequency: ${rl.frequency}s.
+    </p>
+    <p>Active Users: ${rl.users}</p>
+    <p>Hits: ${rl.hits}</p>
+    <p>Whitelisted: ${rl.whitelist_hits}</p>
+    <p>Denied: ${rl.denied_hits}</p>
+    <p>Blocked IPs: ${len (blocked)}</p>
+    <p>Total Backends: ${backends}</p>
+    <p>Active Backends: ${active_backends}</p>
+
+    <p>Formats Sum:</p>
+
+    <table>
+      <tr py:for="key, value, percent in bs.formats_sum_acc.iter_results ()">
+	<td>${key}</td><td>${value}</td><td>${"%.3f" % percent}</td>
+	<td class="nagios">nagios-${key}-sum: ${value} ${"%.3f" % percent}</td>
+      </tr>
+    </table>
+
+    <p>Formats Detail:</p>
+
+    <table>
+      <tr py:for="key, value, percent in bs.formats_acc.iter_results ()">
+	<td>${key}</td><td>${value}</td><td>${"%.3f" % percent}</td>
+	<td class="nagios">nagios-${key}: ${value} ${"%.3f" % percent}</td>
+      </tr>
+    </table>
+
+    <py:if test="resolve">
+
+	<p>Blocked IPs:</p>
+
+	<ul>
+	  <!--! the blocked IPs sorted by IP -->
+	  <li py:for="d in blocked">
+	    ${print_session ()}
+	    ${print_requests ()}
+	  </li>
+	</ul>
+
+	<p>Busiest IPs:</p>
+
+	<ul>
+	  <!--! the top 10 active IPs sorted by hits desc -->
+	  <li py:for="d in busiest" class="${'whitelisted' if d.ips.whitelisted else ''}">
+	    ${print_session ()}
+	    ${print_requests ()}
+	  </li>
+	</ul>
+
+	<p>IPs with most sessions:</p>
+
+	<ul>
+	  <!--! the top 10 IPs with most sessions sorted by sessions desc -->
+	  <li py:for="d in most_sessions" class="${'whitelisted' if d.ips.whitelisted else ''}">
+	    ${print_session ()}
+	    ${print_requests ()}
+	  </li>
+	</ul>
+
+	<p>Active IPs: ${len (active)}</p>
+
+	<ul>
+	  <!--! the active IPs sorted by IP -->
+	  <li py:for="d in active" class="${'whitelisted' if d.ips.whitelisted else ''}">
+	    ${print_session ()}
+	  </li>
+	</ul>
+
+    </py:if> <!--! resolve -->
+
+  </body>
+</html>

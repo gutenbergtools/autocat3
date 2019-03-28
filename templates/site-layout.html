@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xmlns:og="http://opengraphprotocol.org/schema/"
+      xmlns:fb="http://www.facebook.com/2008/fbml"
+      py:strip="">
+
+  <py:def function="site_head">
+    <style type="text/css">
+      .icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
+    </style>
+
+    <link rel="stylesheet" type="text/css"
+	  href="/css/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
+
+    <!--! IE8 does not recognize application/javascript -->
+    <script type="text/javascript">//<![CDATA[
+      var json_search     = "${os.json_search}";
+      var mobile_url      = "${os.mobile_url}";
+      var canonical_url   = "${os.canonical_url}";
+      var lang            = "${os.lang}";
+      var fb_lang         = "${os.fb_lang}"; /* FB accepts only xx_XX */
+      var msg_load_more   = "${_('Load More Results…')}";
+      var page_mode       = "${os.page_mode}";
+      var dialog_title    = "${os.user_dialog[1]}";
+      var dialog_message  = "${os.user_dialog[0]}";
+    //]]></script>
+
+    <script type="text/javascript"
+	    src="/js/pg-desktop-one.js?${cherrypy.config['js_mtime']}" />
+
+    <link rel="shortcut icon"             href="/pics/favicon" />
+    <link rel="canonical"                 href="${os.canonical_url}" />
+
+    <link rel="search"
+	  type="application/opensearchdescription+xml"
+	  title="Search Project Gutenberg"
+	  href="${os.osd_url}" />
+
+    <link rel="alternate nofollow"
+	  type="${os.type_opds}"
+	  title="OPDS feed"
+	  href="${os.url_carry (format = 'opds')}" />
+
+    <link py:if="os.touch_icon"             rel="apple-touch-icon"             href="${os.touch_icon}" />
+    <link py:if="os.touch_icon_precomposed" rel="apple-touch-icon-precomposed" href="${os.touch_icon_precomposed}" />
+    <meta py:if="os.viewport"               name="viewport"                    content="${os.viewport}" />
+
+    <meta http-equiv="Content-Type"       content="text/html; charset=UTF-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+    <meta http-equiv="Content-Language"   content="${os.lang}" />
+
+    <!--! plain old metadata -->
+    <meta name="title"                    content="${os.title}" />
+    <meta name="description"              content="${os.description}" />
+    <meta name="keywords"                 content="ebook, ebooks, free ebooks, free books, book, books, audio books" />
+    <meta name="classification"           content="public" />
+
+    <!--! facebook open graph -->
+    <meta property="og:title"             content="${os.title}" />
+    <meta property="og:description"       content="${os.description}" />
+    <meta property="og:type"              content="${os.og_type}" />
+    <meta property="og:image"             content="${os.snippet_image_url}" />
+    <meta property="og:url"               content="${os.canonical_url}" />
+    <meta property="og:site_name"         content="Project Gutenberg" />
+    <meta property="fb:app_id"            content="${cherrypy.config['facebook_app_id']}" />
+    <!--! <meta property="fb:admins"            content="615269807" /> -->
+
+    <!--! twitter card -->
+    <meta name="twitter:card"         content="summary" />
+    <meta name="twitter:site"         content="@gutenberg_new" />
+
+  </py:def>
+
+  <py:def function="credits">
+    <div id="credits">
+      <div class="h1"
+	   title="Credits">Credits</div>
+
+      <a href="http://www.ibiblio.org" rel="nofollow"
+	 title="Project Gutenberg is hosted by ibiblio.">
+	<span class ="icon icon_hosted" />
+      </a>
+
+      <p>This web site uses only free software.</p>
+
+      <a href="http://httpd.apache.org/" rel="nofollow"
+	 title="Powered by Apache">
+	<span class="icon icon_apache" />
+      </a>
+
+      <a href="http://www.python.org" rel="nofollow"
+	 title="Powered by Python">
+	<span class="icon icon_python" />
+      </a>
+
+      <a href="http://www.postgresql.org" rel="nofollow"
+	 title="Powered by PostgreSQL">
+	<span class="icon icon_postgres" />
+      </a>
+    </div>
+  </py:def>
+
+  <py:def function="copyright">
+    <div class="copyright" i18n:comment="The copyright notice on the footer of every page.">
+      © 2003–2012 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
+    </div>
+  </py:def>
+
+  <py:def function="site_top">
+    <div id="fb-root" />
+
+    <div id="print-head" class="noscreen">
+      <div class="center">http:${os.desktop_url}<br/><br/>${os.tagline}</div>
+    </div>
+
+    <div id="screen-head" class="noprint">
+      <table>
+	<tr i18n:comment="The logo, tagline and badges at the very top of every page.">
+
+	  <td rowspan="2" id="logo" i18n:comment="The PG logo at the top left of every page.">
+	    <a href="/wiki/Main_Page" title="Go to the Main Page.">
+	      <span id="${cherrypy.tools.rate_limiter.get_challenge ()}" class="icon icon_logo" />
+	    </a>
+	  </td>
+
+	  <td id="tagline-badges" colspan="2">
+
+	    <table>
+	      <tr>
+		<td id="tagline">${os.tagline}</td>
+		<td id="paypal-badge" class="badge">${paypal ()}</td>
+		<td id="flattr-badge" class="badge">${flattr ()}</td>
+	      </tr>
+	    </table>
+
+	  </td>
+	</tr>
+
+	<tr id="menubar-search">
+	  <td id="menubar" i18n:comment="The menu bar at the top of every page.">
+	    <a py:if="os.page != 'start'"
+	       id="menubar-first"
+	       tabindex="11" accesskey="1"
+	       title="Start a new search."
+	       href="${os.url ('start')}">Search</a>
+	    <span py:if="os.page == 'start'"
+		  id="menubar-first" class="grayed">Search</span>
+
+	    <a tabindex="22"
+	       title="Our latest releases."
+	       href="/ebooks/search/?sort_order=release_date">Latest</a>
+
+	    <a tabindex="31"
+	       title="Read the Project Gutenberg terms of use."
+	       href="/terms_of_use/">Terms of Use</a>
+
+	    <a tabindex="32"
+	       href="/wiki/Gutenberg:Project_Gutenberg_Needs_Your_Donation"
+	       title="Learn why we need some money.">Donate?</a>
+
+	    <a tabindex="33" accesskey="m" href="${os.mobile_url}"
+	       title="Go to our mobile site.">Mobile</a>
+
+	  </td>
+
+	  <td id="search" i18n:comment="The search box at the top right of every page.">
+	    <form method="get" action="${os.desktop_search}"
+		  enctype="multipart/form-data">
+	      <table class="borderless">
+		<tr>
+		  <td id="search-button-cell">
+		    <button id="search-button" type="submit" title="Execute the search. &lt;enter&gt;">
+		      <span class="icon icon_smsearch" />
+		    </button>
+		  </td>
+		  <td id="search-input-cell">
+		    <input id="search-input" name="query" type="text" title="${os.placeholder} &lt;s&gt;"
+			   accesskey="s" value="${os.search_terms}" />
+		  </td>
+		  <td id="help-button-cell">
+		    <button id="help-button" type="button" title="Open the help menu. &lt;h&gt;"
+			    accesskey="h">Help</button>
+		  </td>
+		</tr>
+	      </table>
+	    </form>
+	  </td>
+
+	</tr>
+      </table>
+
+      <div id="helpbox" class="hide">
+	<xi:include href="help.html" />
+      </div>
+
+    </div>
+
+  </py:def>
+
+  <py:def function="site_footer">
+    <div class="footer" i18n:comment="On the footer of every page.">
+    </div>
+  </py:def>
+
+  <py:def function="prev_next_links">
+    <span class="links" i18n:comment="The links to move between paginated search results."
+	  xmlns="http://www.w3.org/1999/xhtml"
+	  xmlns:xi="http://www.w3.org/2001/XInclude"
+	  xmlns:py="http://genshi.edgewall.org/">
+
+      <py:if test="os.show_prev_page_link">|
+      <a title="Go to the first page of results."
+	 accesskey="a"
+	 href="${os.url_carry (start_index = 1)}">First</a>
+      </py:if>
+
+      <py:if test="os.show_prev_page_link">|
+      <a title="Go to the previous page of results."
+	 accesskey="-"
+	 href="${os.url_carry (start_index = os.prev_page_index)}">Previous</a>
+      </py:if>
+
+      <py:if test="os.show_next_page_link">|
+      <a title="Go to the next page of results."
+	 accesskey="+"
+	 href="${os.url_carry (start_index = os.next_page_index)}">Next</a>
+      </py:if>
+    </span>
+  </py:def>
+
+  <py:def function="paypal">
+    <form class="paypal-button"
+	  action="https://www.paypal.com/cgi-bin/webscr" method="post">
+      <div>
+	<!--! xml:lang avoids extraction for translation -->
+	<input xml:lang="en" type="hidden" name="cmd" value="_s-xclick" />
+	<input xml:lang="en" type="hidden" name="hosted_button_id" value="XKAL6BZL3YPSN" />
+	<input type="image"  name="submit"
+	       src="//${cherrypy.config['file_host']}/pics/paypal/${os.paypal_lang}.gif"
+	       title="Send us money through PayPal." />
+      </div>
+    </form>
+  </py:def>
+
+  <py:def function="flattr">
+    <a class="flattr-button" target="_blank"
+       href="https://flattr.com/thing/509045/Project-Gutenberg"
+       title="Send us money through Flattr.">
+      <span class="icon icon_flattr" />
+    </a>
+  </py:def>
+
+</html>
