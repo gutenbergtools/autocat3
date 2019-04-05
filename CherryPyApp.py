@@ -51,12 +51,6 @@ import Formatters
 import RateLimiter
 
 import Timer
-import MyRamSession
-import PostgresSession
-
-cherrypy.lib.sessions.RamSession      = MyRamSession.FixedRamSession
-cherrypy.lib.sessions.MyramSession    = MyRamSession.MyRamSession
-cherrypy.lib.sessions.PostgresSession = PostgresSession.PostgresSession
 
 plugins.Timer = Timer.TimerPlugin
 
