@@ -164,6 +164,7 @@ def main ():
     if hasattr (cherrypy.engine, 'signal_handler'):
         cherrypy.engine.signal_handler.subscribe ()
 
+    GutenbergDatabase.options.update(cherrypy.config)
     cherrypy.engine.pool = plugins.ConnectionPool (
         cherrypy.engine, params = GutenbergDatabase.get_connection_params (cherrypy.config))
     cherrypy.engine.pool.subscribe ()
