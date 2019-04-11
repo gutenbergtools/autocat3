@@ -29,27 +29,28 @@ class MSDriveSession (CloudStorage.CloudOAuth2Session):
     #
 
     name_prefix           = 'msdrive'
-    oauth2_auth_endpoint  = 'https://login.live.com/oauth20_authorize.srf'
-    oauth2_token_endpoint = 'https://login.live.com/oauth20_token.srf'
-    oauth2_scope          = 'wl.signin wl.basic wl.skydrive wl.skydrive_update'
-
+    oauth2_auth_endpoint  = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+    oauth2_token_endpoint = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+    oauth2_scope          = 'files.readwrite'
 
 class MSDrive (CloudStorage.CloudStorage):
     """ Send files to Microsoft Drive. """
 
     name                  = 'OneDrive'
     session_class         = MSDriveSession
-    user_agent            = 'PG2MSDrive/0.2'
-    upload_endpoint       = 'https://apis.live.net/v5.0/me/skydrive/files/'
+    user_agent            = 'PG2OneDrive/2019.0'
+    #upload_endpoint       = 'https://apis.live.net/v5.0/me/skydrive/files/'
+    upload_endpoint       = 'https://graph.microsoft.com/v1.0/me/drive/items/root:/{filename}:/createUploadSession'
 
 
     def upload_file (self, session, request):
         """ Upload a file to microsoft drive. """
 
-        url = self.upload_endpoint + self.fix_filename (session.ebook.get_filename ())
+        url = self.upload_endpoint.format(
+            'filename': self.fix_filename (session.ebook.get_filename ())
+        )
 
-        # MSDrive does not like such never-heard-of-before
-        # content-types like 'epub', so we just send it without
-        # content-type.
-        with closing (session.put (url, data = request.iter_content (1024 * 1024))) as r:
-            r.raise_for_status ()
+        upload_session = session.post (url)
+        if 'uploadUrl' in upload_session:
+            with closing (session.put (upload_session['uploadUrl'], data = request.iter_content (1024 * 1024))) as r:
+                r.raise_for_status ()
