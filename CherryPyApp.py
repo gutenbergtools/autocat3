@@ -44,11 +44,9 @@ from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, Book
 from BibrecPage import BibrecPage
 import CoverPages
 import QRCodePage
-import StatsPage
 import CaptchaPage
 import Sitemap
 import Formatters
-import RateLimiter
 
 import Timer
 
@@ -140,12 +138,6 @@ def main ():
     Formatters.init ()
     cherrypy.log ("Continuing App Init", context = 'ENGINE', severity = logging.INFO)
 
-    try:
-        cherrypy.tools.rate_limiter = RateLimiter.RateLimiterTool ()
-    except Exception as e:
-        tb = traceback.format_exc ()
-        cherrypy.log (tb, context = 'ENGINE', severity = logging.ERROR)
-
     cherrypy.log ("Continuing App Init", context = 'ENGINE', severity = logging.INFO)
     cherrypy.tools.I18nTool = i18n_tool.I18nTool ()
 
@@ -169,8 +161,6 @@ def main ():
         cherrypy.engine, params = GutenbergDatabase.get_connection_params (cherrypy.config))
     cherrypy.engine.pool.subscribe ()
 
-    plugins.RateLimiterReset (cherrypy.engine).subscribe ()
-    plugins.RateLimiterDatabase (cherrypy.engine).subscribe ()
     plugins.Timer (cherrypy.engine).subscribe ()
 
     cherrypy.log ("Daemonizing", context = 'ENGINE', severity = logging.INFO)
@@ -263,16 +253,7 @@ def main ():
                controller = Page.NullPage ())
 
     d.connect ('stats', r'/stats/',
-               controller = StatsPage.StatsPage ())
-
-    d.connect ('block', r'/stats/block/',
-               controller = RateLimiter.BlockPage ())
-
-    d.connect ('unblock', r'/stats/unblock/',
-               controller = RateLimiter.UnblockPage ())
-
-    d.connect ('traceback', r'/stats/traceback/',
-               controller = RateLimiter.TracebackPage ())
+               controller = Page.NullPage (), _static = True)
 
     d.connect ('honeypot_send', r'/ebooks/send/megaupload/{id:\d+}.{filetype}',
                controller = Page.NullPage (), _static = True)
