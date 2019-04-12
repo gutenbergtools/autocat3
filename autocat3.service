@@ -1,0 +1,12 @@
+[Unit]
+Description=autocat3 Service
+After=network.target
+
+[Service]
+User=autocat
+Type=simple
+WorkingDirectory=/var/lib/autocat/autocat3
+ExecStart=pipenv run CherryPyApp.py
+
+[Install]
+WantedBy=multi-user.target
