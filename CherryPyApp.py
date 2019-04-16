@@ -53,7 +53,7 @@ import Timer
 plugins.Timer = Timer.TimerPlugin
 
 if six.PY3:
-    CHERRYPY_CONFIG = ('/etc/autocat3.conf', os.path.expanduser ('~/.autocat3'))
+    CHERRYPY_CONFIG = (os.path.expanduser ('~/.autocat3'), '/etc/autocat3.conf')
     # CCHERRYPY_CONFIG = ('/etc/autocat3.conf')
 else:
     CHERRYPY_CONFIG = ('/etc/autocat.conf', os.path.expanduser ('~/.autocat'))
