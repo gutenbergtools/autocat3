@@ -40,7 +40,6 @@ SQLAlchemy = "*"
 #ufw = "*"
 #unattended-upgrades = "*"
 urllib3 = "*"
-adns = "==1.4-py0"
 
 [requires]
 python_version = "3.6"
