@@ -6,7 +6,7 @@ After=network.target
 User=autocat
 Type=simple
 WorkingDirectory=/var/lib/autocat/autocat3
-ExecStart=/opt/rh/rh-python36/root/usr/bin/pipenv run python CherryPyApp.py
+ExecStart=/usr/local/bin/pipenv run python CherryPyApp.py
 
 [Install]
 WantedBy=multi-user.target

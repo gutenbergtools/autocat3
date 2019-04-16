@@ -44,9 +44,11 @@ pipenv install
 
 # add conf file
 #!! from local
-# scp [local:]~/autocat3.conf [autocat@host:]~/.autocat
+# scp [local:]~/autocat3.conf [autocat@host:]~/.autocat3
 
 mkdir /var/lib/autocat/log/
+touch /var/lib/autocat/log/error.log
+touch /var/lib/autocat/log/access.log
 
 exit
 
