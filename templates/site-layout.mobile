@@ -56,7 +56,6 @@
       <div class="table link">
 	<div class="row">
 	  <div class="cell leftcell">
-	    <div class="icon icon_search" id="${cherrypy.tools.rate_limiter.get_challenge ()}" />
 	  </div>
 	  <div class="cell content">
 	    <form id="search" method="get" action="${os.mobile_search}"
