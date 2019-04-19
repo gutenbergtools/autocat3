@@ -2,11 +2,11 @@ sudo yum install git
 #sudo yum install postgresql-server
 #sudo yum install postgresql-contrib
 
-# install py3
+# install py3 (might not be the bast way to do this)
 
-sudo yum install centos-release-scl
-sudo yum install rh-python36
-scl enable rh-python36 bash
+#sudo yum install centos-release-scl
+#sudo yum install rh-python36
+#scl enable rh-python36 bash
 
 #install pip
 
@@ -22,24 +22,27 @@ sudo passwd autocat
 sudo su - autocat
 
 # create ~/.ssh/id_rsa and ~/.ssh/id_rsa.pub using app key from the gutenbergtools/autocat3 repo
-# id_rsa should have permissions 600
+# id_rsa should have permissions 400
 mkdir .ssh
 install -m 600 .ssh/id_rsa
 touch .ssh/id_rsa.pub
 #!! from local
 # scp [local:]~.ssh/github [autocat@host:]~/.ssh/id_rsa
 # scp [local:]~.ssh/github.pub [autocat@host:]~/.ssh/id_rsa.pub
-chmod 600 .ssh/id_rsa
+chmod 400 .ssh/id_rsa
 
-#set default python
+# create ~/.pgpass file to store password in format
+# [pghost]:*:[pgdatabase]:[pguser]:[password]
+chmod 400 .pgpass
+
+#set default python - only needed if pu3 is 
 scl enable rh-python36 bash
 echo 'source scl_source enable rh-python36' >> /var/lib/autocat/.bash_profile
 
 git clone git@github.com:gutenbergtools/autocat3.git
 cd autocat3
 pipenv --three
-#git checkout remotes/origin/dev
-git checkout remotes/origin/remove-ratelimit
+git checkout remotes/origin/master
 pipenv install
 
 # add conf file
