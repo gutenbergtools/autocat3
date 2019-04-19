@@ -38,7 +38,6 @@ class BibrecPage (Page.Page):
         dc.load_from_database (os.id)
         if not dc.files:
             # NOTE: Error message
-            cherrypy.tools.rate_limiter.e404 ()
             raise cherrypy.HTTPError (404, _('No ebook by that number.'))
 
         # add these fields so we won't have to test for their existence later
