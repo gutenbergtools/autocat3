@@ -51,12 +51,13 @@ import Formatters
 import Timer
 
 plugins.Timer = Timer.TimerPlugin
+install_dir = os.path.dirname (os.path.abspath (__file__))
 
-if six.PY3:
-    CHERRYPY_CONFIG = (os.path.expanduser ('~/.autocat3'), '/etc/autocat3.conf')
-    # CCHERRYPY_CONFIG = ('/etc/autocat3.conf')
-else:
-    CHERRYPY_CONFIG = ('/etc/autocat.conf', os.path.expanduser ('~/.autocat'))
+CHERRYPY_CONFIG = os.path.join(install_dir, 'CherryPy.conf')
+LOCAL_CONFIG = (
+        os.path.join(install_dir, 'CherryPy.conf'),
+        os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf'
+)
 
 class MyRoutesDispatcher (cherrypy.dispatch.RoutesDispatcher):
     """ Dispatcher that tells us the matched route.
@@ -81,8 +82,7 @@ def main ():
         'uid': 0,
         'gid': 0,
         'server_name': 'localhost',
-        'genshi.template_dir': os.path.join (
-            os.path.dirname (os.path.abspath (__file__)), 'templates'),
+        'genshi.template_dir': os.path.join (install_dir, 'templates'),
         'daemonize': False,
         'pidfile': None,
         'host': 'localhost',
@@ -91,7 +91,8 @@ def main ():
         })
 
     config_filename = None
-    for config_filename in CHERRYPY_CONFIG:
+    cherrypy.config.update (CHERRYPY_CONFIG)
+    for config_filename in LOCAL_CONFIG:
         try:
             cherrypy.config.update (config_filename)
             break
