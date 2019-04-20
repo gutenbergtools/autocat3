@@ -47,7 +47,7 @@ class MSDrive (CloudStorage.CloudStorage):
         """ Upload a file to microsoft drive. """
 
         url = self.upload_endpoint.format(
-            'filename': self.fix_filename (session.ebook.get_filename ())
+            {'filename': self.fix_filename (session.ebook.get_filename ())}
         )
 
         upload_session = session.post (url)

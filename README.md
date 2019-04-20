@@ -1,5 +1,5 @@
 # autocat3_original
-## Intruduction
+## Introduction
 
 **autocat3** is a python-based application used for supporting [Project Gutenberg](gutenberg.org). 
 CherryPy is used as the web framwork which is easy to develop.
