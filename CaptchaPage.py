@@ -26,7 +26,7 @@ import BaseSearcher
 # https://developers.google.com/recaptcha/docs/verify
 #
 
-API = "http://www.google.com/recaptcha/api/verify"
+API = "https://www.google.com/recaptcha/api/verify"
 
 
 class QuestionPage (Page.Page):
