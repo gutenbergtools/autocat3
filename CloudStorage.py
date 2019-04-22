@@ -299,5 +299,5 @@ class EbookMetaData (object):
         """ Return the url of the ebook file on gutenberg.org. """
 
         return urllib.parse.urljoin (
-            'http://' + cherrypy.config['file_host'],
+            'https://' + cherrypy.config['file_host'],
             'ebooks/%d.%s' % (self.id, self.filetype))

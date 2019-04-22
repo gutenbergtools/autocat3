@@ -6,7 +6,7 @@ DON'T USE THIS PAGE FOR SCRAPING.
 
 Seriously. You'll only get your IP blocked.
 
-Download http://www.gutenberg.org/feeds/catalog.rdf.bz2 instead,
+Download https://www.gutenberg.org/feeds/catalog.rdf.bz2 instead,
 which contains *all* Project Gutenberg metadata in one RDF/XML file.
 
 -->
@@ -47,7 +47,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
   <subtitle>Free ebooks since 1971.</subtitle>
   <author>
     <name>Marcello Perathoner</name>
-    <uri>http://www.gutenberg.org</uri>
+    <uri>https://www.gutenberg.org</uri>
     <email>webmaster@gutenberg.org</email>
   </author>
   <icon>${os.qualify ('/pics/favicon.png')}</icon>
