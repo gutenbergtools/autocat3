@@ -135,7 +135,7 @@ class CloudStorage (object):
     session_class   = CloudOAuth2Session
     user_agent      = None
     upload_endpoint = None
-    re_filename     = re.compile (r'[/\<>:"|?*]')
+    re_filename     = re.compile (r'[/\<>:"|?* ]')
 
 
     def __init__ (self):
