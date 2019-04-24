@@ -54,10 +54,7 @@ plugins.Timer = Timer.TimerPlugin
 install_dir = os.path.dirname (os.path.abspath (__file__))
 
 CHERRYPY_CONFIG = os.path.join(install_dir, 'CherryPy.conf')
-LOCAL_CONFIG = (
-        os.path.join(install_dir, 'CherryPy.conf'),
-        os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf'
-)
+LOCAL_CONFIG = [os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf']
 
 class MyRoutesDispatcher (cherrypy.dispatch.RoutesDispatcher):
     """ Dispatcher that tells us the matched route.
@@ -92,13 +89,6 @@ def main ():
 
     config_filename = None
     cherrypy.config.update (CHERRYPY_CONFIG)
-    for config_filename in LOCAL_CONFIG:
-        try:
-            cherrypy.config.update (config_filename)
-            break
-        except IOError:
-            pass
-
     # Rotating Logs
     #
 
@@ -121,6 +111,8 @@ def main ():
     h.setLevel (logging.DEBUG)
     h.setFormatter (cherrypy._cplogging.logfmt)
     cherrypy.log.access_log.addHandler (h)
+    
+
 
     if not cherrypy.config['daemonize']:
         ch = logging.StreamHandler ()
@@ -132,8 +124,15 @@ def main ():
     #
 
     cherrypy.log ('*' * 80, context = 'ENGINE', severity = logging.INFO)
-    cherrypy.log ("Using config file '%s'." % config_filename,
+    cherrypy.log ("Using config file '%s'." % CHERRYPY_CONFIG,
                   context = 'ENGINE', severity = logging.INFO)
+    for config_filename in LOCAL_CONFIG:
+        try:
+            cherrypy.config.update (config_filename)
+            cherrypy.log ('loaded %s' % config_filename, context = 'ENGINE', severity = logging.INFO)
+            break
+        except IOError:
+            pass
 
     # after cherrypy.config is parsed
     Formatters.init ()
@@ -308,7 +307,7 @@ def main ():
 
     cherrypy.log ("Mounting root", context = 'ENGINE', severity = logging.INFO)
 
-    app = cherrypy.tree.mount (root = None, config = config_filename)
+    app = cherrypy.tree.mount (root = None, config = CHERRYPY_CONFIG)
 
     app.merge ({'/': {'request.dispatch': d}})
     return app
