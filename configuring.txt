@@ -47,6 +47,7 @@ pipenv install
 
 # add conf file
 #!! from local
+# Better to copy conf file from guten2 cause it's up-to-date
 # scp [local:]~/autocat3.conf [autocat@host:]~/.autocat3
 
 mkdir /var/lib/autocat/log/
@@ -57,7 +58,9 @@ exit
 
 sudo mkdir /var/run/autocat
 sudo touch /var/run/autocat/autocat3.pid
-sudo chown autocat /var/run/autocat/autocat3.pid
+# sudo chown autocat /var/run/autocat/autocat3.pid
+# Better to set the group name as pgweb for /var/run/autocat
+sudo chown -R autocat:pgweb /var/run/autocat
 
 sudo systemctl enable /var/lib/autocat/autocat3/autocat3.service
 sudo systemctl start autocat3
