@@ -45,7 +45,12 @@ pipenv --three
 git checkout remotes/origin/master
 pipenv install
 
-# add conf file
+# add local conf file. keep secrets here!
+# for production .autocat3 should set values for these parameters:
+#   pghost, pguser, 
+#   dropbox_client_secret, gdrive_client_secret, msdrive_client_secret, recaptcha_private_key
+#   log.error_file, log.access_file
+
 #!! from local
 # scp [local:]~/autocat3.conf [autocat@host:]~/.autocat3
 
