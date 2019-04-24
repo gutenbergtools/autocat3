@@ -4,11 +4,10 @@
 """
 MSDrive.py
 
-Copyright 2014,15 by Marcello Perathoner
-
 Distributable under the GNU General Public License Version 3 or newer.
 
-The send-to-microsoft-drive pages.
+The send-to-onedrive pages using the Graph API
+https://docs.microsoft.com/en-us/graph/api/driveitem-createuploadsession?view=graph-rest-1.0
 
 """
 
@@ -18,8 +17,7 @@ from contextlib import closing
 
 import CloudStorage
 
-
-class MSDriveSession (CloudStorage.CloudOAuth2Session):
+class MSDriveSession(CloudStorage.CloudOAuth2Session):
     """ Hold parameters for OAuth. """
 
     #
@@ -28,28 +26,55 @@ class MSDriveSession (CloudStorage.CloudOAuth2Session):
     # http://msdn.microsoft.com/en-us/library/live/hh243649
     #
 
-    name_prefix           = 'msdrive'
-    oauth2_auth_endpoint  = 'https://login.live.com/oauth20_authorize.srf'
-    oauth2_token_endpoint = 'https://login.live.com/oauth20_token.srf'
-    oauth2_scope          = 'wl.signin wl.basic wl.skydrive wl.skydrive_update'
+    name_prefix = 'msdrive'
+    oauth2_auth_endpoint = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+    oauth2_token_endpoint = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+    oauth2_scope = 'Files.ReadWrite'
+
+class MSDrive(CloudStorage.CloudStorage):
+    """ Send files to Microsoft OneDrive. """
+
+    name = 'OneDrive'
+    session_class = MSDriveSession
+    user_agent = 'PG2OneDrive/2019.0'
+    #upload_endpoint = 'https://apis.live.net/v5.0/me/skydrive/files/'
+    upload_endpoint = 'https://graph.microsoft.com/v1.0/me/drive/items/root:/Documents/Gutenberg/{filename}:/createUploadSession'
+    
 
 
-class MSDrive (CloudStorage.CloudStorage):
-    """ Send files to Microsoft Drive. """
+    def upload_file(self, session, response):
+        """ Upload a file to microsoft onedrive. """
+        filename = self.fix_filename(session.ebook.get_filename())
+        item_data = {
+            'name': filename,
+            'description': 'A Project Gutenberg Ebook',
+            "@microsoft.graph.conflictBehavior": "rename", 
+        }
+        filesize = int(response.headers['Content-Length'])
+        url = self.upload_endpoint.format(filename=filename)
+        chunk_size = 327680 # weird onedrive thing related to FAT tables
+        upload_data = session.post(url, json={'item': item_data}).json()
 
-    name                  = 'OneDrive'
-    session_class         = MSDriveSession
-    user_agent            = 'PG2MSDrive/0.2'
-    upload_endpoint       = 'https://apis.live.net/v5.0/me/skydrive/files/'
+        def headers(start, end, filesize):
+            return {
+                'Content-Length': str(end - start + 1),
+                'Content-Range': 'bytes {}-{}/{}'.format(start, end, filesize)
+            }
 
+        if 'uploadUrl' in upload_data:
+            session_uri = upload_data['uploadUrl']
+            start = 0
+            end = min(chunk_size - 1, filesize - 1)
 
-    def upload_file (self, session, request):
-        """ Upload a file to microsoft drive. """
-
-        url = self.upload_endpoint + self.fix_filename (session.ebook.get_filename ())
-
-        # MSDrive does not like such never-heard-of-before
-        # content-types like 'epub', so we just send it without
-        # content-type.
-        with closing (session.put (url, data = request.iter_content (1024 * 1024))) as r:
-            r.raise_for_status ()
+            for chunk in response.iter_content(chunk_size):
+                r = session.put(
+                    session_uri,
+                    data=chunk,
+                    headers=headers(start, end, filesize),
+                )
+                start = start + chunk_size
+                end = min(end + chunk_size, filesize - 1)
+                r.raise_for_status()
+        else:
+            CloudStorage.log('no uploadUrl in %s' % upload_data)
+        session.close()

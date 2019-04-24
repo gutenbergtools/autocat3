@@ -65,9 +65,10 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
         prefix = self.name_prefix
 
         host = config['file_host']
+        host_https = config['host_https']
         urlgen = routes.URLGenerator (cherrypy.routes_mapper, {
             'HTTP_HOST': host,
-            'HTTPS': 1
+            'HTTPS': host_https
         })
 
         client_id     = config[prefix + '_client_id']
@@ -134,7 +135,7 @@ class CloudStorage (object):
     session_class   = CloudOAuth2Session
     user_agent      = None
     upload_endpoint = None
-    re_filename     = re.compile (r'[/\<>:"|?*]')
+    re_filename     = re.compile (r'[/\<>:"|?* ]')
 
 
     def __init__ (self):
@@ -297,7 +298,11 @@ class EbookMetaData (object):
 
     def get_source_url (self):
         """ Return the url of the ebook file on gutenberg.org. """
-
+        protocol = 'https://' if cherrypy.config['host_https'] else 'http://'
+        if self.id == 99999:
+            # test filename
+            return urllib.parse.urljoin (
+                protocol + str(cherrypy.config['file_host']) , 'test.pdf')
         return urllib.parse.urljoin (
-            'https://' + cherrypy.config['file_host'],
+            protocol + cherrypy.config['file_host'],
             'ebooks/%d.%s' % (self.id, self.filetype))
