@@ -39,6 +39,13 @@ https_adapter = requests.adapters.HTTPAdapter ()
 # https://github.com/idan/oauthlib/commit/ca4811b3087f9d34754d3debf839e247593b8a39
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
+config = cherrypy.config
+
+urlgen = routes.URLGenerator (cherrypy.routes_mapper, {
+    'HTTP_HOST': config['file_host'],
+    'HTTPS': config['host_https']
+})
+
 def log (msg):
     """ Log an informational  message. """
     cherrypy.log (msg, context = 'CLOUDSTORAGE', severity = logging.INFO)
@@ -61,18 +68,10 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
     def __init__ (self, **kwargs):
         """ Initialize session from cherrypy config. """
 
-        config = cherrypy.config
         prefix = self.name_prefix
 
-        host = config['file_host']
-        host_https = config['host_https']
-        urlgen = routes.URLGenerator (cherrypy.routes_mapper, {
-            'HTTP_HOST': host,
-            'HTTPS': host_https
-        })
-
         client_id     = config[prefix + '_client_id']
-        redirect_uri  = urlgen (prefix + '_callback', host = host)
+        redirect_uri  = urlgen (prefix + '_callback', host = config['file_host'])
 
         super (CloudOAuth2Session, self).__init__ (
             client_id = client_id,
@@ -140,8 +139,7 @@ class CloudStorage (object):
 
     def __init__ (self):
         self.host = cherrypy.config['host']
-        self.urlgen = routes.URLGenerator (cherrypy.routes_mapper, {'HTTP_HOST': self.host})
-
+        self.urlgen = urlgen
 
     def index (self, **kwargs):
         """ Output the page. """
