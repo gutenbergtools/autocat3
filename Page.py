@@ -67,16 +67,8 @@ class NullPage (Page):
         return '<html/>'
 
 class GoHomePage (Page):
-    """
-    if there's a non captcha page in the session, go there
-    Otherwise, goto start page.
-    This can replace the Captcha pages. 
-    """
+    """ Go to start page. """
     def index (self, **kwargs):
-        for req in reversed (cherrypy.ipsession['requests']):
-            if 'captcha' not in req:
-                raise cherrypy.HTTPRedirect (req)
-
         os = BaseSearcher.OpenSearch ()
         raise cherrypy.HTTPRedirect (os.url ('start'))
 
