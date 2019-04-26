@@ -44,7 +44,6 @@ from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, Book
 from BibrecPage import BibrecPage
 import CoverPages
 import QRCodePage
-import CaptchaPage
 import Sitemap
 import Formatters
 
@@ -260,10 +259,10 @@ def main ():
 
     # /w/captcha/question/ so varnish will cache it
     d.connect ('captcha.question', r'/w/captcha/question/',
-               controller = CaptchaPage.QuestionPage ())
+               controller = Page.GoHomePage ())
 
     d.connect ('captcha.answer', r'/w/captcha/answer/',
-               controller = CaptchaPage.AnswerPage ())
+               controller = Page.GoHomePage ())
 
     # sitemap protocol access control requires us to place sitemaps in /ebooks/
     d.connect ('sitemap', r'/ebooks/sitemaps/',
