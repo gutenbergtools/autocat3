@@ -86,15 +86,25 @@ def main ():
         'file_host': 'localhost',
         })
 
-    config_filename = None
-    cherrypy.config.update (CHERRYPY_CONFIG)
+    cherrypy.config.update(CHERRYPY_CONFIG)
+    
+    extra_config = ''
+    for config_filename in LOCAL_CONFIG:
+        try:
+            cherrypy.config.update(config_filename)
+            extra_config = config_filename
+            break
+        except IOError:
+            pass
+
     # Rotating Logs
     #
 
-    # Remove the default FileHandlers if present.
+    # read the log file locations from config file.
+    error_file = cherrypy.config.get('log.error_file', 'error.log')
+    access_file = cherrypy.config.get('log.error_file', 'access.log')
 
-    error_file = cherrypy.log.error_file
-    access_file = cherrypy.log.access_file
+    # turn off cp built-in logging
     cherrypy.log.error_file = ""
     cherrypy.log.access_file = ""
 
@@ -110,6 +120,7 @@ def main ():
     h.setLevel (logging.DEBUG)
     h.setFormatter (cherrypy._cplogging.logfmt)
     cherrypy.log.access_log.addHandler (h)
+    # set up python logging
     
 
 
@@ -125,13 +136,8 @@ def main ():
     cherrypy.log ('*' * 80, context = 'ENGINE', severity = logging.INFO)
     cherrypy.log ("Using config file '%s'." % CHERRYPY_CONFIG,
                   context = 'ENGINE', severity = logging.INFO)
-    for config_filename in LOCAL_CONFIG:
-        try:
-            cherrypy.config.update (config_filename)
-            cherrypy.log ('loaded %s' % config_filename, context = 'ENGINE', severity = logging.INFO)
-            break
-        except IOError:
-            pass
+    if extra_config:
+        cherrypy.log('extra_config: %s' % extra_config, context='ENGINE', severity=logging.INFO)
 
     # after cherrypy.config is parsed
     Formatters.init ()
