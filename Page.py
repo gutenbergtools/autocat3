@@ -66,6 +66,11 @@ class NullPage (Page):
         """ Output an empty page. """
         return '<html/>'
 
+class GoHomePage (Page):
+    """ Go to start page. """
+    def index (self, **kwargs):
+        os = BaseSearcher.OpenSearch ()
+        raise cherrypy.HTTPRedirect (os.url ('start'))
 
 class SearchPage (Page):
     """ Abstract base class for all search page classes. """

@@ -48,7 +48,7 @@ pipenv install
 # add local conf file. keep secrets here!
 # for production .autocat3 should set values for these parameters:
 #   pghost, pguser, 
-#   dropbox_client_secret, gdrive_client_secret, msdrive_client_secret, recaptcha_private_key
+#   dropbox_client_secret, gdrive_client_secret, msdrive_client_secret, 
 #   log.error_file, log.access_file
 
 #!! from local

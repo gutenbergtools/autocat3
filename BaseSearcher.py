@@ -420,7 +420,7 @@ class OpenSearch (object):
 
         host = cherrypy.request.headers.get ('X-Forwarded-Host', cherrypy.config['host'])
         self.host = host.split (',')[-1].strip () # keep only the last hub
-        self.protocol = cherrypy.request.headers.get ('X-Forwarded-Protocol', 'http')
+        self.protocol = cherrypy.request.headers.get ('X-Forwarded-Protocol', 'https')
 
         # sanity check
         if self.host not in (cherrypy.config['all_hosts']):
@@ -432,7 +432,7 @@ class OpenSearch (object):
             cherrypy.routes_mapper,
             {
                 'HTTP_HOST': self.host,
-                # 'HTTP_X_FORWARDED_PROTO': self.protocol,
+                'HTTPS': 1 if self.protocol == 'https' else 0,
             }
         )
 
