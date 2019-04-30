@@ -99,7 +99,7 @@ def main():
 
     # Rotating Logs
     # CherryPy will already open log files if present in config
-
+    error_log = access_file = ''
     # read the logger file locations from config file.
     if not cherrypy.log.error_file:
         error_file = cherrypy.config.get('logger.error_file', '')
