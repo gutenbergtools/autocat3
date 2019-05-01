@@ -98,29 +98,29 @@ def main():
             pass
 
     # Rotating Logs
-    #
-
-    # read the log file locations from config file.
-    error_file = cherrypy.config.get('log.error_file', 'error.log')
-    access_file = cherrypy.config.get('log.error_file', 'access.log')
-
-    # turn off cp built-in logging
-    cherrypy.log.error_file = ""
-    cherrypy.log.access_file = ""
+    # CherryPy will already open log files if present in config
+    error_file = access_file = ''
+    # read the logger file locations from config file.
+    if not cherrypy.log.error_file:
+        error_file = cherrypy.config.get('logger.error_file', '')
+    if not cherrypy.log.access_file:
+        access_file = cherrypy.config.get('logger.access_file', '')
 
     # set up python logging
     max_bytes = getattr(cherrypy.log, "rot_max_bytes", 100 * 1024 * 1024)
     backup_count = getattr(cherrypy.log, "rot_backup_count", 2)
 
-    h = logging.handlers.RotatingFileHandler(error_file, 'a', max_bytes, backup_count, 'utf-8')
-    h.setLevel(logging.INFO)
-    h.setFormatter(cherrypy._cplogging.logfmt)
-    cherrypy.log.error_log.addHandler(h)
+    if error_file:
+        h = logging.handlers.RotatingFileHandler(error_file, 'a', max_bytes, backup_count, 'utf-8')
+        h.setLevel(logging.INFO)
+        h.setFormatter(cherrypy._cplogging.logfmt)
+        cherrypy.log.error_log.addHandler(h)
 
-    h = logging.handlers.RotatingFileHandler(access_file, 'a', max_bytes, backup_count, 'utf-8')
-    h.setLevel(logging.INFO)
-    h.setFormatter(cherrypy._cplogging.logfmt)
-    cherrypy.log.access_log.addHandler(h)
+    if access_file:
+        h = logging.handlers.RotatingFileHandler(access_file, 'a', max_bytes, backup_count, 'utf-8')
+        h.setLevel(logging.INFO)
+        h.setFormatter(cherrypy._cplogging.logfmt)
+        cherrypy.log.access_log.addHandler(h)
 
 
 
