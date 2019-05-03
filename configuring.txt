@@ -70,3 +70,16 @@ sudo chown -R autocat:pgweb /var/run/autocat
 sudo systemctl enable /var/lib/autocat/autocat3/autocat3.service
 sudo systemctl start autocat3
 
+## updates
+
+su - autocat
+cd autocat3
+git pull
+git checkout remotes/origin/master
+# for gutenberg2
+# git checkout remotes/origin/gutenberg2
+
+pipenv install --ignore-pipfile
+
+sudo systemctl restart autocat3
+
