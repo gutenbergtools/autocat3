@@ -237,7 +237,7 @@ class AuthorPage (SearchPage):
 
     def fixup (self, os):
 
-        if (os.start_index == 1 and len (os.entries) > 1):
+        if (os.start_index == 1 and len (os.entries) > 0):
 
             # browse-by-author page for maintainers
             if 'is-catalog-maintainer' in cherrypy.request.cookie:
