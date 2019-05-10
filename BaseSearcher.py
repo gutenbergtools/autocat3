@@ -420,19 +420,21 @@ class OpenSearch (object):
 
         host = cherrypy.request.headers.get ('X-Forwarded-Host', cherrypy.config['host'])
         self.host = host.split (',')[-1].strip () # keep only the last hub
+        # turns out X-Forwarded-Protocol (X-Forwarded-Proto is the defacto standaard)
+        # is not a thing and has to be set in HAProxy
         self.protocol = cherrypy.request.headers.get ('X-Forwarded-Protocol', 'https')
 
         # sanity check
         if self.host not in (cherrypy.config['all_hosts']):
             self.host = cherrypy.config['host']
         if self.protocol not in VALID_PROTOCOLS:
-            self.protocol = 'http'
+            self.protocol = 'https'
 
         self.urlgen = routes.URLGenerator (
             cherrypy.routes_mapper,
             {
                 'HTTP_HOST': self.host,
-                'HTTPS': 1 if self.protocol == 'https' else 0,
+                'HTTPS': 1 ,
             }
         )
 
@@ -898,7 +900,7 @@ class OpenSearch (object):
 
     def format_canonical_bibrec_url (self, row):
         """ Generate the rel=canonical bibrec url for a book. """
-        return self.url ('bibrec', host = self.file_host, protocol = 'http', id = row.pk, format = None)
+        return self.url ('bibrec', host = self.file_host, protocol = 'https', id = row.pk, format = None)
 
     def format_thumb_url (self, row):
         """ Generate the thumb url in results. """
