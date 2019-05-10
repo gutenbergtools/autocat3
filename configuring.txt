@@ -73,6 +73,8 @@ sudo systemctl start autocat3
 ## updates
 
 su - autocat
+# or sudo su - autocat if you can sudo
+
 cd autocat3
 git pull
 git checkout remotes/origin/master
