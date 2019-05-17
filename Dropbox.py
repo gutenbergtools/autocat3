@@ -49,7 +49,8 @@ class Dropbox (CloudStorage.CloudStorage):
         """
 
         parameters = {
-            'path': '/' + self.fix_filename (session.ebook.get_filename ())
+            'path': '/' + self.fix_filename (session.ebook.get_filename ()),
+            'autorename': True,
         }
         headers = {
             'Authorization'   : 'Bearer ' + str (session.token),
@@ -59,5 +60,6 @@ class Dropbox (CloudStorage.CloudStorage):
         with closing (session.post (self.upload_endpoint,
                                     data = response.content,
                                     headers = headers)) as r:
-            CloudStorage.error_log (r.text)
+            if 'error_summary' in r.text:
+                CloudStorage.error_log (r.text)
             r.raise_for_status ()
