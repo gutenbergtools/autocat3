@@ -276,6 +276,30 @@ class SQLStatement (object):
             s = match_object.group (0)
             return cls.prefix_to_prefix.get (s, s)
 
+        def balance(query):
+            """ Balance parens. """
+            def scan(query, up, down):
+                scan = ''
+                depth = 0
+                for char in query:
+                    if char == up:
+                        depth += 1
+                        scan += char
+                    elif char == down:
+                        depth += -1
+                        if depth < 0:
+                            depth = 0
+                        else:
+                            scan += char
+                    else:
+                        scan += char
+                return scan, depth
+            balanced, depth = scan(query, '(', ')')
+            if depth:
+                balanced, depth = scan(balanced[::-1], ')', '(')
+                balanced = balanced[::-1]
+            return balanced
+
         # Replace the user-visible prefixes with the internally used prefixes.
         query = sub (r'(\b\w+\.|#)(?=\w)', prefix_sub, query)
 
@@ -283,9 +307,16 @@ class SQLStatement (object):
         query = sub (r'\b(\p{L}+)(\s|$)', r'\1:*\2', query)
         query = query.replace ('. ', ' ')
 
+        # if parens aren't balanced, remove them
+        query = balance (query)
+        
+        # if ! or | are at the wrong ends, remove them
+        query = sub (r'(^[ \|]+|[ \|\!]+$)', '', query)
+        
         # replace ' ' with ' & '
         query = ' '.join (query.split ())
         query = sub (r'(?<![|!(\s])\s+(?![|)])', ' & ', query)
+        
         return query
 
 
