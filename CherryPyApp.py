@@ -106,6 +106,10 @@ def main():
     if not cherrypy.log.access_file:
         access_file = cherrypy.config.get('logger.access_file', '')
 
+    # disable log file handlers
+    cherrypy.log.error_file = ""
+    cherrypy.log.access_file = ""
+
     # set up python logging
     max_bytes = getattr(cherrypy.log, "rot_max_bytes", 100 * 1024 * 1024)
     backup_count = getattr(cherrypy.log, "rot_backup_count", 2)
