@@ -301,6 +301,11 @@ class EbookMetaData (object):
             # test filename
             return urllib.parse.urljoin (
                 protocol + str(cherrypy.config['file_host']) , 'test.pdf')
-        return urllib.parse.urljoin (
-            protocol + cherrypy.config['file_host'],
-            'ebooks/%d.%s' % (self.id, self.filetype))
+        if self.filetype == 'pdf':
+            return urllib.parse.urljoin (
+                protocol + cherrypy.config['file_host'],
+                'files/%d/%d-pdf.pdf' % (self.id, self.id))
+        else:
+            return urllib.parse.urljoin (
+                protocol + cherrypy.config['file_host'],
+                'ebooks/%d.%s' % (self.id, self.filetype))
