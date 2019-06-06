@@ -18,6 +18,7 @@ import operator
 
 import cherrypy
 import genshi.output
+import re
 import six
 from six.moves import urllib
 
@@ -37,6 +38,7 @@ HANDOVER_TYPES = (mt.epub, mt.plucker, mt.mobi, mt.pdf, mt.qioo)
 
 # self-contained files we can send to dropbox
 CLOUD_TYPES = (mt.epub, mt.mobi, mt.pdf)
+STD_PDF_MATCH = re.compile (r'files/\d+/\d+-pdf.pdf$')
 
 class XMLishFormatter (BaseFormatter.BaseFormatter):
     """ Produce XMLish output. """
@@ -47,6 +49,10 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
 
     def fix_dc (self, dc, os):
         """ Tweak dc. """
+        def has_std_path (file_obj):
+            if file_obj.filetype == 'pdf':
+                return STD_PDF_MATCH.search (file_obj.url)
+            return True
 
         super (XMLishFormatter, self).fix_dc (dc, os)
 
@@ -58,7 +64,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
         for file_ in dc.files + dc.generated_files:
             type_ = six.text_type (file_.mediatypes[0])
             m = type_.partition (';')[0]
-            if m in CLOUD_TYPES:
+            if m in CLOUD_TYPES and has_std_path (file_):
                 file_.dropbox_url = os.url (
                     'dropbox_send', id = dc.project_gutenberg_id, filetype = file_.filetype)
                 file_.gdrive_url = os.url (
