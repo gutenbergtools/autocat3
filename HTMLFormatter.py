@@ -50,6 +50,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
     def fix_dc (self, dc, os):
         """ Tweak dc. """
         def has_std_path (file_obj):
+            ''' so cloudstorage links can be elided when the url is non-standard'''
             if file_obj.filetype == 'pdf':
                 return STD_PDF_MATCH.search (file_obj.url)
             return True
