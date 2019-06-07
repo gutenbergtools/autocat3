@@ -218,8 +218,12 @@ class CloudStorage (object):
         url = session.ebook.get_source_url ()
         # Caveat: use requests.get, not session.get, because it is an insecure
         # transport. session.get would raise InsecureTransportError
+        # turn off server encoding since we're going to re-stream the bytes
         return requests.get (
-            url, headers = { 'user-agent': self.user_agent }, stream = True)
+            url,
+            headers = {'user-agent': self.user_agent, 'accept-encoding': ''},
+            stream = True
+        )
 
 
     def fix_filename (self, filename):
