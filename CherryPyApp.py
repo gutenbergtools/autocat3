@@ -35,7 +35,9 @@ import i18n_tool
 builtins._ = i18n_tool.ugettext
 builtins.__ = i18n_tool.ungettext
 
+# this import causes ConnectionPool.ConnectionPool to become the cherrypy connection pool
 import ConnectionPool
+
 import Page
 import StartPage
 import SuggestionsPage
