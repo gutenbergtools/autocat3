@@ -50,7 +50,7 @@ class MSDrive(CloudStorage.CloudStorage):
             'description': 'A Project Gutenberg Ebook',
             "@microsoft.graph.conflictBehavior": "rename", 
         }
-        filesize = int(response.headers['Content-Length'])
+        filesize = len(response.content)
         url = self.upload_endpoint.format(filename=filename)
         chunk_size = 327680 # weird onedrive thing related to FAT tables
         upload_data = session.post(url, json={'item': item_data}).json()
@@ -60,21 +60,20 @@ class MSDrive(CloudStorage.CloudStorage):
                 'Content-Length': str(end - start + 1),
                 'Content-Range': 'bytes {}-{}/{}'.format(start, end, filesize)
             }
+        with session as s:
+            if 'uploadUrl' in upload_data:
+                session_uri = upload_data['uploadUrl']
+                start = 0
+                end = min(chunk_size - 1, filesize - 1)
 
-        if 'uploadUrl' in upload_data:
-            session_uri = upload_data['uploadUrl']
-            start = 0
-            end = min(chunk_size - 1, filesize - 1)
-
-            for chunk in response.iter_content(chunk_size):
-                r = session.put(
-                    session_uri,
-                    data=chunk,
-                    headers=headers(start, end, filesize),
-                )
-                start = start + chunk_size
-                end = min(end + chunk_size, filesize - 1)
-                r.raise_for_status()
-        else:
-            CloudStorage.log('no uploadUrl in %s' % upload_data)
-        session.close()
+                for chunk in response.iter_content(chunk_size):
+                    r = s.put(
+                        session_uri,
+                        data=chunk,
+                        headers=headers(start, end, filesize),
+                    )
+                    start = start + chunk_size
+                    end = min(end + chunk_size, filesize - 1)
+                    r.raise_for_status()
+            else:
+                CloudStorage.log('no uploadUrl in %s' % upload_data)

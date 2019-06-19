@@ -54,19 +54,20 @@ class GDrive (CloudStorage.CloudStorage):
         }
         headers = {
             'X-Upload-Content-Type': request.headers['Content-Type'],
-            'X-Upload-Content-Length': request.headers['Content-Length'],
+            'X-Upload-Content-Length': str(len(request.content)),
             'Content-Type': 'application/json; charset=UTF-8',
         }
-        with closing (session.post (self.upload_endpoint,
-                                    data = json.dumps (file_metadata),
-                                    headers = headers)) as r2:
-            r2.raise_for_status ()
-            session_uri = r2.headers['Location']
+        with session as s:
+            with closing (s.post (self.upload_endpoint,
+                                        data = json.dumps (file_metadata),
+                                        headers = headers)) as r2:
+                r2.raise_for_status ()
+                session_uri = r2.headers['Location']
 
-        headers = {
-            'Content-Type': request.headers['Content-Type'],
-        }
-        with closing (session.put (session_uri,
-                                   data = request.iter_content (1024 * 1024),
-                                   headers = headers)) as r3:
-            r3.raise_for_status ()
+            headers = {
+                'Content-Type': request.headers['Content-Type'],
+            }
+            with closing (s.put (session_uri,
+                                       data = request.iter_content (1024 * 1024),
+                                       headers = headers)) as r3:
+                r3.raise_for_status ()
