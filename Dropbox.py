@@ -57,9 +57,11 @@ class Dropbox (CloudStorage.CloudStorage):
             'Content-Type'    : 'application/octet-stream',
             'Dropbox-API-Arg' : json.dumps (parameters)
         }
-        with closing (session.post (self.upload_endpoint,
-                                    data = response.content,
-                                    headers = headers)) as r:
-            if 'error_summary' in r.text:
-                CloudStorage.error_log (r.text)
-            r.raise_for_status ()
+        data = response.content
+        with session as s:
+            with closing (s.post (self.upload_endpoint,
+                                        data = data,
+                                        headers = headers)) as r:
+                if 'error_summary' in r.text:
+                    CloudStorage.error_log (r.text)
+                r.raise_for_status ()
