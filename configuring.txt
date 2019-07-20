@@ -70,6 +70,20 @@ sudo chown -R autocat:pgweb /var/run/autocat
 sudo systemctl enable /var/lib/autocat/autocat3/autocat3.service
 sudo systemctl start autocat3
 
+# If there are problems with `sudo systemctl enable /var/lib/autocat/autocat3/autocat3.service`
+# it might be due to monit (the monitoring system) fighting to restart. Or it might be that the
+# service is in an uncertain state, not stopped. Try:
+sudo service autocat3 stop
+systemctl disable autocat3.service
+systemctl enable /var/lib/autocat/autocat3/autocat3.service
+systemctl restart autocat3.service
+systemctl status autocat3.service
+
+# `sudo rm /etc/systemd/system/autocat3.service` is probably not needed. As of July 20 2019,
+# we are having problems with monit trying to restart. It might be necessary to also stop
+# monit. Further diagnosis is forthcoming.
+
+
 ## updates
 
 su - autocat
