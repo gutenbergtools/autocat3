@@ -24,16 +24,8 @@ import traceback
 
 import cherrypy
 from cherrypy.process import plugins
-import six
-from six.moves import builtins
 
 from libgutenberg import GutenbergDatabase
-
-import i18n_tool
-# Make translator functions available everywhere. Do this early, at
-# least before Genshi starts loading templates.
-builtins._ = i18n_tool.ugettext
-builtins.__ = i18n_tool.ungettext
 
 # this import causes ConnectionPool.ConnectionPool to become the cherrypy connection pool
 import ConnectionPool
