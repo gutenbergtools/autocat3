@@ -23,6 +23,7 @@ import genshi.filters
 
 import cherrypy
 
+from i18n_tool import ugettext as _
 import HTMLFormatter
 import OPDSFormatter
 import JSONFormatter

@@ -14,7 +14,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 <?python
   import re
   from libgutenberg import GutenbergGlobals as gg
-
+  from i18n_tool import ugettext as _
   if os.format == 'stanza':
      os.type_opds = "application/atom+xml"
      opds_relations = {

@@ -28,6 +28,7 @@ import requests_oauthlib
 from requests import RequestException
 from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 
+from i18n_tool import ugettext as _
 import BaseSearcher
 
 # pylint: disable=R0921

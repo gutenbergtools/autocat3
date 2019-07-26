@@ -21,6 +21,8 @@ from libgutenberg.DublinCore import DublinCore
 
 import BaseSearcher
 from Page import SearchPage
+from i18n_tool import ugettext as _
+from i18n_tool import ungettext as __
 
 
 class BookSearchPage (SearchPage):
