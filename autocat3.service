@@ -5,7 +5,6 @@ After=network.target
 [Service]
 User=autocat
 Type=simple
-LimitNOFILE=4096
 RuntimeDirectory=autocat
 WorkingDirectory=/var/lib/autocat/autocat3
 ExecStartPre=-/usr/bin/mkdir /var/run/autocat
