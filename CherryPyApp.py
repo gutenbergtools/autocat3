@@ -38,6 +38,7 @@ from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, Book
 from BibrecPage import BibrecPage
 import CoverPages
 import QRCodePage
+import diagnostics
 import Sitemap
 import Formatters
 
@@ -254,6 +255,9 @@ def main():
 
     d.connect('iplimit', r'/iplimit/',
                controller=Page.NullPage())
+
+    d.connect('diagnostics', r'/diagnostics/',
+               controller=diagnostics.DiagnosticsPage())
 
     d.connect('stats', r'/stats/',
                controller=Page.NullPage(), _static=True)
