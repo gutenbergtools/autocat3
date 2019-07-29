@@ -26,6 +26,7 @@ import cherrypy
 from cherrypy.process import plugins
 
 from libgutenberg import GutenbergDatabase
+import i18n_tool
 
 # this import causes ConnectionPool.ConnectionPool to become the cherrypy connection pool
 import ConnectionPool
