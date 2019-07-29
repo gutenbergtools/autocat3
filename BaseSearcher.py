@@ -33,6 +33,9 @@ from libgutenberg import DublinCore
 from libgutenberg import GutenbergDatabaseDublinCore
 from libgutenberg import GutenbergGlobals as gg
 
+from i18n_tool import ugettext as _
+from i18n_tool import ungettext as __
+
 import DublinCoreI18n
 from SupportedLocales import FB_LANGS, TWITTER_LANGS, GOOGLE_LANGS, PAYPAL_LANGS, FLATTR_LANGS
 

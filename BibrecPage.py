@@ -17,6 +17,8 @@ from __future__ import unicode_literals
 import cherrypy
 
 from libgutenberg import GutenbergGlobals as gg
+from i18n_tool import ugettext as _
+from i18n_tool import ungettext as __
 
 import BaseSearcher
 import Page

@@ -23,6 +23,7 @@ from libgutenberg.GutenbergDatabase import DatabaseError
 
 import BaseSearcher
 import Formatters
+from i18n_tool import ugettext as _
 
 class Page (object):
     """ Base for all pages. """

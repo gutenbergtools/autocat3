@@ -16,6 +16,7 @@ from __future__ import unicode_literals
 
 import BaseSearcher
 import Page
+from i18n_tool import ugettext as _
 
 class Start (Page.Page):
     """ The start page. """

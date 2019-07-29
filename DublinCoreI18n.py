@@ -17,7 +17,7 @@ from __future__ import unicode_literals
 
 import cherrypy
 import babel
-
+from i18n_tool import ugettext as _
 
 class DublinCoreI18nMixin (object):
     """ Translator Mixin for GutenbergDatabaseDublinCore class. """
