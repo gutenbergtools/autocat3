@@ -13,8 +13,9 @@ import resource
 import sys
 from collections import Mapping, Container
 from sys import getsizeof
-from Page import Page
+import cherrypy
 from cherrypy.lib.sessions import RamSession
+from Page import Page
 
 def deep_getsizeof(o, ids):
     """Find the memory footprint of a Python object
@@ -52,7 +53,8 @@ def deep_getsizeof(o, ids):
 
 class DiagnosticsPage (Page):
     """ Python health. """
-    
+
+    @cherrypy.tools.json_out()
     def index (self, **dummy_kwargs):
         """ return stats. """
         stats = {}
@@ -61,5 +63,5 @@ class DiagnosticsPage (Page):
         stats['allocated_blocks'] = sys.getallocatedblocks()
         stats['rusage_self'] = resource.getrusage(resource.RUSAGE_SELF)
         stats['rusage_children'] = resource.getrusage(resource.RUSAGE_CHILDREN)
-        return json.dumps(stats)
+        return stats
 
