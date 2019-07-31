@@ -5,6 +5,9 @@
       xmlns:py="http://genshi.edgewall.org/"
       xmlns:i18n="http://genshi.edgewall.org/i18n"
       py:strip="">
+  <?python
+      from i18n_tool import ugettext as _
+  ?>
 
   <py:def function="site_head">
     <style type="text/css">
