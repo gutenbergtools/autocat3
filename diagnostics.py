@@ -44,7 +44,10 @@ def deep_getsizeof(o, ids):
         return r
 
     if isinstance(o, Mapping):
-        return r + sum(d(k, ids) + d(v, ids) for k, v in o.items())
+        try:
+            return r + sum(d(k, ids) + d(v, ids) for k, v in list(o.items()))
+        except RuntimeError:
+            return 'error'
 
     if isinstance(o, Container):
         return r + sum(d(x, ids) for x in o)
