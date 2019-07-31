@@ -7,7 +7,9 @@
       xmlns:og="http://opengraphprotocol.org/schema/"
       xmlns:fb="http://www.facebook.com/2008/fbml"
       py:strip="">
-
+  <?python
+      from i18n_tool import ugettext as _
+  ?>
   <py:def function="site_head">
     <style type="text/css">
       .icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
