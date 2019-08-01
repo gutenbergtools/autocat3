@@ -53,7 +53,11 @@ CHERRYPY_CONFIG = os.path.join(install_dir, 'CherryPy.conf')
 LOCAL_CONFIG = [os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf']
 
 def error_page_404(status, message, traceback, version):
-    return ErrorPage(status, message).index()
+    resp = ErrorPage(status, message).index()
+    
+    # signal that we needn't save the session
+    cherrypy.session.loaded = False
+    return resp
 
 
 class MyRoutesDispatcher(cherrypy.dispatch.RoutesDispatcher):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #  -*- mode: python; indent-tabs-mode: nil; -*- coding: utf-8 -*-
-
+import cherrypy
 from BaseSearcher import OpenSearch
 from Page import Page
 import Formatters
