@@ -42,6 +42,7 @@ import QRCodePage
 import diagnostics
 import Sitemap
 import Formatters
+from errors import ErrorPage
 
 import Timer
 
@@ -50,6 +51,14 @@ install_dir = os.path.dirname(os.path.abspath(__file__))
 
 CHERRYPY_CONFIG = os.path.join(install_dir, 'CherryPy.conf')
 LOCAL_CONFIG = [os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf']
+
+def error_page_404(status, message, traceback, version):
+    resp = ErrorPage(status, message).index()
+    
+    # signal that we needn't save the session
+    cherrypy.session.loaded = False
+    return resp
+
 
 class MyRoutesDispatcher(cherrypy.dispatch.RoutesDispatcher):
     """ Dispatcher that tells us the matched route.
@@ -157,6 +166,8 @@ def main():
 
     cherrypy.config['all_hosts'] = (
         cherrypy.config['host'], cherrypy.config['host_mobile'], cherrypy.config['file_host'])
+    
+    cherrypy.config.update({'error_page.404': error_page_404})
 
     if hasattr(cherrypy.engine, 'signal_handler'):
         cherrypy.engine.signal_handler.subscribe()
