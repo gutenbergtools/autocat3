@@ -13,9 +13,14 @@ import resource
 import sys
 from collections import Mapping, Container
 from sys import getsizeof
+import threading
+
 import cherrypy
 from cherrypy.lib.sessions import RamSession
 from Page import Page
+
+def thread_info():
+    return [t.name for t in threading.enumerate()]
 
 def deep_getsizeof(o, ids):
     """Find the memory footprint of a Python object
@@ -66,5 +71,6 @@ class DiagnosticsPage (Page):
         stats['allocated_blocks'] = sys.getallocatedblocks()
         stats['rusage_self'] = resource.getrusage(resource.RUSAGE_SELF)
         stats['rusage_children'] = resource.getrusage(resource.RUSAGE_CHILDREN)
+        stats['thread_info'] = thread_info()
         return stats
 
