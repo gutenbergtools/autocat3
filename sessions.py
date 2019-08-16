@@ -1,5 +1,5 @@
 # will submit a PR to CherryPy project - if it gets merged we can remove it. ESH 8/15/2019
-
+import cherrypy
 from cherrypy.lib.sessions import RamSession as cpRamSession
 
 class RamSession(cpRamSession):
