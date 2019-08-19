@@ -150,7 +150,7 @@ class BaseFormatter (object):
 
             # HACK for https://
             if file_.url.startswith ('http://'):
-                file_.url = file_.url[5:] # to //
+                file_.url = 'https' + file_.url[4:] 
 
             file_.dropbox_url = None
             # file_.dropbox_filename = None
