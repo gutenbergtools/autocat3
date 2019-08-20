@@ -7,7 +7,7 @@ User=autocat
 Type=simple
 RuntimeDirectory=autocat
 WorkingDirectory=/var/lib/autocat/autocat3
-ExecStartPre=-/usr/bin/mkdir /var/run/autocat
+ExecStartPre=-/usr/bin/mkdir -p /var/run/autocat
 ExecStart=/var/lib/autocat/.local/bin/pipenv run python CherryPyApp.py
 
 [Install]
