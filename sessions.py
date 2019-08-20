@@ -32,8 +32,6 @@ class RamSession(cpRamSession):
                     pass
 
 
-            return 
-
         # added to remove obsolete lock objects
         for _id in list(self.locks):
             locked = (
