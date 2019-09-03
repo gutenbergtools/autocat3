@@ -32,10 +32,10 @@ from i18n_tool import ugettext as _
 NO_DESKTOP_FILETYPES = 'plucker qioo rdf rst rst.gen rst.master tei cover.medium cover.small'.split ()
 
 # filetypes shown on mobile site
-MOBILE_TYPES = (mt.epub, mt.plucker, mt.mobi, mt.pdf, 'text/html', mt.html, mt.qioo)
+MOBILE_TYPES = (mt.epub, mt.mobi, mt.pdf, 'text/html', mt.html)
 
 # filetypes which are usually handed over to a separate app on mobile devices
-HANDOVER_TYPES = (mt.epub, mt.plucker, mt.mobi, mt.pdf, mt.qioo)
+HANDOVER_TYPES = (mt.epub, mt.mobi, mt.pdf)
 
 # self-contained files we can send to dropbox
 CLOUD_TYPES = (mt.epub, mt.mobi, mt.pdf)
