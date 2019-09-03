@@ -57,7 +57,7 @@ class BibrecPage (Page.Page):
             dc.icon = 'audiobook'
         os.title_icon = dc.icon
         os.twit = os.title
-        os.qrcode_url = '//%s/cache/epub/%d/pg%d.qrcode.png' % (os.file_host, os.id, os.id)
+        os.qrcode_url = '/cache/epub/%d/pg%d.qrcode.png' % (os.id, os.id)
 
         os.entries.append (dc)
 

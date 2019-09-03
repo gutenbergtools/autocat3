@@ -58,6 +58,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
 
         super (XMLishFormatter, self).fix_dc (dc, os)
 
+        # generated_files always [] AFAICT -esh
         for file_ in dc.generated_files:
             file_.help_topic = file_.hr_filetype
             file_.compression = 'none'
@@ -77,6 +78,13 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
             if m in HANDOVER_TYPES:
                 file_.url = file_.url + '?' + urllib.parse.urlencode (
                     { 'session_id': str (cherrypy.session.id) } )
+
+            # these are used as relative links
+            if file_.generated and not file_.filetype.startswith ('cover.'):
+                file_.filename = "ebooks/%d.%s" % (file_.id, file_.filetype)
+                if m in HANDOVER_TYPES:
+                    file_.filename = file_.filename + '?' + urllib.parse.urlencode (
+                        { 'session_id': str (cherrypy.session.id) } )
 
         for file_ in dc.files:
             file_.honeypot_url = os.url (
