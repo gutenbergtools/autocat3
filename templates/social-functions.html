@@ -37,24 +37,6 @@
   </py:def>
 
 
-  <py:def function="gplus_share(url)">
-    <!-- share without javascript -->
-    <?python
-      params = {
-	  'url': url,
-	  }
-    ?>
-    <div class="social-button gplus-share-button">
-      <!--! https://developers.google.com/+/web/share/#sharelink -->
-      <a href="https://plus.google.com/share?${p (params)}"
-	 title="Share on Google+"
-	 onclick="open_share_popup(this.href, this.target, 640, 320)"
-	 target="_gplus_share_popup">
- 	<span class="icon icon_gplus" />
-      </a>
-    </div>
-  </py:def>
-
 
   <py:def function="tw_share(url, text)">
     <!-- tweet without javascript -->
