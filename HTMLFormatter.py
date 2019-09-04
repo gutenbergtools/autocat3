@@ -75,10 +75,6 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
                 file_.msdrive_url = os.url (
                     'msdrive_send', id = dc.project_gutenberg_id, filetype = file_.filetype)
 
-            if m in HANDOVER_TYPES:
-                file_.url = file_.url + '?' + urllib.parse.urlencode (
-                    { 'session_id': str (cherrypy.session.id) } )
-
             # these are used as relative links
             if file_.generated and not file_.filetype.startswith ('cover.'):
                 file_.filename = "ebooks/%d.%s" % (file_.id, file_.filetype)
