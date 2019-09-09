@@ -352,7 +352,7 @@ Gutenberg metadata much faster than by scraping.
 		      <td><span class="icon icon_folder" /></td>
 		      <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
 			i18n:comment="Link to the directory containing all files.">More Files…</a></td>
-		      <td class="noscreen">e.base_dir</td>
+		      <td class="noscreen">${os.qualify (e.base_dir)}</td>
 		      <td/>
 		      <td class="noprint"><!--! dropbox column --></td>
 		      <td class="noprint"><!--! gdrive  column --></td>
