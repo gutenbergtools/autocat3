@@ -464,13 +464,7 @@ class OpenSearch (object):
         if self.protocol not in VALID_PROTOCOLS:
             self.protocol = 'https'
 
-        self.urlgen = routes.URLGenerator (
-            cherrypy.routes_mapper,
-            {
-                'HTTP_HOST': self.host,
-                'HTTPS': 1 ,
-            }
-        )
+        self.urlgen = routes.URLGenerator ( cherrypy.routes_mapper, {'HTTP_HOST': self.host})
 
         self.set_format (k.get ('format'))
 
@@ -617,13 +611,13 @@ class OpenSearch (object):
         self.mobile_search  = self.url ('search', format = 'mobile')
         self.json_search    = self.url ('suggest', format = None)
 
-        self.base_url       = self.protocol_relative (self.url (host = self.host))
+        self.base_url       = self.url (host = self.file_host)
 
         # for google, fb etc.
         self.canonical_url  = self.url_carry (host = self.file_host, format = None)
 
-        self.desktop_url    = self.protocol_relative (self.url_carry (host = self.desktop_host, format = None))
-        self.mobile_url     = self.protocol_relative (self.url_carry (host = self.mobile_host, format = 'mobile'))
+        self.desktop_url    = self.url_carry (host = self.desktop_host, format = None)
+        self.mobile_url     = self.url_carry (host = self.mobile_host, format = 'mobile')
 
         self.osd_url        = self.qualify ('/catalog/osd-books.xml')
 
@@ -694,14 +688,6 @@ class OpenSearch (object):
     def qualify (self, url):
         """ Append host part. """
         return urllib.parse.urljoin (self.base_url, url)
-
-
-    def protocol_relative (self, url):
-        """ Make absolute url protocol relative. """
-        offset = url.find ('//')
-        if offset > -1:
-            return url[offset:]
-        return url
 
 
     def set_format (self, format_):
@@ -939,9 +925,7 @@ class OpenSearch (object):
     def format_thumb_url (self, row):
         """ Generate the thumb url in results. """
         if row.coverpages:
-            return urllib.parse.urljoin ('//' + self.file_host, row.coverpages[0])
-            # return self.url ('bibrec', host = self.file_host, id = row.pk,
-            # format = 'cover.small')
+            return row.coverpages[0]
         return None
 
     def format_icon (self, dummy_row):

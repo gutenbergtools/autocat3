@@ -118,9 +118,6 @@ Gutenberg metadata much faster than by scraping.
 			       </li>
               -->
 	      <li>
-		${gplus_share (os.canonical_url)}
-	      </li>
-	      <li>
 		${tw_share    (os.canonical_url, os.twit)}
 	      </li>
 	      <li>
@@ -323,7 +320,7 @@ Gutenberg metadata much faster than by scraping.
 		      <td><span class="icon icon_${e.icon}" /></td>
 		      <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
 			  class="unpadded icon_save"
-			  ><a href="${file_.url}" type="${file_.mediatypes[-1]}" charset="${file_.encoding}"
+			  ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" charset="${file_.encoding}"
 			      class="link"
 			      title="Download">${file_.hr_filetype}</a></td>
 		      <td class="noscreen">${file_.url}</td>
@@ -355,7 +352,7 @@ Gutenberg metadata much faster than by scraping.
 		      <td><span class="icon icon_folder" /></td>
 		      <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
 			i18n:comment="Link to the directory containing all files.">More Files…</a></td>
-		      <td class="noscreen">https:${os.qualify (e.base_dir)}</td>
+		      <td class="noscreen">${os.qualify (e.base_dir)}</td>
 		      <td/>
 		      <td class="noprint"><!--! dropbox column --></td>
 		      <td class="noprint"><!--! gdrive  column --></td>

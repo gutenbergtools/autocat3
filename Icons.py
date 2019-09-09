@@ -60,7 +60,6 @@ THUMBS = {
     'gdrive'          : 'pics/gdrive-24x21.png',
     'msdrive'         : 'pics/msdrive-24x24.png',
     'twitter'         : 'pics/twitter_whiteonblue-20x20.png',
-    'gplus'           : 'pics/gplus-20x20.png',
 
     # 'hosted'          : 'pics/ibiblio-hosted-110x32.png',
     # 'apache'          : 'pics/apache-powered-118x41.gif',
