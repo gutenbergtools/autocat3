@@ -212,7 +212,7 @@ class MobileFormatter (XMLishFormatter):
                     cat.extra = file_.hr_extent
 
                     cat.charset = file_.encoding
-                    cat.url = file_.url
+                    cat.url = '/' + file_.filename
                     cat.icon = dc.icon
                     cat.icon2 = 'download'
                     cat.class_ += 'filelink'
