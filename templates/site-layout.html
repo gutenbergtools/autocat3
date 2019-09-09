@@ -110,7 +110,7 @@
 
   <py:def function="copyright">
     <div class="copyright" i18n:comment="The copyright notice on the footer of every page.">
-      © 2003–2012 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
+      © 2003–2019 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
     </div>
   </py:def>
 
@@ -118,7 +118,7 @@
     <div id="fb-root" />
 
     <div id="print-head" class="noscreen">
-      <div class="center">https:${os.desktop_url}<br/><br/>${os.tagline}</div>
+      <div class="center">${os.desktop_url}<br/><br/>${os.tagline}</div>
     </div>
 
     <div id="screen-head" class="noprint">
@@ -244,7 +244,7 @@
 	<input xml:lang="en" type="hidden" name="cmd" value="_s-xclick" />
 	<input xml:lang="en" type="hidden" name="hosted_button_id" value="XKAL6BZL3YPSN" />
 	<input type="image"  name="submit"
-	       src="//${cherrypy.config['file_host']}/pics/paypal/${os.paypal_lang}.gif"
+	       src="/pics/paypal/${os.paypal_lang}.gif"
 	       title="Send us money through PayPal." />
       </div>
     </form>

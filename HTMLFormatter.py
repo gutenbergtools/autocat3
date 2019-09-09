@@ -32,10 +32,10 @@ from i18n_tool import ugettext as _
 NO_DESKTOP_FILETYPES = 'plucker qioo rdf rst rst.gen rst.master tei cover.medium cover.small'.split ()
 
 # filetypes shown on mobile site
-MOBILE_TYPES = (mt.epub, mt.plucker, mt.mobi, mt.pdf, 'text/html', mt.html, mt.qioo)
+MOBILE_TYPES = (mt.epub, mt.mobi, mt.pdf, 'text/html', mt.html)
 
 # filetypes which are usually handed over to a separate app on mobile devices
-HANDOVER_TYPES = (mt.epub, mt.plucker, mt.mobi, mt.pdf, mt.qioo)
+HANDOVER_TYPES = (mt.epub, mt.mobi, mt.pdf)
 
 # self-contained files we can send to dropbox
 CLOUD_TYPES = (mt.epub, mt.mobi, mt.pdf)
@@ -58,6 +58,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
 
         super (XMLishFormatter, self).fix_dc (dc, os)
 
+        # generated_files always [] AFAICT -esh
         for file_ in dc.generated_files:
             file_.help_topic = file_.hr_filetype
             file_.compression = 'none'
@@ -74,9 +75,12 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
                 file_.msdrive_url = os.url (
                     'msdrive_send', id = dc.project_gutenberg_id, filetype = file_.filetype)
 
-            if m in HANDOVER_TYPES:
-                file_.url = file_.url + '?' + urllib.parse.urlencode (
-                    { 'session_id': str (cherrypy.session.id) } )
+            # these are used as relative links
+            if file_.generated and not file_.filetype.startswith ('cover.'):
+                file_.filename = "ebooks/%d.%s" % (file_.id, file_.filetype)
+                if m in HANDOVER_TYPES:
+                    file_.filename = file_.filename + '?' + urllib.parse.urlencode (
+                        { 'session_id': str (cherrypy.session.id) } )
 
         for file_ in dc.files:
             file_.honeypot_url = os.url (
@@ -208,7 +212,7 @@ class MobileFormatter (XMLishFormatter):
                     cat.extra = file_.hr_extent
 
                     cat.charset = file_.encoding
-                    cat.url = file_.url
+                    cat.url = '/' + file_.filename
                     cat.icon = dc.icon
                     cat.icon2 = 'download'
                     cat.class_ += 'filelink'
