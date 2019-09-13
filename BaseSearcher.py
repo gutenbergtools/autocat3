@@ -925,7 +925,7 @@ class OpenSearch (object):
     def format_thumb_url (self, row):
         """ Generate the thumb url in results. """
         if row.coverpages:
-            return row.coverpages[0]
+            return '/' + row.coverpages[0]
         return None
 
     def format_icon (self, dummy_row):
