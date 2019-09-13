@@ -64,6 +64,20 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
             file_.compression = 'none'
             file_.encoding  = None
 
+        dedupable = {}
+        for file_ in dc.files:
+            if file_.filetype.endswith('images'):
+                dedupable[file_.filetype] = file_
+        do_dedupe = False
+        for ft in ['epub', 'kindle', 'pdf']:
+            if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
+                if dedupable[ft + '.images'].extent == dedupable[ft + '.noimages'].extent:
+                    do_dedupe = True
+        if do_dedupe:
+            for ft in ['epub', 'kindle', 'pdf']:
+                if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
+                    dc.files.remove(dedupable[ft + '.images'])
+                
         for file_ in dc.files + dc.generated_files:
             type_ = six.text_type (file_.mediatypes[0])
             m = type_.partition (';')[0]
