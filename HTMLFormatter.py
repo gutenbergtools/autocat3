@@ -66,7 +66,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
 
         dedupable = {}
         for file_ in dc.files:
-            if file_.filetype.endswith('images'):
+            if file_.filetype and file_.filetype.endswith('images'):
                 dedupable[file_.filetype] = file_
         do_dedupe = False
         for ft in ['epub', 'kindle', 'pdf']:
