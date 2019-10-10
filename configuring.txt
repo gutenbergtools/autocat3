@@ -67,6 +67,9 @@ sudo touch /var/run/autocat/autocat3.pid
 # Better to set the group name as pgweb for /var/run/autocat
 sudo chown -R autocat:pgweb /var/run/autocat
 
+#####
+##### To install or update the autocat3 service
+#####
 sudo systemctl enable /var/lib/autocat/autocat3/autocat3.service
 sudo systemctl start autocat3
 
@@ -74,10 +77,10 @@ sudo systemctl start autocat3
 # it might be due to monit (the monitoring system) fighting to restart. Or it might be that the
 # service is in an uncertain state, not stopped. Try:
 sudo service autocat3 stop
-systemctl disable autocat3.service
-systemctl enable /var/lib/autocat/autocat3/autocat3.service
-systemctl restart autocat3.service
-systemctl status autocat3.service
+sudo systemctl disable autocat3.service
+sudo systemctl enable /var/lib/autocat/autocat3/autocat3.service
+sudo systemctl restart autocat3.service
+sudo systemctl status autocat3.service
 
 # `sudo rm /etc/systemd/system/autocat3.service` is probably not needed. As of July 20 2019,
 # we are having problems with monit trying to restart. It might be necessary to also stop
