@@ -70,9 +70,11 @@ Gutenberg metadata much faster than by scraping.
   </head>
 
   <body>
-    <div id="mw-head-dummy" class="noprint" />
+	<div class="container">
+${site_top()}
+  <!--  <div id="mw-head-dummy" class="noprint" />-->
 
-    <div id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
+    <div class="page_content" id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
 
       <div class="breadcrumbs noprint">
 	<ul>
@@ -85,10 +87,8 @@ Gutenberg metadata much faster than by scraping.
 	  </py:for>
 	</ul>
       </div>
-
-      <div class="header">
 	<h1 itemprop="name">${os.title}</h1>
-      </div>
+     
 
       <div class="body">
         <div property="dcterms:publisher" itemprop="publisher" content="Project Gutenberg" />
@@ -369,7 +369,7 @@ Gutenberg metadata much faster than by scraping.
 	</div> <!--! tabs -->
 	</div> <!--! tabs-wrapper -->
       </div>   <!--! body -->
-
+</div>
       <div id="dialog" class="hidden">
       </div>
 
