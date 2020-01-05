@@ -7,7 +7,7 @@ User=autocat
 Type=simple
 RuntimeDirectory=autocat
 WorkingDirectory=/var/lib/autocat/autocat3
-ExecStartPre=-/usr/bin/mkdir -p /var/run/autocat
+ExecStartPre=-/usr/bin/mkdir -p /var/run/autocat ; -/usr/bin/curl -o /var/lib/autocat/menu.html https://raw.githubusercontent.com/gbnewby/gutenbergsite/master/_includes/menu.html
 ExecStart=/usr/local/bin/pipenv run python CherryPyApp.py
 #
 # These next lines are for auto-restart. See: man systemd.service
