@@ -158,8 +158,8 @@ ${site_top()}
 		    <tr py:for="author in e.authors">
 		      <th>${author.role}</th>
 		      <td>
-			<a href="${os.url ('author', id = author.id)}"
-			   rel="marcrel:${author.marcrel}" about="/authors/${author.id}" typeof="pgterms:agent"
+			<a href="/browse/authors/${author.first_lettter}#$a{author.id}"
+			   rel="marcrel:${author.marcrel}" about="/authors/" typeof="pgterms:agent"
 			   itemprop="creator">${author.name_and_dates}</a></td>
 		    </tr>
 
