@@ -18,7 +18,7 @@ from i18n_tool import ugettext as _
 <link rel="stylesheet" type="text/css"
 href="/gutenberg/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
 <link rel="stylesheet" type="text/css"
-href="/gutenberg/nav.css?${cherrypy.config['css_mtime']}"/>
+href="/gutenberg/new_nav.css?${cherrypy.config['css_mtime']}"/>
 <link rel="stylesheet" type="text/css"
 href="/gutenberg/style.css?${cherrypy.config['css_mtime']}"/>
 <!--! IE8 does not recognize application/javascript -->
@@ -118,7 +118,8 @@ title="Powered by PostgreSQL">
 </py:def>
 
 <py:def function="site_top">
- <xi:include href="../../menu.html" />
+<xi:include href="../../menu.html" />
+<!-- <xi:include href="/../gutenbergsite/_includes/menu.html"/>-->
 </py:def>
 
   <py:def function="site_footer">
