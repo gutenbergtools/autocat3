@@ -139,7 +139,7 @@ class HTMLFormatter (XMLishFormatter):
 
     def get_serializer (self):
         # return BaseFormatter.XHTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
-        return genshi.output.XHTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
+        return genshi.output.HTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
 
 
     def fix_dc (self, dc, os):
@@ -204,7 +204,7 @@ class MobileFormatter (XMLishFormatter):
 
 
     def get_serializer (self):
-        return genshi.output.XMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
+        return genshi.output.HTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
 
 
     def fix_dc (self, dc, os):
