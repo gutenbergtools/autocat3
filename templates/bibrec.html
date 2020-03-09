@@ -21,7 +21,7 @@ Gutenberg metadata much faster than by scraping.
       xmlns:marcrel="http://www.loc.gov/loc.terms/relators/"
       xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
       xml:lang="${os.lang}"
-      version="XHTML+RDFa 1.0">
+>
 
   <?python
     import re
@@ -53,8 +53,7 @@ Gutenberg metadata much faster than by scraping.
        title="${explain (topic)}"><span class="icon icon_help noprint" /></a>
   </py:def>
 
-  <head profile="http://a9.com/-/spec/opensearch/1.1/"
-	xmlns:og="http://opengraphprotocol.org/schema/">
+  <head xmlns:og="http://opengraphprotocol.org/schema/">
 
     ${site_head ()}
 
