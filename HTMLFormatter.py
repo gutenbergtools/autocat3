@@ -129,7 +129,7 @@ class HTMLFormatter (XMLishFormatter):
     """ Produce HTML output. """
 
     CONTENT_TYPE = 'text/html; charset=UTF-8'
-    DOCTYPE      = 'html'
+    DOCTYPE      = 'html5'
 
     def __init__ (self):
         super (HTMLFormatter, self).__init__ ()
@@ -193,7 +193,7 @@ class MobileFormatter (XMLishFormatter):
     """ Produce HTML output suitable for mobile devices. """
 
     CONTENT_TYPE = mt.xhtml + '; charset=UTF-8'
-    DOCTYPE      = 'html'
+    DOCTYPE      = 'html5'
 
     def __init__ (self):
         super (MobileFormatter, self).__init__ ()
