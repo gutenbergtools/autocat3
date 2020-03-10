@@ -39,7 +39,7 @@ class CoverPages (object):
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en" xml:base="http://www.gutenberg.org">
 <head>
 <title>Cover Flow</title>
-<style>
+<!--<style>
 .cover-thumb {
         display: inline-block;
         background-position: center;
@@ -53,7 +53,7 @@ class CoverPages (object):
 	width:  210px;
 	height: 310px;
 }
-</style>
+</style>-->
 </head>
 <body><div>"""
 
@@ -65,8 +65,8 @@ class CoverPages (object):
 
             s += """<a href="{href}"
                        title="{title}"
-                       class="cover-thumb cover-thumb-{size}" target="_top"
-                       style="background-image: url({url})"> </a>\n""".format (
+                       target="_top"
+                       ><div class="cover-container"><img src="{url}" alt="{title}" title="{title}" draggable="false"><h3>{title}</h3></a>\n""".format (
                 url = url, href = href, title = title, size = size)
 
         return (s + '</div></body></html>\n').encode ('utf-8')
