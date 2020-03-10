@@ -65,10 +65,11 @@ class CoverPages (object):
 
             s += """<a href="{href}"
                        title="{title}"
-                       target="_top"
-                       ><div class="cover-container"><img src="{url}" alt="{title}" title="{title}" draggable="false"><h3>{title}</h3></a>\n""".format (
+                       class="cover-thumb cover-thumb-{size}" target="_top"
+                       style="background-image: url({url})"> </a>\n""".format (
                 url = url, href = href, title = title, size = size)
 
+ 
         return (s + '</div></body></html>\n').encode ('utf-8')
 
     def index (self, count, size, order, **kwargs):
