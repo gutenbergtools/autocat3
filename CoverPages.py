@@ -16,7 +16,7 @@ from __future__ import unicode_literals
 
 import cherrypy
 import six
-
+import textwrap
 from libgutenberg import GutenbergGlobals as gg
 
 import BaseSearcher
@@ -35,7 +35,7 @@ class CoverPages (object):
         cherrypy.response.headers['Content-Language'] = 'en'
 
         s = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en" xml:base="http://www.gutenberg.org">
 <head>
 <title>Cover Flow</title>
@@ -46,30 +46,35 @@ class CoverPages (object):
         background-repeat: no-repeat;
 }
 .cover-thumb-small {
-	width:   76px;
-	height: 110px;
+	width:  100px;
+	height: 150px;
 }
 .cover-thumb-medium {
 	width:  210px;
 	height: 310px;
 }
-</style>
+</style>-->
 </head>
-<body><div>"""
+<body><div>-->"""
 
         for row in rows:
             url = '/' + row.filename
             href = '/ebooks/%d' % row.pk
             title = gg.xmlspecialchars (row.title)
             title = title.replace ('"', '&quot;')
+            title_len=len(title)
+	    #title = re.sub (r'\s*\$[a-z].*', '', title)
+            title= title.splitlines()[0]	    
+            if(title_len>80):
+                title=textwrap.wrap(title,50)[0]
+
 
             s += """<a href="{href}"
                        title="{title}"
-                       class="cover-thumb cover-thumb-{size}" target="_top"
-                       style="background-image: url({url})"> </a>\n""".format (
+                       target="_top"
+                       ><div class="cover-container"><img src="{url}" alt="{title}" title="{title}" draggable="false"><h5>{title}\n</h5></div></a>\n""".format (
                 url = url, href = href, title = title, size = size)
-
-        return (s + '</div></body></html>\n').encode ('utf-8')
+        return (s + '<!--</div></body></html>-->\n').encode ('utf-8')
 
     def index (self, count, size, order, **kwargs):
         """ Internal help function. """
