@@ -129,9 +129,7 @@ class HTMLFormatter (XMLishFormatter):
     """ Produce HTML output. """
 
     CONTENT_TYPE = 'text/html; charset=UTF-8'
-    DOCTYPE      = ('html',
-                    '-//W3C//DTD XHTML+RDFa 1.0//EN',
-                    'http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd')
+    DOCTYPE      = 'html5'
 
     def __init__ (self):
         super (HTMLFormatter, self).__init__ ()
@@ -139,7 +137,7 @@ class HTMLFormatter (XMLishFormatter):
 
     def get_serializer (self):
         # return BaseFormatter.XHTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
-        return genshi.output.XHTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
+        return genshi.output.HTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
 
 
     def fix_dc (self, dc, os):
@@ -195,16 +193,14 @@ class MobileFormatter (XMLishFormatter):
     """ Produce HTML output suitable for mobile devices. """
 
     CONTENT_TYPE = mt.xhtml + '; charset=UTF-8'
-    DOCTYPE      = ('html',
-                    '-//WAPFORUM//DTD XHTML Mobile 1.2//EN',
-                    'http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd')
+    DOCTYPE      = 'html5'
 
     def __init__ (self):
         super (MobileFormatter, self).__init__ ()
 
 
     def get_serializer (self):
-        return genshi.output.XMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
+        return genshi.output.HTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
 
 
     def fix_dc (self, dc, os):
