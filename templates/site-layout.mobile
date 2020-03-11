@@ -10,7 +10,7 @@
   ?>
 
   <py:def function="site_head">
-    <style type="text/css">
+    <style >
       .icon { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
     </style>
     <link rel="stylesheet" type="text/css"
