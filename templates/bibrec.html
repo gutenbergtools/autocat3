@@ -69,11 +69,9 @@ Gutenberg metadata much faster than by scraping.
   </head>
 
   <body>
-	<div class="container">
-${site_top()}
-  <!--  <div id="mw-head-dummy" class="noprint" />-->
+    <div id="mw-head-dummy" class="noprint" />
 
-    <div class="page_content" id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
+    <div id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
 
       <div class="breadcrumbs noprint">
 	<ul>
@@ -86,8 +84,10 @@ ${site_top()}
 	  </py:for>
 	</ul>
       </div>
+
+      <div class="header">
 	<h1 itemprop="name">${os.title}</h1>
-     
+      </div>
 
       <div class="body">
         <div property="dcterms:publisher" itemprop="publisher" content="Project Gutenberg" />
@@ -157,8 +157,8 @@ ${site_top()}
 		    <tr py:for="author in e.authors">
 		      <th>${author.role}</th>
 		      <td>
-			<a href="/browse/authors/${author.first_lettter}#a${author.id}"
-			   rel="marcrel:${author.marcrel}" about="/authors/" typeof="pgterms:agent"
+			<a href="${os.url ('author', id = author.id)}"
+			   rel="marcrel:${author.marcrel}" about="/authors/${author.id}" typeof="pgterms:agent"
 			   itemprop="creator">${author.name_and_dates}</a></td>
 		    </tr>
 
@@ -368,7 +368,7 @@ ${site_top()}
 	</div> <!--! tabs -->
 	</div> <!--! tabs-wrapper -->
       </div>   <!--! body -->
-</div>
+
       <div id="dialog" class="hidden">
       </div>
 
