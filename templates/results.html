@@ -22,8 +22,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
       xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
       xmlns:og="http://opengraphprotocol.org/schema/"
       xmlns:fb="http://www.facebook.com/2008/fbml"
-      xml:lang="${os.lang}"
-      version="XHTML+RDFa 1.0">
+      xml:lang="${os.lang}">
 
   <?python
   old_header = os.title
@@ -33,7 +32,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
   <xi:include href="site-layout.html" />
   <xi:include href="social-functions.html" />
 
-  <head profile="http://a9.com/-/spec/opensearch/1.1/">
+  <head >
     ${site_head ()}
 
     <title>${os.title} - ${os.pg}</title>

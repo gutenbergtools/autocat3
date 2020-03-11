@@ -11,7 +11,7 @@
       from i18n_tool import ugettext as _
   ?>
   <py:def function="site_head">
-    <style type="text/css">
+    <style >
       .icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
     </style>
 
@@ -19,7 +19,7 @@
 	  href="/css/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
 
     <!--! IE8 does not recognize application/javascript -->
-    <script type="text/javascript">//<![CDATA[
+    <script>//<![CDATA[
       var json_search     = "${os.json_search}";
       var mobile_url      = "${os.mobile_url}";
       var canonical_url   = "${os.canonical_url}";
@@ -31,7 +31,7 @@
       var dialog_message  = "${os.user_dialog[0]}";
     //]]></script>
 
-    <script type="text/javascript"
+    <script
 	    src="/js/pg-desktop-one.js?${cherrypy.config['js_mtime']}" />
 
     <link rel="shortcut icon"             href="/pics/favicon" />
@@ -52,8 +52,8 @@
     <meta py:if="os.viewport"               name="viewport"                    content="${os.viewport}" />
 
     <meta http-equiv="Content-Type"       content="text/html; charset=UTF-8" />
-    <meta http-equiv="Content-Style-Type" content="text/css" />
-    <meta http-equiv="Content-Language"   content="${os.lang}" />
+    <meta http-equiv="default-style" content="text/css" />
+  
 
     <!--! plain old metadata -->
     <meta name="title"                    content="${os.title}" />
@@ -243,7 +243,7 @@
 	<!--! xml:lang avoids extraction for translation -->
 	<input xml:lang="en" type="hidden" name="cmd" value="_s-xclick" />
 	<input xml:lang="en" type="hidden" name="hosted_button_id" value="XKAL6BZL3YPSN" />
-	<input type="image"  name="submit"
+	<input type="image" alt="paypal icon" name="submit"
 	       src="/pics/paypal/${os.paypal_lang}.gif"
 	       title="Send us money through PayPal." />
       </div>

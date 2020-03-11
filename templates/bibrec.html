@@ -21,7 +21,7 @@ Gutenberg metadata much faster than by scraping.
       xmlns:marcrel="http://www.loc.gov/loc.terms/relators/"
       xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
       xml:lang="${os.lang}"
-      version="XHTML+RDFa 1.0">
+>
 
   <?python
     import re
@@ -53,8 +53,7 @@ Gutenberg metadata much faster than by scraping.
        title="${explain (topic)}"><span class="icon icon_help noprint" /></a>
   </py:def>
 
-  <head profile="http://a9.com/-/spec/opensearch/1.1/"
-	xmlns:og="http://opengraphprotocol.org/schema/">
+  <head xmlns:og="http://opengraphprotocol.org/schema/">
 
     ${site_head ()}
 
@@ -63,7 +62,7 @@ Gutenberg metadata much faster than by scraping.
     <link rel="alternate nofollow" type="${mt.rdf}"
 	  href="${os.url ('bibrec', id = os.id, format = 'rdf')}" />
 
-    <style type="text/css">
+    <style>
       .qrcode { background: transparent url(${os.qrcode_url}) 0 0 no-repeat; }
     </style>
     <meta name="google" content="notranslate" />
@@ -149,7 +148,7 @@ Gutenberg metadata much faster than by scraping.
 
 		  <h2>Bibliographic Record <span>${help (_('Table: Bibliographic Record'))}</span></h2>
 
-		  <table class="bibrec" summary="Bibliographic data of author and book.">
+		  <table class="bibrec" >
 		    <colgroup>
 		      <col class="narrow" />
 		      <col />
@@ -245,7 +244,7 @@ Gutenberg metadata much faster than by scraping.
 
 		    <tr itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">
 		      <th>Price</th>
-		      <td><span itemprop="priceCurrency" content="USD" /><span itemprop="price">$0.00</span><span itemprop="availability" href="http://schema.org/InStock" content="In Stock" /></td>
+		      <td><span itemprop="priceCurrency" content="USD" /><span itemprop="price">$0.00</span><span itemprop="availability"  content="In Stock" ><a href="http://schema.org/InStock"></a></span></td>
 		    </tr>
 
 		  </table>
@@ -289,14 +288,15 @@ Gutenberg metadata much faster than by scraping.
 
 	    <py:for each="e in os.entries">
 	      <py:if test="isinstance (e, bs.DC)">
-		<div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" rev="dcterms:isFormatOf">
+		<div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" ><!--! rev="dcterms:isFormatOf" -->
 
 		  <h2>Download This eBook</h2>
 
-		  <table class="files" summary="Table of available file types and sizes.">
+		  <table class="files">
 		    <colgroup>
 		      <col class="narrow" />
-		      <col />
+			  <col />
+			  <col />
 		      <col />
 		      <col class="narrow noprint" />
 		      <col class="narrow noprint" />
@@ -320,8 +320,7 @@ Gutenberg metadata much faster than by scraping.
 		      <td><span class="icon icon_${e.icon}" /></td>
 		      <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
 			  class="unpadded icon_save"
-			  ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" charset="${file_.encoding}"
-			      class="link"
+			  ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" class="link"
 			      title="Download">${file_.hr_filetype}</a></td>
 		      <td class="noscreen">${file_.url}</td>
 		      <td  class="right"
