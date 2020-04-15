@@ -74,14 +74,9 @@ class CoverPages (object):
                        target="_top"
                        ><div class="cover-container"><img src="{url}" alt="{title}" title="{title}" draggable="false"><h5>{title}\n</h5></div></a>\n""".format (
                 url = url, href = href, title = title, size = size)
-<<<<<<< HEAD
         return (s + '<!--</div></body></html>-->\n').encode ('utf-8')
-=======
 
  
-        return (s + '</div></body></html>\n').encode ('utf-8')
->>>>>>> 0253c4308e81c77c840eed00fd2df1fe998dc5f5
-
     def index (self, count, size, order, **kwargs):
         """ Internal help function. """
 
