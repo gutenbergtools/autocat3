@@ -46,19 +46,20 @@ class CoverPages (object):
             url = '/' + row.filename
             href = '/ebooks/%d' % row.pk
             title = gg.xmlspecialchars (row.title)
+	    #Declaring this variable causes autocat service to fail
+	    #short_title = title
             title = title.replace ('"', '&quot;')
-            title_len=len(title)
-            title=re.sub(r"\-+"," ",title)
-          #title = re.sub (r"\-+"," ",title)
+            title_len = len(title)
+            title = re.sub(r"\-+"," ",title)
+            #title = re.sub (r"\-+"," ",title)
 	    #new_title= re.sub(r'\-+',' ',title)
-            title= title.splitlines()[0]	    
+            title = title.splitlines()[0]	    
             if(title_len>80):
-                title=textwrap.wrap(title,80)[0]
+                title = textwrap.wrap(title,80)[0]
 
-            s += """<a href="{href}"
-                       title="{title}"
-                       target="_top"
-                       ><div class="cover_image"><div class="cover_img"><img src="{url}" alt="{title}" title="{title}" draggable="false"></div><div class="cover_title"><h5>{title}\n</h5></div></div></a>\n""".format (
+            s += """<a href="{href}" title="{title}" target="_top"><div class="cover_image">
+		    <div class="cover_img"><img src="{url}" alt="{title}" title="{title}" draggable="false">
+		    </div><div class="cover_title"><h5>{title}</h5></div></div></a>\n""".format (
                 url = url, href = href, title = title, size = size)
         return (s + '<!--</div></body></html>-->\n').encode ('utf-8')
 
