@@ -46,18 +46,18 @@ class CoverPages (object):
             url = '/' + row.filename
             href = '/ebooks/%d' % row.pk
             title = gg.xmlspecialchars (row.title)
-	    #Shortening long titles for latest covers
+	          #Shortening long titles for latest covers
             short_title = title
             short_title = short_title.replace ('"', '&quot;')
             title_len = len(title)
             short_title = re.sub(r"\-+"," ",short_title)
             #title = re.sub (r"\-+"," ",title)
-	    #new_title= re.sub(r'\-+',' ',title)
+	          #new_title= re.sub(r'\-+',' ',title)
             short_title = short_title.splitlines()[0]	    
             if(title_len>80):
                 short_title = textwrap.wrap(short_title,80)[0]
 
-            s += """<a href="{href}" title="{title}" target="_top"><div class="cover_image">
+        s += """<a href="{href}" title="{title}" target="_top"><div class="cover_image">
 		    <div class="cover_img"><img src="{url}" alt="{title}" title="{title}" draggable="false">
 		    </div><div class="cover_title"><h5>{short_title}</h5></div></div></a>\n""".format (
                 url = url, href = href, title = title, short_title = short_title, size = size)
