@@ -18,7 +18,7 @@ import cherrypy
 import six
 import textwrap
 from libgutenberg import GutenbergGlobals as gg
-
+import re
 import BaseSearcher
 
 class CoverPages (object):
@@ -34,46 +34,33 @@ class CoverPages (object):
         cherrypy.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         cherrypy.response.headers['Content-Language'] = 'en'
 
-        s = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-<!--"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en" xml:base="http://www.gutenberg.org">
-<head>
+        s = """<!--<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en" xml:base="http://www.gutenberg.org">-->
+<!--<head>
 <title>Cover Flow</title>
-<!--<style>
-.cover-thumb {
-        display: inline-block;
-        background-position: center;
-        background-repeat: no-repeat;
-}
-.cover-thumb-small {
-	width:  100px;
-	height: 150px;
-}
-.cover-thumb-medium {
-	width:  210px;
-	height: 310px;
-}
-</style>-->
-</head>
-<body><div>-->"""
+</head>-->
+<!--<body><div>-->"""
 
         for row in rows:
             url = '/' + row.filename
             href = '/ebooks/%d' % row.pk
             title = gg.xmlspecialchars (row.title)
-            title = title.replace ('"', '&quot;')
-            title_len=len(title)
-	    #title = re.sub (r'\s*\$[a-z].*', '', title)
-            title= title.splitlines()[0]	    
+	          #Shortening long titles for latest covers
+            short_title = title
+            short_title = short_title.replace ('"', '&quot;')
+            title_len = len(title)
+            short_title = re.sub(r"\-+"," ",short_title)
+            #title = re.sub (r"\-+"," ",title)
+	          #new_title= re.sub(r'\-+',' ',title)
+            short_title = short_title.splitlines()[0]	    
             if(title_len>80):
-                title=textwrap.wrap(title,50)[0]
+                short_title = textwrap.wrap(short_title,80)[0]
 
-
-            s += """<a href="{href}"
-                       title="{title}"
-                       target="_top"
-                       ><div class="cover-container"><img src="{url}" alt="{title}" title="{title}" draggable="false"><h5>{title}\n</h5></div></a>\n""".format (
-                url = url, href = href, title = title, size = size)
+        s += """<a href="{href}" title="{title}" target="_top"><div class="cover_image">
+		    <div class="cover_img"><img src="{url}" alt="{title}" title="{title}" draggable="false">
+		    </div><div class="cover_title"><h5>{short_title}</h5></div></div></a>\n""".format (
+                url = url, href = href, title = title, short_title = short_title, size = size)
         return (s + '<!--</div></body></html>-->\n').encode ('utf-8')
 
  
