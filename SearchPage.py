@@ -216,7 +216,7 @@ class BookshelfSearchPage (SearchPage):
 
         if len (os.query):
             sql.fulltext ('bookshelves.tsvec', os.query)
-            os.title = _("<a href=\"ebooks/bookshelf/\">Bookshelves</a>: {bookshelf}").format (bookshelf = os.query)
+            os.title = _("Bookshelves: {bookshelf}").format (bookshelf = os.query)
 
 
 class AuthorPage (SearchPage):
