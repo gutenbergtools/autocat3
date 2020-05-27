@@ -56,8 +56,7 @@ class CoverPages (object):
             short_title = short_title.splitlines()[0]	    
             if(title_len>80):
                 short_title = textwrap.wrap(short_title,80)[0]
-
-        s += """<a href="{href}" title="{title}" target="_top"><div class="cover_image">
+            s += """<a href="{href}" title="{title}" target="_top"><div class="cover_image">
 		    <div class="cover_img"><img src="{url}" alt="{title}" title="{title}" draggable="false">
 		    </div><div class="cover_title"><h5>{short_title}</h5></div></div></a>\n""".format (
                 url = url, href = href, title = title, short_title = short_title, size = size)
