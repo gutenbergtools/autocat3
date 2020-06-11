@@ -48,6 +48,9 @@ class CoverPages (object):
             title = gg.xmlspecialchars (row.title)
 	          #Shortening long titles for latest covers
             title = title.replace ('"', '&quot;')
+            title = title.replace ('<', '&lt;')
+            title = title.replace ('>', '&gt;')
+            title = title.replace ("'", '&apos;')
             short_title = title
             title_len = len(title)
             short_title = re.sub(r"\-+"," ",short_title)

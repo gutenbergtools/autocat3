@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!--
-
 DON'T USE THIS PAGE FOR SCRAPING.
-
 Seriously. You'll only get your IP blocked.
-
 Read http://www.gutenberg.org/feeds/ to learn how to download Project
 Gutenberg metadata much faster than by scraping.
-
 -->
 
 <html xmlns="http://www.w3.org/1999/xhtml"
@@ -127,19 +123,126 @@ ${site_top()}
 
 	  <div id="qr">
 	    <!--! qr code of desktop page for print -->
-	    <span class="qrcode qrcode-desktop noscreen" />
-	    <!--! qr code of mobile page for screen -->
-	    <span class="qrcode qrcode-mobile noprint" title="Go to our mobile site." />
+        <span class="qrcode qrcode-desktop noscreen" />
+        
 	  </div>
 	</div>
 
 	<div id="tabs-wrapper">
 	<div id="tabs">
-	  <ul class="noprint">
-	    <li><a href="#download">Download</a></li>
-	    <li><a href="#bibrec">Bibrec</a></li>
-	  </ul>
+        <ul class="noprint">
+            <li><a href="#download">Download</a></li>
+            <li><a href="#bibrec">Bibrec</a></li>
+        </ul>
+        <div id="download" i18n:comment="On the 'Download' tab of the 'bibrec' page.">
 
+            <py:for each="e in os.entries">
+              <py:if test="isinstance (e, bs.DC)">
+            <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" ><!--! rev="dcterms:isFormatOf" -->
+    
+              <h2>Download This eBook</h2>
+    
+              <table class="files">
+                <colgroup>
+                  <col class="narrow" />
+                  <col />
+                  <col />
+                  <col />
+                  <col class="narrow noprint" />
+                  <col class="narrow noprint" />
+                  <col class="narrow noprint" />
+                </colgroup>
+    
+                <tr>
+                  <th />
+                  <th>Format <span>${help ('Format')}</span></th>
+                  <th class="noscreen">Url</th>
+                  <th i18n:comment="Size of a file." class="right">Size</th>
+                  <th class="noprint"><span>${help ('Dropbox')}</span></th>
+                  <th class="noprint"><span>${help ('Google Drive')}</span></th>
+                  <th class="noprint"><span>${help ('OneDrive')}</span></th>
+                </tr>
+    
+                <tr py:for="i, file_ in enumerate (e.files)"
+                py:if="not file_.hidden"
+                class="${i%2 and 'odd' or 'even'}"
+                about="${file_.url}" typeof="pgterms:file">
+                  <td><span class="icon icon_${e.icon}" /></td>
+                  <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
+                  class="unpadded icon_save"
+                  ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" class="link"
+                      title="Download">${file_.hr_filetype}</a></td>
+                  <td class="noscreen">${file_.url}</td>
+                  <td  class="right"
+                   property="dcterms:extent" content="${file_.extent}">${file_.hr_extent}</td>
+                  <td class="noprint">
+                <a py:if="file_.dropbox_url"
+                   href="${file_.dropbox_url}"
+                   title="Send to Dropbox." rel="nofollow"><span class="icon icon_dropbox" /></a>
+                  </td>
+                  <td class="noprint">
+                <a py:if="file_.gdrive_url"
+                   href="${file_.gdrive_url}"
+                   title="Send to Google Drive." rel="nofollow"><span class="icon icon_gdrive" /></a>
+                  </td>
+                  <td class="noprint">
+                <a py:if="file_.honeypot_url"
+                   href="${file_.honeypot_url}"
+                   title="Send to MegaUpload." rel="nofollow" />
+                <a py:if="file_.msdrive_url"
+                   href="${file_.msdrive_url}"
+                   title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
+                  </td>
+                </tr>
+    
+                <!--! more files ... -->
+                <tr py:if="e.base_dir"
+                class="${i%2 and 'odd' or 'even'}">
+                  <td><span class="icon icon_folder" /></td>
+                  <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
+                i18n:comment="Link to the directory containing all files.">More Files…</a></td>
+                  <td class="noscreen">${os.qualify (e.base_dir)}</td>
+                  <td/>
+                  <td class="noprint"><!--! dropbox column --></td>
+                  <td class="noprint"><!--! gdrive  column --></td>
+                  <td class="noprint"><!--! msdrive  column --></td>
+                </tr>
+    
+              </table>
+            </div>
+              </py:if>
+            </py:for>
+    
+          </div> <!-- download -->
+          
+          <div id="more_stuff">
+            <py:for each="n, e in enumerate (os.entries)">
+          <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
+            <py:if test="e.header and old_header != e.header">
+              <h2 class="header">${e.header}</h2>
+            </py:if>
+            <?python old_header = e.header ?>
+    
+            <div class="${e.class_}">
+              <a rel="nofollow"
+                 href="${e.url}"
+                 type="${e.type}"
+                 charset="${e.charset}"
+                 accesskey="${str (n % 10)}">
+                <span class="cell leftcell">
+              <span class="icon icon_${e.icon}" />
+                </span>
+                <span class="cell content">
+              <span class="title">${e.title}</span>
+              <span py:if="e.subtitle" class="subtitle">${e.subtitle}</span>
+              <span py:if="e.extra" class="extra">${e.extra}</span>
+                </span>
+                <span class="hstrut" />
+              </a>
+            </div>
+          </py:if>
+            </py:for>
+          </div> <!-- more stuff -->
 	  <div id="bibrec" i18n:comment="On the 'bibrec' tab of the 'bibrec' page.">
 	    <py:for each="e in os.entries">
 	      <py:if test="isinstance (e, bs.DC)">
@@ -202,7 +305,7 @@ ${site_top()}
 
 		    <tr py:for="locc in e.loccs"
 			property="dcterms:subject" datatype="dcterms:LCC" content="${locc.id}">
-		      <th>LoC Class</th>
+		      <th>LoC Class</th>
 		      <td>
 			<a href="/browse/loccs/${locc.id.lower ()}">${locc.id}: ${locc.locc}</a>
 		      </td>
@@ -228,12 +331,12 @@ ${site_top()}
 		    </tr>
 
 		    <tr property="dcterms:issued" datatype="xsd:date" content="${e.xsd_release_date_time}">
-		      <th>Release Date</th>
+		      <th>Release Date</th>
 		      <td itemprop="datePublished">${e.hr_release_date}</td>
 		    </tr>
 
 		    <tr>
-		      <th>Copyright Status</th>
+		      <th>Copyright Status</th>
 		      <td property="dcterms:rights">${e.rights}</td>
 		    </tr>
 
@@ -253,117 +356,8 @@ ${site_top()}
 	      </py:if>
 	    </py:for>
 
-	    <div id="more_stuff">
-	      <py:for each="n, e in enumerate (os.entries)">
-		<py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
-		  <py:if test="e.header and old_header != e.header">
-		    <h2 class="header">${e.header}</h2>
-		  </py:if>
-		  <?python old_header = e.header ?>
-
-		  <div class="${e.class_}">
-		    <a rel="nofollow"
-		       href="${e.url}"
-		       type="${e.type}"
-		       charset="${e.charset}"
-		       accesskey="${str (n % 10)}">
-		      <span class="cell leftcell">
-			<span class="icon icon_${e.icon}" />
-		      </span>
-		      <span class="cell content">
-			<span class="title">${e.title}</span>
-			<span py:if="e.subtitle" class="subtitle">${e.subtitle}</span>
-			<span py:if="e.extra" class="extra">${e.extra}</span>
-		      </span>
-		      <span class="hstrut" />
-		    </a>
-		  </div>
-		</py:if>
-	      </py:for>
-	    </div> <!-- more stuff -->
-
 	  </div> <!--! bibrec -->
 
-	  <div id="download" i18n:comment="On the 'Download' tab of the 'bibrec' page.">
-
-	    <py:for each="e in os.entries">
-	      <py:if test="isinstance (e, bs.DC)">
-		<div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" ><!--! rev="dcterms:isFormatOf" -->
-
-		  <h2>Download This eBook</h2>
-
-		  <table class="files">
-		    <colgroup>
-		      <col class="narrow" />
-			  <col />
-			  <col />
-		      <col />
-		      <col class="narrow noprint" />
-		      <col class="narrow noprint" />
-		      <col class="narrow noprint" />
-		    </colgroup>
-
-		    <tr>
-		      <th />
-		      <th>Format <span>${help ('Format')}</span></th>
-		      <th class="noscreen">Url</th>
-		      <th i18n:comment="Size of a file." class="right">Size</th>
-		      <th class="noprint"><span>${help ('Dropbox')}</span></th>
-		      <th class="noprint"><span>${help ('Google Drive')}</span></th>
-		      <th class="noprint"><span>${help ('OneDrive')}</span></th>
-		    </tr>
-
-		    <tr py:for="i, file_ in enumerate (e.files)"
-			py:if="not file_.hidden"
-			class="${i%2 and 'odd' or 'even'}"
-			about="${file_.url}" typeof="pgterms:file">
-		      <td><span class="icon icon_${e.icon}" /></td>
-		      <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
-			  class="unpadded icon_save"
-			  ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" class="link"
-			      title="Download">${file_.hr_filetype}</a></td>
-		      <td class="noscreen">${file_.url}</td>
-		      <td  class="right"
-			   property="dcterms:extent" content="${file_.extent}">${file_.hr_extent}</td>
-		      <td class="noprint">
-			<a py:if="file_.dropbox_url"
-			   href="${file_.dropbox_url}"
-			   title="Send to Dropbox." rel="nofollow"><span class="icon icon_dropbox" /></a>
-		      </td>
-		      <td class="noprint">
-			<a py:if="file_.gdrive_url"
-			   href="${file_.gdrive_url}"
-			   title="Send to Google Drive." rel="nofollow"><span class="icon icon_gdrive" /></a>
-		      </td>
-		      <td class="noprint">
-			<a py:if="file_.honeypot_url"
-			   href="${file_.honeypot_url}"
-			   title="Send to MegaUpload." rel="nofollow" />
-			<a py:if="file_.msdrive_url"
-			   href="${file_.msdrive_url}"
-			   title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
-		      </td>
-		    </tr>
-
-		    <!--! more files ... -->
-		    <tr py:if="e.base_dir"
-			class="${i%2 and 'odd' or 'even'}">
-		      <td><span class="icon icon_folder" /></td>
-		      <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
-			i18n:comment="Link to the directory containing all files.">More Files…</a></td>
-		      <td class="noscreen">${os.qualify (e.base_dir)}</td>
-		      <td/>
-		      <td class="noprint"><!--! dropbox column --></td>
-		      <td class="noprint"><!--! gdrive  column --></td>
-		      <td class="noprint"><!--! msdrive  column --></td>
-		    </tr>
-
-		  </table>
-		</div>
-	      </py:if>
-	    </py:for>
-
-	  </div> <!-- download -->
 
 	</div> <!--! tabs -->
 	</div> <!--! tabs-wrapper -->
@@ -382,7 +376,6 @@ ${site_top()}
 	   about=""
 	   rel="dcterms:conformsTo"
 	   resource="http://www.w3.org/TR/rdfa-syntax" /></a>
-
 	<a href="${os.url_carry ('bibrec', format='rdf')}"
 	   title="Download RDF/XML Metadata for this ebook."><img
 	   src="http://www.w3.org/RDF/icons/rdf_metadata_button.32"
