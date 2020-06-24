@@ -85,7 +85,7 @@ ${site_top()}
 	<h1 itemprop="name">${os.title}</h1>
      
 
-      <div class="body">
+      <div class="page-body">
         <div property="dcterms:publisher" itemprop="publisher" content="Project Gutenberg" />
         <div itemprop="bookFormat" content="EBook" />
 
@@ -130,10 +130,6 @@ ${site_top()}
 
 	<div id="tabs-wrapper">
 	<div id="tabs">
-        <ul class="noprint">
-            <li><a href="#download">Download</a></li>
-            <li><a href="#bibrec">Bibrec</a></li>
-        </ul>
         <div id="download" i18n:comment="On the 'Download' tab of the 'bibrec' page.">
 
             <py:for each="e in os.entries">
