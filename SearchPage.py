@@ -36,11 +36,7 @@ class BookSearchPage (SearchPage):
 
         if os.sort_order == 'random':
             sql.where.append ("""
-                       pk in (select floor (random () * maxbook)::integer
-                       from generate_series (1, 30), (select max (pk) as maxbook
-                       from books) xbks1)
-                       """)
-
+                       pk in (select pk from books order by random() limit 20) """)
         if len (os.query):
             sql.fulltext ('books.tsvec', os.query)
             os.title = _("Books: {title}").format (title = os.query)
