@@ -35,8 +35,8 @@ class BookSearchPage (SearchPage):
         os.f_format_icon = os.format_icon_titles
 
         if os.sort_order == 'random':
-            sql.where.append (
-                       pk in (select pk from books order by random() limit 20))
+            sql.where.append ("""
+                       pk in (select pk from books order by random() limit 20)""")
         if len (os.query):
             sql.fulltext ('books.tsvec', os.query)
             os.title = _("Books: {title}").format (title = os.query)
