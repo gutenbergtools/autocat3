@@ -9,14 +9,6 @@ RuntimeDirectory=autocat
 WorkingDirectory=/var/lib/autocat/autocat3
 ExecStartPre=-/usr/bin/mkdir -p /var/run/autocat
 ExecStart=/usr/local/bin/pipenv run python CherryPyApp.py
-#
-# These next lines are for auto-restart. See: man systemd.service
-Type=simple
-PIDFile=/var/run/autocat/autocat3.pid
-RemainAfterExit=no
-Restart=on-failure
-RestartSec=5s
-TimeStartSec=5s
 
 [Install]
 WantedBy=multi-user.target
