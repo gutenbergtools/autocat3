@@ -39,10 +39,13 @@ class CoverPages(object):
         for row in rows:
             url = '/' + row.filename
             href = '/ebooks/%d' % row.pk
-            title = gg.xmlspecialchars (row.title) # handles <,>,&
-              #Shortening long titles for latest covers
-            title = title.replace('"', '&quot;')
-            title = title.replace("'", '&apos;')
+            if row.title: 
+                title = gg.xmlspecialchars (row.title) # handles <,>,&
+                #Shortening long titles for latest covers
+                title = title.replace('"', '&quot;')
+                title = title.replace("'", '&apos;')
+            else:
+                title = '!! missing title !!'
             short_title = title
             title_len = len(title)
             short_title = re.sub(r"\-+", " ", short_title)
