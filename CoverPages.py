@@ -35,7 +35,7 @@ class CoverPages(object):
 
         cherrypy.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         cherrypy.response.headers['Content-Language'] = 'en'
-
+        s = ''
         for row in rows:
             url = '/' + row.filename
             href = '/ebooks/%d' % row.pk
@@ -49,7 +49,7 @@ class CoverPages(object):
             short_title = short_title.splitlines()[0]	    
             if(title_len > 80):
                 short_title = textwrap.wrap(short_title, 80)[0]
-            s = """
+            s += """
                 <a href="{href}" title="{title}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
