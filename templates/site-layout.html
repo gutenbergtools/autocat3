@@ -1,125 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <html xmlns="http://www.w3.org/1999/xhtml"
-xmlns:xi="http://www.w3.org/2001/XInclude"
-xmlns:py="http://genshi.edgewall.org/"
-xmlns:i18n="http://genshi.edgewall.org/i18n"
-xmlns:og="http://opengraphprotocol.org/schema/"
-xmlns:fb="http://www.facebook.com/2008/fbml"
-py:strip="">
-<?python
-from i18n_tool import ugettext as _
-?>
-<py:def function="site_head">
-<style >
-.icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
-</style>
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xmlns:og="http://opengraphprotocol.org/schema/"
+      xmlns:fb="http://www.facebook.com/2008/fbml"
+      py:strip="">
+  <?python
+      from i18n_tool import ugettext as _
+  ?>
+  <py:def function="site_head">
+    <style >
+      .icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
+    </style>
 
-<link rel="stylesheet" type="text/css"
-href="/gutenberg/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
-<link rel="stylesheet" type="text/css"
-href="/gutenberg/new_nav.css?${cherrypy.config['css_mtime']}"/>
-<link rel="stylesheet" type="text/css"
-href="/gutenberg/style.css?${cherrypy.config['css_mtime']}"/>
-<!--! IE8 does not recognize application/javascript -->
-<script>//<![CDATA[
-var json_search     = "${os.json_search}";
-var mobile_url      = "${os.mobile_url}";
-var canonical_url   = "${os.canonical_url}";
-var lang            = "${os.lang}";
-var fb_lang         = "${os.fb_lang}"; /* FB accepts only xx_XX */
-var msg_load_more   = "${_('Load More Results…')}";
-var page_mode       = "${os.page_mode}";
-var dialog_title    = "${os.user_dialog[1]}";
-var dialog_message  = "${os.user_dialog[0]}";
-//]]></script>
+    <link rel="stylesheet" type="text/css"
+	    href="/gutenberg/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
+    <link rel="stylesheet" type="text/css"
+        href="/gutenberg/new_nav.css?${cherrypy.config['css_mtime']}"/>
+    <link rel="stylesheet" type="text/css"
+        href="/gutenberg/style.css?${cherrypy.config['css_mtime']}"/>
 
-<script 
-src="/js/pg-desktop-one.js?${cherrypy.config['js_mtime']}" />
+    <!--! IE8 does not recognize application/javascript -->
+    <script>//<![CDATA[
+      var json_search     = "${os.json_search}";
+      var mobile_url      = "${os.mobile_url}";
+      var canonical_url   = "${os.canonical_url}";
+      var lang            = "${os.lang}";
+      var fb_lang         = "${os.fb_lang}"; /* FB accepts only xx_XX */
+      var msg_load_more   = "${_('Load More Results…')}";
+      var page_mode       = "${os.page_mode}";
+      var dialog_title    = "${os.user_dialog[1]}";
+      var dialog_message  = "${os.user_dialog[0]}";
+    //]]></script>
 
-<link rel="shortcut icon"             href="/gutenberg/favicon" />
-<link rel="canonical"                 href="${os.canonical_url}" />
+    <script
+	    src="/js/pg-desktop-one.js?${cherrypy.config['js_mtime']}" />
 
-<link rel="search"
-type="application/opensearchdescription+xml"
-title="Search Project Gutenberg"
-href="${os.osd_url}" />
+    <link rel="shortcut icon"             href="/gutenberg/favicon" />
+    <link rel="canonical"                 href="${os.canonical_url}" />
 
-<link rel="alternate nofollow"
-type="${os.type_opds}"
-title="OPDS feed"
-href="${os.url_carry (format = 'opds')}" />
+    <link rel="search"
+	  type="application/opensearchdescription+xml"
+	  title="Search Project Gutenberg"
+	  href="${os.osd_url}" />
 
-<link py:if="os.touch_icon"             rel="apple-touch-icon"             href="${os.touch_icon}" />
-<link py:if="os.touch_icon_precomposed" rel="apple-touch-icon-precomposed" href="${os.touch_icon_precomposed}" />
-<meta py:if="os.viewport"               name="viewport"                    content="${os.viewport}" />
+    <link rel="alternate nofollow"
+	  type="${os.type_opds}"
+	  title="OPDS feed"
+	  href="${os.url_carry (format = 'opds')}" />
 
-<meta http-equiv="Content-Type"       content="text/html; charset=UTF-8" />
-<meta http-equiv="default-style" content="text/css" />
+    <link py:if="os.touch_icon"             rel="apple-touch-icon"             href="${os.touch_icon}" />
+    <link py:if="os.touch_icon_precomposed" rel="apple-touch-icon-precomposed" href="${os.touch_icon_precomposed}" />
+    <meta py:if="os.viewport"               name="viewport"                    content="${os.viewport}" />
 
-<!--! plain old metadata -->
-<meta name="title"                    content="${os.title}" />
-<meta name="description"              content="${os.description}" />
-<meta name="keywords"                 content="ebook, ebooks, free ebooks, free books, book, books, audio books" />
-<meta name="classification"           content="public" />
+    <meta http-equiv="Content-Type"       content="text/html; charset=UTF-8" />
+    <meta http-equiv="default-style" content="text/css" />
+  
 
-<!--! facebook open graph -->
-<meta property="og:title"             content="${os.title}" />
-<meta property="og:description"       content="${os.description}" />
-<meta property="og:type"              content="${os.og_type}" />
-<meta property="og:image"             content="${os.snippet_image_url}" />
-<meta property="og:url"               content="${os.canonical_url}" />
-<meta property="og:site_name"         content="Project Gutenberg" />
-<meta property="fb:app_id"            content="${cherrypy.config['facebook_app_id']}" />
-<!--! <meta property="fb:admins"            content="615269807" /> -->
+    <!--! plain old metadata -->
+    <meta name="title"                    content="${os.title}" />
+    <meta name="description"              content="${os.description}" />
+    <meta name="keywords"                 content="ebook, ebooks, free ebooks, free books, book, books, audio books" />
+    <meta name="classification"           content="public" />
 
-<!--! twitter card -->
-<meta name="twitter:card"         content="summary" />
-<meta name="twitter:site"         content="@gutenberg_new" />
-<meta name="twitter:image"        content="${os.snippet_image_url}" />
-<meta name="twitter:image:alt"        content="book cover image" />
+    <!--! facebook open graph -->
+    <meta property="og:title"             content="${os.title}" />
+    <meta property="og:description"       content="${os.description}" />
+    <meta property="og:type"              content="${os.og_type}" />
+    <meta property="og:image"             content="${os.snippet_image_url}" />
+    <meta property="og:url"               content="${os.canonical_url}" />
+    <meta property="og:site_name"         content="Project Gutenberg" />
+    <meta property="fb:app_id"            content="${cherrypy.config['facebook_app_id']}" />
+    <!--! <meta property="fb:admins"            content="615269807" /> -->
 
-</py:def>
+    <!--! twitter card -->
+    <meta name="twitter:card"         content="summary" />
+    <meta name="twitter:site"         content="@gutenberg_new" />
+    <meta name="twitter:image"        content="${os.snippet_image_url}" />
+    <meta name="twitter:image:alt"        content="book cover image" />
 
-<py:def function="credits">
-<div id="credits">
-<div class="h1"
-title="Credits">Credits</div>
+  </py:def>
 
-<a href="https://www.ibiblio.org" rel="nofollow"
-title="Project Gutenberg is hosted by ibiblio.">
-<span class ="icon icon_hosted" />
-</a>
+  <py:def function="credits">
+    <div id="credits">
+      <div class="h1"
+	   title="Credits">Credits</div>
 
-<p>This web site uses only free software.</p>
+      <a href="https://www.ibiblio.org" rel="nofollow"
+	 title="Project Gutenberg is hosted by ibiblio.">
+	<span class ="icon icon_hosted" />
+      </a>
 
-<a href="https://httpd.apache.org/" rel="nofollow"
-title="Powered by Apache">
-<span class="icon icon_apache" />
-</a>
+      <p>This web site uses only free software.</p>
 
-<a href="https://www.python.org" rel="nofollow"
-title="Powered by Python">
-<span class="icon icon_python" />
-</a>
+      <a href="https://httpd.apache.org/" rel="nofollow"
+	 title="Powered by Apache">
+	<span class="icon icon_apache" />
+      </a>
 
-<a href="https://www.postgresql.org" rel="nofollow"
-title="Powered by PostgreSQL">
-<span class="icon icon_postgres" />
-</a>
-</div>
-</py:def>
+      <a href="https://www.python.org" rel="nofollow"
+	 title="Powered by Python">
+	<span class="icon icon_python" />
+      </a>
 
-<py:def function="copyright">
-<div class="copyright" i18n:comment="The copyright notice on the footer of every page.">
-© 2020 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
-</div>
-</py:def>
+      <a href="https://www.postgresql.org" rel="nofollow"
+	 title="Powered by PostgreSQL">
+	<span class="icon icon_postgres" />
+      </a>
+    </div>
+  </py:def>
 
-<py:def function="site_top">
-<xi:include href="../../menu.html" />
-<!-- <xi:include href="/../gutenbergsite/_includes/menu.html"/>-->
-</py:def>
+  <py:def function="copyright">
+    <div class="copyright" i18n:comment="The copyright notice on the footer of every page.">
+      © 2020 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
+    </div>
+  </py:def>
+
+  <py:def function="site_top">
+    <xi:include href="../../menu.html" />
+  </py:def>
 
   <py:def function="site_footer">
     <div class="footer" i18n:comment="On the footer of every page.">
@@ -178,7 +179,7 @@ title="Powered by PostgreSQL">
 	<!--! xml:lang avoids extraction for translation -->
 	<input xml:lang="en" type="hidden" name="cmd" value="_s-xclick" />
 	<input xml:lang="en" type="hidden" name="hosted_button_id" value="XKAL6BZL3YPSN" />
-	<input type="image"  alt ="paypal icon" name="submit"
+	<input type="image" alt="paypal icon" name="submit"
 	       src="/pics/paypal/${os.paypal_lang}.gif"
 	       title="Send us money through PayPal." />
       </div>
