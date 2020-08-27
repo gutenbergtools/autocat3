@@ -83,7 +83,7 @@ ${site_top()}
 	</ul>
       </div>
 	<h1 itemprop="name">${os.title}</h1>
-     
+
 
       <div class="page-body">
         <div property="dcterms:publisher" itemprop="publisher" content="Project Gutenberg" />
@@ -106,17 +106,11 @@ ${site_top()}
 
 	  <div id="social" class="noprint">
 	    <ul>
-	      <!--! Broken. Dialog opens and closes immediately. Disabled for now.
-	      <li>
-		${fb_share    (os.canonical_url, os.title.encode ('utf-8'),
-		               os.description.encode ('utf-8'), os.cover_thumb_url)}
-			       </li>
-              -->
 	      <li>
 		${tw_share    (os.canonical_url, os.twit)}
 	      </li>
 	      <li>
-		<a onclick="printpage ()" title="Print this page"><span class="icon icon_print" /></a>
+		<a onclick="printpage()" title="Print this page"><span class="icon icon_print" /></a>
 	      </li>
 	    </ul>
 	  </div>
@@ -124,7 +118,7 @@ ${site_top()}
 	  <div id="qr">
 	    <!--! qr code of desktop page for print -->
         <span class="qrcode qrcode-desktop noscreen" />
-        
+
 	  </div>
 	</div>
 
@@ -133,11 +127,11 @@ ${site_top()}
         <div id="download" i18n:comment="On the 'Download' tab of the 'bibrec' page.">
 
             <py:for each="e in os.entries">
-              <py:if test="isinstance (e, bs.DC)">
-            <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" ><!--! rev="dcterms:isFormatOf" -->
-    
+              <py:if test="isinstance(e, bs.DC)">
+            <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
+
               <h2>Download This eBook</h2>
-    
+
               <table class="files">
                 <colgroup>
                   <col class="narrow" />
@@ -148,7 +142,7 @@ ${site_top()}
                   <col class="narrow noprint" />
                   <col class="narrow noprint" />
                 </colgroup>
-    
+
                 <tr>
                   <th />
                   <th>Format <span>${help ('Format')}</span></th>
@@ -158,8 +152,8 @@ ${site_top()}
                   <th class="noprint"><span>${help ('Google Drive')}</span></th>
                   <th class="noprint"><span>${help ('OneDrive')}</span></th>
                 </tr>
-    
-                <tr py:for="i, file_ in enumerate (e.files)"
+
+                <tr py:for="i, file_ in enumerate(e.files)"
                 py:if="not file_.hidden"
                 class="${i%2 and 'odd' or 'even'}"
                 about="${file_.url}" typeof="pgterms:file">
@@ -190,7 +184,7 @@ ${site_top()}
                    title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
                   </td>
                 </tr>
-    
+
                 <!--! more files ... -->
                 <tr py:if="e.base_dir"
                 class="${i%2 and 'odd' or 'even'}">
@@ -203,14 +197,14 @@ ${site_top()}
                   <td class="noprint"><!--! gdrive  column --></td>
                   <td class="noprint"><!--! msdrive  column --></td>
                 </tr>
-    
+
               </table>
             </div>
               </py:if>
             </py:for>
-    
+
           </div> <!-- download -->
-          
+
           <div id="more_stuff">
             <py:for each="n, e in enumerate (os.entries)">
           <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
@@ -218,7 +212,7 @@ ${site_top()}
               <h2 class="header">${e.header}</h2>
             </py:if>
             <?python old_header = e.header ?>
-    
+
             <div class="${e.class_}">
               <a rel="nofollow"
                  href="${e.url}"
@@ -271,23 +265,23 @@ ${site_top()}
 			</td>
 			<td py:when="marc.code[0]=='5'">
 			  <?python
-			    text = gg.xmlspecialchars (marc.text)
-			    text = re.sub (r'(//\S+)', r'<a href="\1">\1</a>',         text)
-			    text = re.sub (r'#(\d+)',  r'<a href="/ebooks/\1">#\1</a>', text)
+			    text = gg.xmlspecialchars(marc.text)
+			    text = re.sub(r'(//\S+)', r'<a href="\1">\1</a>', text)
+			    text = re.sub(r'#(\d+)',  r'<a href="/ebooks/\1">#\1</a>', text)
 			  ?>
 			  ${ Markup (gg.insert_breaks (text)) }
 			</td>
 			<td py:when="marc.code=='245'" itemprop="headline">
-			  ${ Markup (gg.insert_breaks (gg.xmlspecialchars (marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
 			</td>
 			<td py:when="marc.code=='240'" itemprop="alternativeHeadline">
-			  ${ Markup (gg.insert_breaks (gg.xmlspecialchars (marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
 			</td>
 			<td py:when="marc.code=='246'" itemprop="alternativeHeadline">
-			  ${ Markup (gg.insert_breaks (gg.xmlspecialchars (marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
 			</td>
 			<td py:otherwise="">
-			  ${ Markup (gg.insert_breaks (gg.xmlspecialchars (marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
 			</td>
 		      </py:choose>
 		    </tr>
@@ -380,7 +374,7 @@ ${site_top()}
 	   alt="RDF/XML Metadata" /></a>
       -->
 
-      ${site_footer ()}
+      ${site_footer()}
 
     </div>
 
