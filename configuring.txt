@@ -86,17 +86,24 @@ sudo systemctl status autocat3.service
 # we are having problems with monit trying to restart. It might be necessary to also stop
 # monit. Further diagnosis is forthcoming.
 
+## Development
+create a "feature" branch on on the git repo, using either master or development as base.
+when your code is working, submit a pull request to master or development as appropriate.
 
 ## updates
+# currently gutenberg1 is production deployment, gutenberg2 is dev deployment
+# to do a new deployment, first pull from the master or dev as appropriate
+# into gutenberg1 or gutenberg2.
+# DONT edit files on the deployment servers, they should always be updated from the git remote.
 
 su - autocat
 # or sudo su - autocat if you can sudo
 
 cd autocat3
-git pull
-git checkout remotes/origin/master
+#for gutenberg1
+git checkout remotes/origin/gutenberg1
 # for gutenberg2
-# git checkout remotes/origin/gutenberg2
+git checkout remotes/origin/gutenberg2
 
 pipenv install --ignore-pipfile
 
