@@ -106,7 +106,10 @@ ${site_top()}
 	  <div id="social" class="noprint">
 	    <ul>
 	      <li>
-		${tw_share    (os.canonical_url, os.twit)}
+		     ${tw_share(os.canonical_url, os.twit)}
+	      </li>
+	      <li>
+		     ${fb_share(os.canonical_url)}
 	      </li>
 	      <li>
 		<a onclick="printpage()" title="Print this page"><span class="icon icon_print" /></a>
