@@ -30,7 +30,6 @@ class Start (Page.Page):
 
         os.search_terms = ''
         os.title = {
-            'mobile': _('PG Mobile'),
             'opds':   _('Project Gutenberg'),
             'stanza': _('Project Gutenberg')
             }.get (os.format, _('Search Project Gutenberg'))

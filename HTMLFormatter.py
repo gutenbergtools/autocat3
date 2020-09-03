@@ -31,9 +31,6 @@ from i18n_tool import ugettext as _
 # filetypes ignored on desktop site
 NO_DESKTOP_FILETYPES = 'plucker qioo rdf rst rst.gen rst.master tei cover.medium cover.small'.split ()
 
-# filetypes shown on mobile site
-MOBILE_TYPES = (mt.epub, mt.mobi, mt.pdf, 'text/html', mt.html)
-
 # filetypes which are usually handed over to a separate app on mobile devices
 HANDOVER_TYPES = (mt.epub, mt.mobi, mt.pdf)
 
@@ -187,44 +184,3 @@ class HTMLFormatter (XMLishFormatter):
         if showncount == 0:
             for file_ in dc.files + dc.generated_files:
                 file_.hidden = False
-
-
-class MobileFormatter (XMLishFormatter):
-    """ Produce HTML output suitable for mobile devices. """
-
-    CONTENT_TYPE = mt.xhtml + '; charset=UTF-8'
-    DOCTYPE      = 'html5'
-
-    def __init__ (self):
-        super (MobileFormatter, self).__init__ ()
-
-
-    def get_serializer (self):
-        return genshi.output.HTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
-
-
-    def fix_dc (self, dc, os):
-        """ Add some info to dc for easier templating.
-
-        Also make sure that dc `walks like a cat´. """
-
-        super (MobileFormatter, self).fix_dc (dc, os)
-
-        for file_ in dc.files + dc.generated_files:
-            if len (file_.mediatypes) == 1:
-                type_ = six.text_type (file_.mediatypes[0])
-                m = type_.partition (';')[0]
-                if m in MOBILE_TYPES:
-                    cat = BaseSearcher.Cat ()
-                    cat.type = file_.mediatypes[0]
-                    cat.header = _('Download')
-                    cat.title = file_.hr_filetype
-                    cat.extra = file_.hr_extent
-
-                    cat.charset = file_.encoding
-                    cat.url = '/' + file_.filename
-                    cat.icon = dc.icon
-                    cat.icon2 = 'download'
-                    cat.class_ += 'filelink'
-                    cat.order = 20
-                    os.entries.append (cat)

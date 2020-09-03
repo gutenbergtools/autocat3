@@ -87,7 +87,6 @@ def main():
         'daemonize': False,
         'pidfile': None,
         'host': 'localhost',
-        'host_mobile': 'localhost',
         'file_host': 'localhost',
         })
 

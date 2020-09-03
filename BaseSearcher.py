@@ -43,7 +43,7 @@ VALID_PROTOCOLS = ('http', 'https')
 
 MEDIATYPE_TO_FORMAT = {
     'text/html' : 'html',
-    mt.mobile   : 'mobile',
+    mt.mobile   : 'html',
     mt.opds     : 'opds',
     mt.json     : 'json',
     }
@@ -99,54 +99,6 @@ class ClassAttr (object):
 
     def __contains__ (self, b):
         return b in self.value
-
-
-class Accumulator (object):
-    """
-    Thread-safe master/slave counter for statistics collection.
-
-    Many serving threads can increment the master counter
-    while the statistic thread safely reads the slave counter.
-
-    """
-
-    def __init__ (self):
-        self.master = defaultdict (int)
-        self.slave = defaultdict (int)
-        self.lock = threading.Lock ()
-
-    def increment (self, key):
-        """ Thread-safe increment the master counter. """
-        try:
-            self.lock.acquire ()
-            self.master[key] += 1
-        finally:
-            self.lock.release ()
-
-    def reset (self):
-        """ Copy values to slave counter and reset the master counter. """
-        try:
-            self.lock.acquire ()
-            self.slave = self.master.copy ()
-            self.master.clear ()
-        finally:
-            self.lock.release ()
-
-    def __getitem__ (self, k):
-        """ Read value from the slave counter. """
-        return self.slave[k]
-
-    def iter_results (self):
-        """ Iterate over the slave counters. """
-
-        total_hits = float (sum (self.slave.values ()))
-        if total_hits > 0:
-            for k, v in sorted (self.slave.items (), key = lambda x: -x[1]):
-                yield (k, v, v / total_hits)
-
-
-formats_acc = Accumulator ()
-formats_sum_acc = Accumulator ()
 
 
 class DC (GutenbergDatabaseDublinCore.GutenbergDatabaseDublinCore,
@@ -491,12 +443,6 @@ class OpenSearch (object):
         except ValueError as what:
             raise cherrypy.HTTPError (400, 'Bad Request. ' + str (what))
 
-        formats_acc.increment (self.format)
-
-        if self.format in ('mobile', 'opds', 'stanza'):
-            formats_sum_acc.increment ('mobile')
-        if self.format == 'html':
-            formats_sum_acc.increment ('html')
 
         self.file_host = cherrypy.config['file_host']
         self.now = datetime.datetime.utcnow ().replace (microsecond = 0).isoformat () + 'Z'
@@ -594,7 +540,6 @@ class OpenSearch (object):
             self.viewport = None
 
         self.desktop_host = cherrypy.config['host']
-        self.mobile_host = cherrypy.config['host_mobile']
 
         last_page = max ((self.total_results - 1) // self.items_per_page, 0) # 0-based
 
@@ -608,7 +553,6 @@ class OpenSearch (object):
         self.show_next_page_link = (self.end_index < self.total_results)
 
         self.desktop_search = self.url ('search', format = None)
-        self.mobile_search  = self.url ('search', format = 'mobile')
         self.json_search    = self.url ('suggest', format = None)
 
         self.base_url       = self.url (host = self.file_host)
@@ -617,7 +561,6 @@ class OpenSearch (object):
         self.canonical_url  = self.url_carry (host = self.file_host, format = None)
 
         self.desktop_url    = self.url_carry (host = self.desktop_host, format = None)
-        self.mobile_url     = self.url_carry (host = self.mobile_host, format = 'mobile')
 
         self.osd_url        = self.qualify ('/catalog/osd-books.xml')
 
@@ -704,7 +647,7 @@ class OpenSearch (object):
 
         # user explicitly requested format
         if format_:
-            self.format = format_
+            self.format = 'html' if format_ == 'mobile' else format_
             self.mediatype = mt[format_]
             self.opensearch_support = 1 if format_ == 'opds' else 2
             return
@@ -713,31 +656,10 @@ class OpenSearch (object):
 
         ua = self.user_agent
 
-        # user accessed the www site
-
-        if self.host == cherrypy.config['host']:
-            # but might want the mobile site ...
-            if 'Kindle/' in ua:
-                self.format = 'mobile'
-                self.mediatype = mt.mobile
-            elif 'tolino' in ua:
-                self.format = 'mobile'
-                self.mediatype = mt.mobile
-            elif ua.startswith ('W3C-mobileOK/DDC-1.0'):
-                self.format = 'mobile'
-                self.mediatype = mt.mobile
-            else:
-                self.format = 'html'
-                self.mediatype = 'text/html'
-            return
+        self.format = 'html'
+        self.mediatype = 'text/html'
 
         # user accessed the mobile site
-
-        mediatype = None
-
-        if self.host == cherrypy.config['host_mobile']:
-            format_ = 'mobile'
-            mediatype = mt.mobile
 
         # known OPDS consumers
         # 'stanza' is the older opds-ish format supported by stanza et al.
@@ -794,11 +716,6 @@ class OpenSearch (object):
                 format_ = 'opds'
                 mediatype = mt.opds
                 opensearch_support = 1
-
-        # still nothing?
-        if not format_:
-            mediatype = 'text/html'
-            format_ = 'html'
 
         self.format = format_
         self.mediatype = mediatype

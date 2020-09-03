@@ -265,7 +265,7 @@ class AuthorPage (SearchPage):
                 os.entries.insert (0, cat)
 
             # author aliases
-            if os.format in ('html', 'mobile'):
+            if os.format  == 'html':
                 rows = BaseSearcher.SQLSearcher.execute (
                     """SELECT alias AS title FROM aliases
                        WHERE fk_authors = %(fk_authors)s AND alias_heading = 1""",
