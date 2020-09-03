@@ -656,15 +656,14 @@ class OpenSearch (object):
 
         ua = self.user_agent
 
-        self.format = 'html'
-        self.mediatype = 'text/html'
+        format_ = 'html'
+        mediatype = 'text/html'
+        opensearch_support = 0
 
         # user accessed the mobile site
 
         # known OPDS consumers
         # 'stanza' is the older opds-ish format supported by stanza et al.
-
-        opensearch_support = 0
 
         if ua:
             if ua.startswith ('Stanza/'):
