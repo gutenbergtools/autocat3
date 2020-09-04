@@ -37,7 +37,6 @@ def format (format_, page, os_):
 formatters = {}
 formatters['opds']     = OPDSFormatter.OPDSFormatter   ()
 formatters['stanza']   = formatters['opds']
-formatters['mobile']   = HTMLFormatter.MobileFormatter ()
 formatters['html']     = HTMLFormatter.HTMLFormatter   ()
 formatters['json']     = JSONFormatter.JSONFormatter   ()
 # FIXME: only needed to load sitemap.xml templates

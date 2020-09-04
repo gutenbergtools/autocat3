@@ -80,7 +80,7 @@ class BibrecPage (Page.Page):
                         ))
 
 
-        if os.format in ('html', 'mobile'):
+        if os.format == 'html':
             cat = BaseSearcher.Cat ()
             cat.header = _('Similar Books')
             cat.title = _('Readers also downloaded…')
@@ -101,30 +101,9 @@ class BibrecPage (Page.Page):
                 cat.order = 33
                 os.entries.append (cat)
 
-        if os.format in ('mobile', ):
-            for author in dc.authors:
-                cat = BaseSearcher.Cat ()
-                cat.title = _('By {author}').format (author = author.name_and_dates)
-                cat.rel = 'related'
-                cat.url = os.url ('author', id = author.id)
-                cat.class_ += 'navlink grayed'
-                cat.icon = 'author'
-                cat.order = 31
-                os.entries.append (cat)
-
-            for subject in dc.subjects:
-                cat = BaseSearcher.Cat ()
-                cat.title = _('On {subject}').format (subject = subject.subject)
-                cat.rel = 'related'
-                cat.url = os.url ('subject', id = subject.id)
-                cat.class_ += 'navlink grayed'
-                cat.icon = 'subject'
-                cat.order = 32
-                os.entries.append (cat)
-
         os.total_results = 1
 
-        os.template = 'results' if os.format == 'mobile' else 'bibrec'
+        os.template = 'bibrec'
         os.page = 'bibrec'
         os.og_type = 'book'
         os.finalize ()

@@ -87,7 +87,6 @@ def main():
         'daemonize': False,
         'pidfile': None,
         'host': 'localhost',
-        'host_mobile': 'localhost',
         'file_host': 'localhost',
         })
 
@@ -165,7 +164,7 @@ def main():
     cherrypy.config['js_mtime']  = t
 
     cherrypy.config['all_hosts'] = (
-        cherrypy.config['host'], cherrypy.config['host_mobile'], cherrypy.config['file_host'])
+        cherrypy.config['host'], cherrypy.config['file_host'])
     
     cherrypy.config.update({'error_page.404': error_page_404})
 
