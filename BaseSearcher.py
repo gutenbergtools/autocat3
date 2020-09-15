@@ -414,7 +414,7 @@ class OpenSearch(object):
         if self.protocol not in VALID_PROTOCOLS:
             self.protocol = 'https'
 
-        self.urlgen = routes.URLGenerator( cherrypy.routes_mapper, {'HTTP_HOST': self.host})
+        self.urlgen = routes.URLGenerator(cherrypy.routes_mapper, {'HTTP_HOST': self.host})
 
         self.set_format(k.get('format'))
 
