@@ -112,7 +112,7 @@ class BaseFormatter (object):
         if path in DATA_URL_CACHE:
             return DATA_URL_CACHE[path]
 
-        abs_path = os.path.join ('http://' + cherrypy.config['file_host'], path.lstrip ('/'))
+        abs_path = os.path.join ('https://' + cherrypy.config['file_host'], path.lstrip ('/'))
         data_url = abs_path
         try:
             f = urllib.request.urlopen (abs_path)

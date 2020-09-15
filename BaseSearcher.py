@@ -553,7 +553,7 @@ class OpenSearch(object):
         self.desktop_search = self.url('search', format = None)
         self.json_search = self.url('suggest', format = None)
 
-        self.base_url = self.url(host = self.file_host)
+        self.base_url = self.url(host = self.file_host, protocol='https')
 
         # for google, fb etc.
         self.canonical_url = self.url_carry(host = self.file_host, format = None)
