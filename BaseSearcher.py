@@ -502,7 +502,7 @@ class OpenSearch(object):
             lang2 if lang2 in TWITTER_LANGS else 'en')
 
         self.viewport = "width=device-width" # , initial-scale=1.0"
-        self.touch_icon = '/pics/apple-touch-icon'
+        self.touch_icon = '/gutenberg/apple-icon.png'
         self.touch_icon_precomposed = None # not yet used
 
         if 'user_dialog' in s:
