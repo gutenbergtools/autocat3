@@ -46,11 +46,11 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
   <title>${os.title}</title>
   <subtitle>Free ebooks since 1971.</subtitle>
   <author>
-    <name>Marcello Perathoner</name>
+    <name>Project Gutenberg</name>
     <uri>https://www.gutenberg.org</uri>
     <email>webmaster@gutenberg.org</email>
   </author>
-  <icon>${os.qualify ('/pics/favicon.png')}</icon>
+  <icon>${os.qualify ('/gutenberg/favicon.ico')}</icon>
 
   <py:choose test="os.opensearch_support">
     <py:when test="2">
