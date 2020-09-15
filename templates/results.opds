@@ -46,7 +46,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
   <title>${os.title}</title>
   <subtitle>Free ebooks since 1971.</subtitle>
   <author>
-    <name>Marcello Perathoner</name>
+    <name>Project Gutenberg</name>
     <uri>https://www.gutenberg.org</uri>
     <email>webmaster@gutenberg.org</email>
   </author>
