@@ -56,6 +56,10 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 	  rel="next"
 	  title="Next Page"
 	  href="${os.url ('search', start_index = os.next_page_index)}" />
+	<link py:if="os.show_next_page_link"
+	  rel="last"
+	  title="Last Page"
+	  href="${os.url ('search', start_index = os.last_page_index)}" />
 
     <meta name="totalResults" content="${os.total_results}" />
     <meta name="startIndex"   content="${os.start_index}" />
