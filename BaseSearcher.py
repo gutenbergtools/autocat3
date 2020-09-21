@@ -887,7 +887,7 @@ class SQLSearcher(object):
 
         sql.sort_order = os.sort_order
         sql.start_index = os.start_index
-        sql.items_per_page = os.items_per_page
+        #sql.items_per_page = os.items_per_page
         query, params = sql.build()
         query += ' -- ' + os.ip
 
