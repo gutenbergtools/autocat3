@@ -561,7 +561,8 @@ class OpenSearch(object):
         self.desktop_url = self.url_carry(host = self.desktop_host, format = None)
 
         self.osd_url = self.qualify('/catalog/osd-books.xml')
-
+        if self.end_index==1000:
+            self.end_index='1000 (max)'
         s = cherrypy.session
         # write this late so pages can change it
         s['search_terms'] = self.search_terms
@@ -887,7 +888,7 @@ class SQLSearcher(object):
 
         sql.sort_order = os.sort_order
         sql.start_index = os.start_index
-        sql.items_per_page = os.items_per_page
+        #sql.items_per_page = os.items_per_page
         query, params = sql.build()
         query += ' -- ' + os.ip
 
