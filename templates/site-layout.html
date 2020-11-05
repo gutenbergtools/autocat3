@@ -118,12 +118,12 @@
   </py:def>
 
   <py:def function="site_top">
-    <xi:include href="../../menu.html" />
+    <xi:include href="menu.html" />
   </py:def>
 
   <py:def function="site_footer">
     <div class="footer" i18n:comment="On the footer of every page.">
-    <xi:include href="../../footer.html" />
+    <xi:include href="footer.html" />
     </div>
   </py:def>
 
@@ -149,6 +149,11 @@
       <a title="Go to the next page of results."
 	 accesskey="+"
 	 href="${os.url_carry (start_index = os.next_page_index)}">Next</a>
+      </py:if>
+      <py:if test="os.show_next_page_link">|
+      <a title="Go to the last page of results."
+	 accesskey="+"
+	 href="${os.url_carry (start_index = os.last_page_index)}">Next</a>
       </py:if>
     </span>
   </py:def>
