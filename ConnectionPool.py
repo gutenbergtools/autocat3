@@ -59,8 +59,7 @@ class ConnectionPool (plugins.SimplePlugin):
                                pool_size       = pool_size,
                                max_overflow    = max_overflow,
                                timeout         = timeout,
-                               recycle         = recycle,
-                               use_threadlocal = True)
+                               recycle         = recycle)
 
 
     def connect (self):
