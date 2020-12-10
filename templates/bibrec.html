@@ -120,7 +120,6 @@ ${site_top()}
 <div id="qr">
   <span class="qrcode qrcode-desktop" title="Scan QR Code for this page." />
 </div>
-<h2>Download This eBook</h2>
 </div>
 
 <div id="tabs">
@@ -129,6 +128,8 @@ ${site_top()}
         <py:for each="e in os.entries">
           <py:if test="isinstance(e, bs.DC)">
         <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
+
+          <h2>Download This eBook</h2>
 
           <table class="files">
             <colgroup>
