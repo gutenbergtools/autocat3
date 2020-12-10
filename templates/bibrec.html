@@ -135,7 +135,6 @@ ${site_top()}
               <col class="narrow" />
               <col />
               <col />
-              <col />
               <col class="narrow noprint" />
               <col class="narrow noprint" />
               <col class="narrow noprint" />
@@ -173,10 +172,6 @@ ${site_top()}
                href="${file_.gdrive_url}"
                title="Send to Google Drive." rel="nofollow"><span class="icon icon_gdrive" /></a>
               </td>
-              <td class="noprint">
-            <a py:if="file_.honeypot_url"
-               href="${file_.honeypot_url}"
-               title="Send to MegaUpload." rel="nofollow" />
             <a py:if="file_.msdrive_url"
                href="${file_.msdrive_url}"
                title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
@@ -190,7 +185,6 @@ ${site_top()}
               <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
             i18n:comment="Link to the directory containing all files.">More Files…</a></td>
               <td class="noscreen">${os.qualify (e.base_dir)}</td>
-              <td/>
               <td class="noprint"><!--! dropbox column --></td>
               <td class="noprint"><!--! gdrive  column --></td>
               <td class="noprint"><!--! msdrive  column --></td>
@@ -387,7 +381,6 @@ ${site_top()}
 	    <span class="qrcode qrcode-desktop" title="Scan QR Code for this page." />
 	  </div>
 	</div>
-
 	<div id="tabs-wrapper">
 	<div id="tabs">
         <div id="download" i18n:comment="On the 'Download' tab of the 'bibrec' page.">
@@ -401,7 +394,6 @@ ${site_top()}
               <table class="files">
                 <colgroup>
                   <col class="narrow" />
-                  <col />
                   <col />
                   <col />
                   <col class="narrow noprint" />
@@ -441,10 +433,6 @@ ${site_top()}
                    href="${file_.gdrive_url}"
                    title="Send to Google Drive." rel="nofollow"><span class="icon icon_gdrive" /></a>
                   </td>
-                  <td class="noprint">
-                <a py:if="file_.honeypot_url"
-                   href="${file_.honeypot_url}"
-                   title="Send to MegaUpload." rel="nofollow" />
                 <a py:if="file_.msdrive_url"
                    href="${file_.msdrive_url}"
                    title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
@@ -458,7 +446,6 @@ ${site_top()}
                   <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
                 i18n:comment="Link to the directory containing all files.">More Files…</a></td>
                   <td class="noscreen">${os.qualify (e.base_dir)}</td>
-                  <td/>
                   <td class="noprint"><!--! dropbox column --></td>
                   <td class="noprint"><!--! gdrive  column --></td>
                   <td class="noprint"><!--! msdrive  column --></td>
