@@ -189,6 +189,8 @@ class SQLStatement(object):
     @classmethod
     def sub(cls, regex_, replace, query):
         """ Like re.sub but also compile and cache the regex. """
+        if not isinstance(query, str):
+            query = query[0] if isinstance(query, list) and len(query) > 0 else ''
 
         cregex = cls.regex_cache.setdefault(
             regex_, regex.compile(regex_, regex.UNICODE | regex.VERSION1))
