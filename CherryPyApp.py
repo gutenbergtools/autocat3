@@ -37,6 +37,7 @@ import SuggestionsPage
 from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, BookshelfSearchPage, \
     AuthorPage, SubjectPage, BookshelfPage, AlsoDownloadedPage
 from BibrecPage import BibrecPage
+from AdvSearchPage import AdvSearchPage
 import CoverPages
 import QRCodePage
 import diagnostics
@@ -230,6 +231,9 @@ def main():
 
     d.connect('bookshelf_search', r'/ebooks/bookshelves/search{.format}/',
                controller=BookshelfSearchPage())
+
+    d.connect('results', r'/ebooks/results{.format}/',
+               controller=AdvSearchPage())
 
     # 'id' pages
 

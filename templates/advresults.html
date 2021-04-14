@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:i18n="http://genshi.edgewall.org/i18n"
+      xmlns:dcterms="http://purl.org/dc/terms/"
+      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+      xmlns:ebook="http://www.gutenberg.org/ebooks/"
+      xmlns:marcrel="http://www.loc.gov/loc.terms/relators/"
+      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+      xmlns:og="http://opengraphprotocol.org/schema/"
+      xmlns:fb="http://www.facebook.com/2008/fbml"
+      xml:lang="${os.lang}">
+
+  <?python
+  from itertools import cycle
+  from libgutenberg.DublinCore import DublinCore
+  ?>
+
+  <xi:include href="site-layout.html" />
+  <xi:include href="social-functions.html" />
+
+  <head >
+    <!--<base href="https://www.gutenberg.org/" />-->
+    <link rel="stylesheet" href="/gutenberg/collapsible.css?1.1" />
+    ${site_head()}
+
+    <title>${os.title} - ${os.pg}</title>
+
+    <link rel="self"
+	  i18n:comment="Link pointing to the same page the user is viewing."
+	  title="This Page"
+	  href="${os.url(pageno=os.pageno)}" />
+
+    <link py:if="os.prevpage"
+	  rel="first"
+	  title="First Page"
+	  href="${os.url(pageno=1)}" />
+
+    <link py:if="os.prevpage"
+	  rel="previous"
+	  title="Previous Page"
+	  href="${os.url(pageno=os.prevpage)}" />
+
+    <link py:if="os.nextpage"
+	  rel="next"
+	  title="Next Page"
+	  href="${os.url(pageno=os.nextpage)}" />
+    <meta name="totalResults" content="${os.total_results}" />
+    <meta name="startIndex"   content="${os.start_index}" />
+    <meta name="itemsPerPage" content="${os.items_per_page}" />
+  </head>
+
+  <body>
+  <div class="container">
+    <div id="mw-head-dummy" class="noprint" />
+
+    <div id="content" class="page_content" i18n:comment="On the page of results of a search.">
+        <!-- start content -->
+<py:if test='os.search_terms'>
+        <p>You selected:</p>
+        <ul>
+            <py:for each="term, value, count in os.search_terms">
+                <li>${term} = ${value} (${count} items match)</li>
+            </py:for>
+        </ul>
+        <p>${os.total_results} books found. </p>
+</py:if>
+
+<py:if test='os.total_results &gt; 1000'>
+    <p>More than 1000 books matched your search. Please refine your query to see results.</p>
+    <xi:include href="advsearch.html" />
+</py:if>
+
+<py:if test='os.total_results and (os.total_results &lt;= 1000)'>
+<py:if test="os.total_results &gt; os.items_per_page">
+    <p class="center resultpages">
+    <a py:if="os.prevpage" href="${os.url(pageno=os.prevpage)}">previous</a>
+    <py:for each="page in range(1, os.lastpage + 1)">
+        <a href="${os.url(pageno=page)}">
+            <span class="${'red' if page == os.pageno else 'black'}">${page}</span>
+        </a>
+    </py:for>
+    <a py:if="os.nextpage" href="${os.url(pageno=os.nextpage)}">next</a>
+    </p>
+</py:if>
+
+<table cellspacing="0" class="pgdbfiles" py:with="cls=cycle(('evenrow', 'oddrow'))">
+  <caption>Titles</caption>
+  <colgroup>
+    <col class="narrow right" />
+    <col class="narrow" />
+    <col class="pgdbdataauthor" />
+    <col class="pgdbdatatitle" />
+    <col class="narrow" />
+  </colgroup>
+  <tr>
+    <th class="narrow right">Etext-No.</th>
+    <th class="narrow"><img src="/pics/stock_volume-16.png" width="16" height="16" alt="Audio" title="Audio Book" /></th>
+    <th class="pgdbdataauthor">Author</th>
+    <th class="pgdbdatatitle">Title</th>
+    <th class="narrow">Language</th>
+  </tr>
+    <py:for each="book in os.entries">
+        <tr class="${next(cls)}">
+            <td>${book.pk}</td>
+            <td>
+                <py:if test="book.is_audiobook"><img src="/pics/stock_volume-16.png" width="16" height="16" alt="Audio" title="Audio Book" /></py:if>
+                &nbsp;
+            </td>
+            <td>
+                <ul>
+                    <py:for each="author in book.authors">
+                        <li><a href="/browse/authors/${author.first_letter}#a${author.id}">${DublinCore.format_author_date_role(author)}</a></li>
+                    </py:for>
+                </ul>
+            </td>
+            <td><a href="/ebooks/${book.pk}">${book.title}</a></td>
+            <td>${[lang.language for lang in book.langs]}</td>
+        </tr>
+    </py:for>
+</table>
+
+<py:if test="os.total_results &gt; os.items_per_page">
+    <p class="center resultpages">
+    <a py:if="os.prevpage" href="${os.url(pageno=os.prevpage)}">previous</a>
+    <py:for each="page in range(1, os.lastpage + 1)" >
+        <a href="${os.url(pageno=page)}">
+            <span class="${'red' if page == os.pageno else 'black'}">${page}</span>
+        </a>
+    </py:for>
+    <a py:if="os.nextpage" href="${os.url(pageno=os.nextpage)}">next</a>
+    </p>
+</py:if>
+
+</py:if>
+<py:if test='not os.total_results'>
+  <xi:include href="advsearch.html" />
+</py:if>
+
+
+	</div>
+	</div>
+      ${site_footer ()}
+
+
+    ${site_top ()}
+
+  </body>
+</html>
