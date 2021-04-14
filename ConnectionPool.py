@@ -17,9 +17,13 @@ import logging
 import psycopg2
 
 import sqlalchemy.pool as pool
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 import cherrypy
 from cherrypy.process import plugins
 
+DUMMY_SQL_URL = "postgresql://127.0.0.1:5432/gutenberg"
 
 class ConnectionCreator():
     """ Creates connections for the connection pool. """
@@ -49,21 +53,22 @@ class ConnectionPool(plugins.SimplePlugin):
     def _start(self):
         """ Init the connection pool. """
 
-
-        return pool.QueuePool (ConnectionCreator (self.params),
-                               pool_size       = pool_size,
-                               max_overflow    = max_overflow,
-                               timeout         = timeout,
-                               recycle         = recycle)
-
-
-    def connect (self):
         pool_size = cherrypy.config.get('sqlalchemy.pool_size', 5)
         max_overflow = cherrypy.config.get('sqlalchemy.max_overflow', 10)
         timeout = cherrypy.config.get('sqlalchemy.timeout', 30)
         recycle = cherrypy.config.get('sqlalchemy.recycle', 3600)
 
         self.bus.log("... pool_size = %d, max_overflow = %d" % (pool_size, max_overflow))
+        my_pool = pool.QueuePool(ConnectionCreator(self.params),
+                                 pool_size=pool_size,
+                                 max_overflow=max_overflow,
+                                 timeout=timeout,
+                                 recycle=recycle)
+        engine = create_engine(DUMMY_SQL_URL, echo=False, pool=my_pool)
+        Session = sessionmaker(bind=engine)
+        return my_pool, Session
+
+    def connect(self):
         """ Return a connection. """
 
         return self.pool.connect()
@@ -84,6 +89,7 @@ class ConnectionPool(plugins.SimplePlugin):
 
         if self.pool is not None:
             self.bus.log("Disposing the SQL connection pool.")
+            self.Session = None
             self.pool.dispose()
             self.pool = None
 
