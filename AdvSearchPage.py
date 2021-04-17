@@ -26,7 +26,7 @@ import routes
 from sqlalchemy import or_, and_
 
 from libgutenberg.Models import (
-    Alias, Attribute, Author, Book, BookAuthor, Category, File, Lang, Locc)
+    Alias, Attribute, Author, Book, BookAuthor, Category, File, Lang, Locc, Subject)
 
 import BaseSearcher
 from errors import ErrorPage
@@ -130,7 +130,7 @@ class AdvSearchPage(Page):
         resultpks = None
         searchterms = []
         for key in terms:
-            if key in ['author', 'title']:
+            if key in ['author', 'title', 'subject']:
                 for word in params[key].split():
                     searchterms.append((key, word))
             else:
@@ -177,6 +177,13 @@ class AdvSearchPage(Page):
                     Attribute.text.ilike(word),
                 )).all()
                 key = 'Title'
+
+            elif key == 'subject':
+                word = "%{}%".format(val)
+                pks = query.join(Book.subjects).filter(                    
+                    Subject.subject.ilike(word),
+                ).all()
+                key = 'Subject'
 
             pks = {row[0] for row in pks}
             resultpks = resultpks.intersection(pks) if resultpks is not None else pks
