@@ -17,6 +17,8 @@ Differences:
 - The language selector invokes some language-localization
 - Authors are now all in a <ul>
 - the first page of results is pageno=1, not 0
+- cataloguer mode to list for missing subjects and loccs no longer supported 
+    (no authentication in autocat3!)
 
 
 """
