@@ -1,6 +1,6 @@
 <div xmlns:py="http://genshi.edgewall.org/" class="box">
  <!-- Advanced search form begins here -->
-  <form py:with="params = os.params()" method="post" action="results/" accept-charset="utf-8" enctype="multipart/form-data">
+  <form py:with="params = os.params()" method="post" action="/ebooks/results/" accept-charset="utf-8" enctype="multipart/form-data">
    <input id="collapsible1" class="toggle" type="checkbox" checked="${'true' if params else 'false'}"/>
    <label for="collapsible1" class="lbl-toggle">Advanced Search</label>
     <div class="collapsible-content">
