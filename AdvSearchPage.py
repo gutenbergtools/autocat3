@@ -25,7 +25,7 @@ Differences:
 import cherrypy
 import routes
 
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, select
 
 from libgutenberg.Models import (
     Alias, Attribute, Author, Book, BookAuthor, Category, File, Lang, Locc, Subject)
@@ -164,8 +164,8 @@ class AdvSearchPage(Page):
 
             elif key == 'author':
                 word = "%{}%".format(val)
-                subq = session.query(Author.id).join(Author.aliases).filter(
-                    Alias.alias.ilike(word)).subquery()
+                subq = select(Author.id).join(Author.aliases).filter(
+                    Alias.alias.ilike(word))
                 pks = query.join(Book.authors).join(BookAuthor.author).filter(or_(
                     Author.name.ilike(word),
                     Author.id.in_(subq),
