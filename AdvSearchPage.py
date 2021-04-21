@@ -201,5 +201,6 @@ class AdvSearchPage(Page):
         else:
             os.entries = entries(resultpks, offset)
         os.search_terms = selections
-        return self.formatter.render('advresults', os)
-        
+        rendered = self.formatter.render('advresults', os)
+        session.close()
+        return rendered
