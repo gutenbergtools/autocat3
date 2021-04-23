@@ -66,12 +66,13 @@ class ConnectionPool(plugins.SimplePlugin):
                                  recycle=recycle)
         engine = create_engine(DUMMY_SQL_URL, echo=False, pool=my_pool)
         Session = sessionmaker(bind=engine)
-        return my_pool, Session
+        return engine, Session
+
 
     def connect(self):
         """ Return a connection. """
 
-        return self.pool.connect()
+        return self.pool.raw_connection()
 
 
     def start(self):
@@ -100,7 +101,7 @@ class ConnectionPool(plugins.SimplePlugin):
         if self.pool is not None:
             self.bus.log("Restarting the SQL connection pool ...")
             self.pool.dispose()
-            self.pool = self._start()
+            self.pool, self.Session  = self._start()
 
 
 cherrypy.process.plugins.ConnectionPool = ConnectionPool
