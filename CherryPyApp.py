@@ -277,9 +277,6 @@ def main():
     d.connect('stats', r'/stats/',
                controller=Page.NullPage(), _static=True)
 
-    d.connect('honeypot_send', r'/ebooks/send/megaupload/{id:\d+}.{filetype}',
-               controller=Page.NullPage(), _static=True)
-
     # /w/captcha/question/ so varnish will cache it
     d.connect('captcha.question', r'/w/captcha/question/',
                controller=Page.GoHomePage())

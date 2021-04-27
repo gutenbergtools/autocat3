@@ -165,7 +165,6 @@ class BaseFormatter(object):
             # file_.dropbox_filename = None
             file_.gdrive_url = None
             file_.msdrive_url = None
-            file_.honeypot_url = None
 
             if file_.filetype == 'cover.medium':
                 dc.cover_image = file_
