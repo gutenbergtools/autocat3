@@ -70,7 +70,6 @@
 
 <py:if test='os.total_results &gt; 1000'>
     <p>More than 1000 books matched your search. Please refine your query to see results.</p>
-    <xi:include href="advsearch.html" />
 </py:if>
 
 <py:if test='os.total_results and (os.total_results &lt;= 1000)'>
@@ -135,7 +134,7 @@
 </py:if>
 
 </py:if>
-<py:if test='not os.total_results'>
+<py:if test='not os.total_results or os.total_results &gt; 1000'>
   <xi:include href="advsearch.html" />
 </py:if>
 

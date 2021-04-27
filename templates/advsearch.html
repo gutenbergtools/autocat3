@@ -1,457 +1,457 @@
 <div xmlns:py="http://genshi.edgewall.org/" class="box">
  <!-- Advanced search form begins here -->
-  <form py:with="params = os.params(); sel = {'selected':'selected'}" method="post" action="/ebooks/results/" accept-charset="utf-8" enctype="multipart/form-data">
-   <input id="collapsible1" class="toggle" type="checkbox" checked="${'true' if params else 'false'}"/>
+  <form method="post" action="/ebooks/results/" accept-charset="utf-8" enctype="multipart/form-data">
+   <input id="collapsible1" class="toggle" type="checkbox" checked="${'true' if os.params else 'false'}"/>
    <label for="collapsible1" class="lbl-toggle">Advanced Search</label>
     <div class="collapsible-content">
      <div class="content-inner">
       <p>
        <label for="author">Author:</label>
-       <input type="text" name="author" id="author" value="${params.get('author', '')}" />
+       <input type="text" name="author" id="author" value="" />
       </p>
       <p>
        <label for="title">Title:</label>
-       <input type="text" name="title" id="title"  value="${params.get('title', '')}" />
+       <input type="text" name="title" id="title"  value="" />
       </p>
       <p>
        <label for="subject">Subject:</label>
-       <input type="text" name="subject" id="subject"  value="${params.get('subject', '')}" />
+       <input type="text" name="subject" id="subject"  value="" />
       </p>
       <p>
         <label for="language">Language:</label>
-        <select py:with="lang = params.get('lang', '')" id="lang" name="lang" title="Language">
-              <option value="" py:attrs="sel if not lang else {}" >Any</option>
-              <option value="af" py:attrs="sel if lang == 'af' else {}">Afrikaans</option>
-              <option value="ale" py:attrs="sel if lang == 'ale' else {}">Aleut</option>
-              <option value="ar" py:attrs="sel if lang == 'ar' else {}">Arabic</option>
-              <option value="arp" py:attrs="sel if lang == 'arp' else {}">Arapaho</option>
-              <option value="brx" py:attrs="sel if lang == 'brx' else {}">Bodo</option>
-              <option value="br" py:attrs="sel if lang == 'br' else {}">Breton</option>
-              <option value="bg" py:attrs="sel if lang == 'bg' else {}">Bulgarian</option>
-              <option value="rmr" py:attrs="sel if lang == 'rmr' else {}">Caló</option>
-              <option value="ca" py:attrs="sel if lang == 'ca' else {}">Catalan</option>
-              <option value="ceb" py:attrs="sel if lang == 'ceb' else {}">Cebuano</option>
-              <option value="zh" py:attrs="sel if lang == 'zh' else {}">Chinese</option>
-              <option value="cs" py:attrs="sel if lang == 'cs' else {}">Czech</option>
-              <option value="da" py:attrs="sel if lang == 'da' else {}">Danish</option>
-              <option value="nl" py:attrs="sel if lang == 'nl' else {}">Dutch</option>
-              <option value="en" py:attrs="sel if lang == 'en' else {}">English</option>
-              <option value="eo" py:attrs="sel if lang == 'eo' else {}">Esperanto</option>
-              <option value="et" py:attrs="sel if lang == 'et' else {}">Estonian</option>
-              <option value="fa" py:attrs="sel if lang == 'fa' else {}">Farsi</option>
-              <option value="fi" py:attrs="sel if lang == 'fi' else {}">Finnish</option>
-              <option value="fr" py:attrs="sel if lang == 'fr' else {}">French</option>
-              <option value="fy" py:attrs="sel if lang == 'fy' else {}">Frisian</option>
-              <option value="fur" py:attrs="sel if lang == 'fur' else {}">Friulian</option>
-              <option value="gla" py:attrs="sel if lang == 'gla' else {}">Gaelic, Scottish</option>
-              <option value="gl" py:attrs="sel if lang == 'gl' else {}">Galician</option>
-              <option value="kld" py:attrs="sel if lang == 'kld' else {}">Gamilaraay</option>
-              <option value="de" py:attrs="sel if lang == 'de' else {}">German</option>
-              <option value="el" py:attrs="sel if lang == 'el' else {}">Greek</option>
-              <option value="grc" py:attrs="sel if lang == 'grc' else {}">Greek, Ancient</option>
-              <option value="he" py:attrs="sel if lang == 'he' else {}">Hebrew</option>
-              <option value="hu" py:attrs="sel if lang == 'hu' else {}">Hungarian</option>
-              <option value="is" py:attrs="sel if lang == 'is' else {}">Icelandic</option>
-              <option value="ilo" py:attrs="sel if lang == 'ilo' else {}">Iloko</option>
-              <option value="ia" py:attrs="sel if lang == 'ia' else {}">Interlingua</option>
-              <option value="iu" py:attrs="sel if lang == 'iu' else {}">Inuktitut</option>
-              <option value="ga" py:attrs="sel if lang == 'ga' else {}">Irish</option>
-              <option value="it" py:attrs="sel if lang == 'it' else {}">Italian</option>
-              <option value="ja" py:attrs="sel if lang == 'ja' else {}">Japanese</option>
-              <option value="csb" py:attrs="sel if lang == 'csb' else {}">Kashubian</option>
-              <option value="kha" py:attrs="sel if lang == 'kha' else {}">Khasi</option>
-              <option value="ko" py:attrs="sel if lang == 'ko' else {}">Korean</option>
-              <option value="la" py:attrs="sel if lang == 'la' else {}">Latin</option>
-              <option value="lt" py:attrs="sel if lang == 'lt' else {}">Lithuanian</option>
-              <option value="mi" py:attrs="sel if lang == 'mi' else {}">Maori</option>
-              <option value="myn" py:attrs="sel if lang == 'myn' else {}">Mayan Languages</option>
-              <option value="enm" py:attrs="sel if lang == 'enm' else {}">Middle English</option>
-              <option value="nah" py:attrs="sel if lang == 'nah' else {}">Nahuatl</option>
-              <option value="nap" py:attrs="sel if lang == 'nap' else {}">Napoletano-Calabrese</option>
-              <option value="nav" py:attrs="sel if lang == 'nav' else {}">Navajo</option>
-              <option value="nai" py:attrs="sel if lang == 'nai' else {}">North American Indian</option>
-              <option value="no" py:attrs="sel if lang == 'no' else {}">Norwegian</option>
-              <option value="oc" py:attrs="sel if lang == 'oc' else {}">Occitan</option>
-              <option value="oji" py:attrs="sel if lang == 'oji' else {}">Ojibwa</option>
-              <option value="ang" py:attrs="sel if lang == 'ang' else {}">Old English</option>
-              <option value="pl" py:attrs="sel if lang == 'pl' else {}">Polish</option>
-              <option value="pt" py:attrs="sel if lang == 'pt' else {}">Portuguese</option>
-              <option value="ro" py:attrs="sel if lang == 'ro' else {}">Romanian</option>
-              <option value="ru" py:attrs="sel if lang == 'ru' else {}">Russian</option>
-              <option value="sa" py:attrs="sel if lang == 'sa' else {}">Sanskrit</option>
-              <option value="sr" py:attrs="sel if lang == 'sr' else {}">Serbian</option>
-              <option value="sl" py:attrs="sel if lang == 'sl' else {}">Slovenian</option>
-              <option value="es" py:attrs="sel if lang == 'es' else {}">Spanish</option>
-              <option value="sv" py:attrs="sel if lang == 'sv' else {}">Swedish</option>
-              <option value="bgs" py:attrs="sel if lang == 'bgs' else {}">Tagabawa</option>
-              <option value="tl" py:attrs="sel if lang == 'tl' else {}">Tagalog</option>
-              <option value="te" py:attrs="sel if lang == 'te' else {}">Telugu</option>
-              <option value="cy" py:attrs="sel if lang == 'cy' else {}">Welsh</option>
-              <option value="yi" py:attrs="sel if lang == 'yi' else {}">Yiddish</option>
+        <select id="lang" name="lang" title="Language">
+              <option value="">Any</option>
+              <option value="af" >Afrikaans</option>
+              <option value="ale" >Aleut</option>
+              <option value="ar" >Arabic</option>
+              <option value="arp" >Arapaho</option>
+              <option value="brx" >Bodo</option>
+              <option value="br" >Breton</option>
+              <option value="bg" >Bulgarian</option>
+              <option value="rmr" >Caló</option>
+              <option value="ca" >Catalan</option>
+              <option value="ceb" >Cebuano</option>
+              <option value="zh" >Chinese</option>
+              <option value="cs" >Czech</option>
+              <option value="da" >Danish</option>
+              <option value="nl" >Dutch</option>
+              <option value="en" >English</option>
+              <option value="eo" >Esperanto</option>
+              <option value="et" >Estonian</option>
+              <option value="fa" >Farsi</option>
+              <option value="fi" >Finnish</option>
+              <option value="fr" >French</option>
+              <option value="fy" >Frisian</option>
+              <option value="fur" >Friulian</option>
+              <option value="gla" >Gaelic, Scottish</option>
+              <option value="gl" >Galician</option>
+              <option value="kld" >Gamilaraay</option>
+              <option value="de" >German</option>
+              <option value="el" >Greek</option>
+              <option value="grc" >Greek, Ancient</option>
+              <option value="he" >Hebrew</option>
+              <option value="hu" >Hungarian</option>
+              <option value="is" >Icelandic</option>
+              <option value="ilo" >Iloko</option>
+              <option value="ia" >Interlingua</option>
+              <option value="iu" >Inuktitut</option>
+              <option value="ga" >Irish</option>
+              <option value="it" >Italian</option>
+              <option value="ja" >Japanese</option>
+              <option value="csb" >Kashubian</option>
+              <option value="kha" >Khasi</option>
+              <option value="ko" >Korean</option>
+              <option value="la" >Latin</option>
+              <option value="lt" >Lithuanian</option>
+              <option value="mi" >Maori</option>
+              <option value="myn" >Mayan Languages</option>
+              <option value="enm" >Middle English</option>
+              <option value="nah" >Nahuatl</option>
+              <option value="nap" >Napoletano-Calabrese</option>
+              <option value="nav" >Navajo</option>
+              <option value="nai" >North American Indian</option>
+              <option value="no" >Norwegian</option>
+              <option value="oc" >Occitan</option>
+              <option value="oji" >Ojibwa</option>
+              <option value="ang" >Old English</option>
+              <option value="pl" >Polish</option>
+              <option value="pt" >Portuguese</option>
+              <option value="ro" >Romanian</option>
+              <option value="ru" >Russian</option>
+              <option value="sa" >Sanskrit</option>
+              <option value="sr" >Serbian</option>
+              <option value="sl" >Slovenian</option>
+              <option value="es" >Spanish</option>
+              <option value="sv" >Swedish</option>
+              <option value="bgs" >Tagabawa</option>
+              <option value="tl" >Tagalog</option>
+              <option value="te" >Telugu</option>
+              <option value="cy" >Welsh</option>
+              <option value="yi" >Yiddish</option>
         </select>
       </p>
       <p>
        <label for="category" accesskey="c">Category:</label>
-       <select id="category" name="category" py:with="cat = params.get('category', '')" title="Category (Book Count)">
-      <option selected="" value="" py:attrs="sel if not cat else {}">Any</option>
-      <option value="1" py:attrs="sel if cat == '1' else {}">Audio Book, human-read</option>
-      <option value="2" py:attrs="sel if cat == '2' else {}">Audio Book, computer-generated</option>
-      <option value="3" py:attrs="sel if cat == '3' else {}">Music, recorded</option>
-      <option value="4" py:attrs="sel if cat == '4' else {}">Music, Sheet</option>
-      <option value="5" py:attrs="sel if cat == '5' else {}">Pictures, still</option>
-      <option value="6" py:attrs="sel if cat == '6' else {}">Other recordings</option>
-      <option value="7" py:attrs="sel if cat == '7' else {}">Pictures, moving</option>
-      <option value="8" py:attrs="sel if cat == '8' else {}">Data</option>
-      <option value="9" py:attrs="sel if cat == '9' else {}">Compilations</option>
+       <select id="category" name="category" title="Category (Book Count)">
+      <option selected="" value="">Any</option>
+      <option value="1" >Audio Book, human-read</option>
+      <option value="2" >Audio Book, computer-generated</option>
+      <option value="3" >Music, recorded</option>
+      <option value="4" >Music, Sheet</option>
+      <option value="5" >Pictures, still</option>
+      <option value="6" >Other recordings</option>
+      <option value="7" >Pictures, moving</option>
+      <option value="8" >Data</option>
+      <option value="9" >Compilations</option>
        </select>
       </p>
       <p>
        <label for="locc" accesskey="o">LoCC:</label>
-       <select id="locc" name="locc"  py:with="locc = params.get('locc', '')"  title="Please choose a Library of Congress Class.">
-      <option selected="" value="" py:attrs="sel if not locc else {}">Any</option>
-      <option value="AC" py:attrs="sel if locc == 'AC' else {}">AC General Works: Collections, Series, Collected works, Pamphlets</option>
-      <option value="AE" py:attrs="sel if locc == 'AE' else {}">AE General Works: Encyclopedias</option>
-      <option value="AG" py:attrs="sel if locc == 'AG' else {}">AG General Works: Dictionaries and other general reference books</option>
-      <option value="AM" py:attrs="sel if locc == 'AM' else {}">AM General Works: Museums, Collectors and collecting</option>
-      <option value="AP" py:attrs="sel if locc == 'AP' else {}">AP General Works: Periodicals</option>
-      <option value="AS" py:attrs="sel if locc == 'AS' else {}">AS General Works: Academies and International Associations, Congresses</option>
-      <option value="AY" py:attrs="sel if locc == 'AY' else {}">AY General Works: Yearbooks, Almanacs, Directories</option>
-      <option value="AZ" py:attrs="sel if locc == 'AZ' else {}">AZ General Works: History of scholarship and learning, The humanities</option>
-      <option value="B" py:attrs="sel if locc == 'B' else {}">B Philosophy, Psychology, Religion</option>
-      <option value="BC" py:attrs="sel if locc == 'BC' else {}">BC Philosophy, Psychology, Religion: Logic</option>
-      <option value="BD" py:attrs="sel if locc == 'BD' else {}">BD Philosophy, Psychology, Religion: Speculative Philosophy, General Philosophical works</option>
-      <option value="BF" py:attrs="sel if locc == 'BF' else {}">BF Philosophy, Psychology, Religion: Psychology, Philosophy, Psychoanalysis</option>
-      <option value="BH" py:attrs="sel if locc == 'BH' else {}">BH Philosophy, Psychology, Religion: Aesthetics</option>
-      <option value="BJ" py:attrs="sel if locc == 'BJ' else {}">BJ Philosophy, Psychology, Religion: Ethics, Social usages, Etiquette, Religion</option>
-      <option value="BL" py:attrs="sel if locc == 'BL' else {}">BL Philosophy, Psychology, Religion: Religion: General, Miscellaneous and Atheism</option>
-      <option value="BM" py:attrs="sel if locc == 'BM' else {}">BM Philosophy, Psychology, Religion: Judaism</option>
-      <option value="BP" py:attrs="sel if locc == 'BP' else {}">BP Philosophy, Psychology, Religion: Islam, Bahaism, Theosophy, Other and new beliefs</option>
-      <option value="BQ" py:attrs="sel if locc == 'BQ' else {}">BQ Philosophy, Psychology, Religion: Buddhism</option>
-      <option value="BR" py:attrs="sel if locc == 'BR' else {}">BR Philosophy, Psychology, Religion: Christianity</option>
-      <option value="BS" py:attrs="sel if locc == 'BS' else {}">BS Philosophy, Psychology, Religion: Christianity: The Bible, Old and New Testament</option>
-      <option value="BT" py:attrs="sel if locc == 'BT' else {}">BT Philosophy, Psychology, Religion: Christianity: Doctrinal theology, God, Christology</option>
-      <option value="BV" py:attrs="sel if locc == 'BV' else {}">BV Philosophy, Psychology, Religion: Christianity: Practical theology, Worship</option>
-      <option value="BX" py:attrs="sel if locc == 'BX' else {}">BX Philosophy, Psychology, Religion: Christianity: Churches, Church movements</option>
-      <option value="CB" py:attrs="sel if locc == 'CB' else {}">CB History: History of civilization</option>
-      <option value="CC" py:attrs="sel if locc == 'CC' else {}">CC History: Archaeology</option>
-      <option value="CE" py:attrs="sel if locc == 'CE' else {}">CE History: Technical Chronology, Calendar</option>
-      <option value="CJ" py:attrs="sel if locc == 'CJ' else {}">CJ History: Numismatics</option>
-      <option value="CN" py:attrs="sel if locc == 'CN' else {}">CN History: Inscriptions, Epigraphy</option>
-      <option value="CR" py:attrs="sel if locc == 'CR' else {}">CR History: Heraldry</option>
-      <option value="CS" py:attrs="sel if locc == 'CS' else {}">CS History: Genealogy</option>
-      <option value="CT" py:attrs="sel if locc == 'CT' else {}">CT History: Biography</option>
-      <option value="D" py:attrs="sel if locc == 'D' else {}">D History: General and Eastern Hemisphere</option>
-      <option value="D501" py:attrs="sel if locc == 'D501' else {}">D501 History: General and Eastern Hemisphere: World War I</option>
-      <option value="D731" py:attrs="sel if locc == 'D731' else {}">D731 History: General and Eastern Hemisphere: World War II</option>
-      <option value="DA" py:attrs="sel if locc == 'DA' else {}">DA History: General and Eastern Hemisphere: Great Britain, Ireland, Central Europe</option>
-      <option value="DB" py:attrs="sel if locc == 'DB' else {}">DB History: General and Eastern Hemisphere: Austria, Hungary, Czech Republic, Slovakia</option>
-      <option value="DC" py:attrs="sel if locc == 'DC' else {}">DC History: General and Eastern Hemisphere: France, Andorra, Monaco</option>
-      <option value="DD" py:attrs="sel if locc == 'DD' else {}">DD History: General and Eastern Hemisphere: Germany</option>
-      <option value="DE" py:attrs="sel if locc == 'DE' else {}">DE History: General and Eastern Hemisphere: The Mediterranean Region, The Greco-Roman World</option>
-      <option value="DF" py:attrs="sel if locc == 'DF' else {}">DF History: General and Eastern Hemisphere: Greece</option>
-      <option value="DG" py:attrs="sel if locc == 'DG' else {}">DG History: General and Eastern Hemisphere: Italy, Vatican City, Malta</option>
-      <option value="DH" py:attrs="sel if locc == 'DH' else {}">DH History: General and Eastern Hemisphere: Netherlands, Belgium, Luxemburg</option>
-      <option value="DJ" py:attrs="sel if locc == 'DJ' else {}">DJ History: General and Eastern Hemisphere: Netherlands</option>
-      <option value="DJK" py:attrs="sel if locc == 'DJK' else {}">DJK History: General and Eastern Hemisphere: Eastern Europe</option>
-      <option value="DK" py:attrs="sel if locc == 'DK' else {}">DK History: General and Eastern Hemisphere: Russia, Former Soviet Republics, Poland</option>
-      <option value="DL" py:attrs="sel if locc == 'DL' else {}">DL History: General and Eastern Hemisphere: Northern Europe, Scandinavia</option>
-      <option value="DP" py:attrs="sel if locc == 'DP' else {}">DP History: General and Eastern Hemisphere: Spain, Portugal</option>
-      <option value="DQ" py:attrs="sel if locc == 'DQ' else {}">DQ History: General and Eastern Hemisphere: Switzerland</option>
-      <option value="DR" py:attrs="sel if locc == 'DR' else {}">DR History: General and Eastern Hemisphere: Balkan Peninsula, Turkey</option>
-      <option value="DS" py:attrs="sel if locc == 'DS' else {}">DS History: General and Eastern Hemisphere: Asia</option>
-      <option value="DT" py:attrs="sel if locc == 'DT' else {}">DT History: General and Eastern Hemisphere: Africa</option>
-      <option value="DU" py:attrs="sel if locc == 'DU' else {}">DU History: General and Eastern Hemisphere: History of Oceania (South Seas)</option>
-      <option value="DX" py:attrs="sel if locc == 'DX' else {}">DX History: General and Eastern Hemisphere: History of Romanies</option>
-      <option value="E011" py:attrs="sel if locc == 'E011' else {}">E011 History: America: America</option>
-      <option value="E151" py:attrs="sel if locc == 'E151' else {}">E151 History: America: United States</option>
-      <option value="E186" py:attrs="sel if locc == 'E186' else {}">E186 History: America: Colonial History</option>
-      <option value="E201" py:attrs="sel if locc == 'E201' else {}">E201 History: America: Revolution</option>
-      <option value="E300" py:attrs="sel if locc == 'E300' else {}">E300 History: America: Revolution to the Civil War</option>
-      <option value="E456" py:attrs="sel if locc == 'E456' else {}">E456 History: America: Civil War period</option>
-      <option value="E660" py:attrs="sel if locc == 'E660' else {}">E660 History: America: Late nineteenth century</option>
-      <option value="E740" py:attrs="sel if locc == 'E740' else {}">E740 History: America: Twentieth century</option>
-      <option value="E838" py:attrs="sel if locc == 'E838' else {}">E838 History: America: Later twentieth century</option>
-      <option value="E895" py:attrs="sel if locc == 'E895' else {}">E895 History: America: Twenty-first century</option>
-      <option value="F001" py:attrs="sel if locc == 'F001' else {}">F001 United States local history: New England</option>
-      <option value="F1001" py:attrs="sel if locc == 'F1001' else {}">F1001 North America local history: Canada</option>
-      <option value="F106" py:attrs="sel if locc == 'F106' else {}">F106 United States local history: Atlantic coast. Middle Atlantic States</option>
-      <option value="F1201" py:attrs="sel if locc == 'F1201' else {}">F1201 North America local history: Mexico</option>
-      <option value="F1401" py:attrs="sel if locc == 'F1401' else {}">F1401 Latin America local history: General</option>
-      <option value="F1461" py:attrs="sel if locc == 'F1461' else {}">F1461 Latin America local history: Guatemala</option>
-      <option value="F1481" py:attrs="sel if locc == 'F1481' else {}">F1481 Latin America local history: El Salvador</option>
-      <option value="F1501" py:attrs="sel if locc == 'F1501' else {}">F1501 Latin America local history: Honduras</option>
-      <option value="F1521" py:attrs="sel if locc == 'F1521' else {}">F1521 Latin America local history: Nicaragua</option>
-      <option value="F1541" py:attrs="sel if locc == 'F1541' else {}">F1541 Latin America local history: Costa Rica</option>
-      <option value="F1561" py:attrs="sel if locc == 'F1561' else {}">F1561 Latin America local history: Panama</option>
-      <option value="F1601" py:attrs="sel if locc == 'F1601' else {}">F1601 History of the Americas: West Indies</option>
-      <option value="F1751" py:attrs="sel if locc == 'F1751' else {}">F1751 History of the Americas: West Indies. Cuba</option>
-      <option value="F1861" py:attrs="sel if locc == 'F1861' else {}">F1861 History of the Americas: West Indies. Jamaica</option>
-      <option value="F1900" py:attrs="sel if locc == 'F1900' else {}">F1900 West Indies local history: Hispaniola (Haiti and Dominican Republic)</option>
-      <option value="F1951" py:attrs="sel if locc == 'F1951' else {}">F1951 West Indies local history: Puerto Rico</option>
-      <option value="F2001" py:attrs="sel if locc == 'F2001' else {}">F2001 History of the Americas: Lesser Antilles</option>
-      <option value="F206" py:attrs="sel if locc == 'F206' else {}">F206 United States local history: The South. South Atlantic States</option>
-      <option value="F2131" py:attrs="sel if locc == 'F2131' else {}">F2131 History of the Americas: West Indies. British West Indies</option>
-      <option value="F2155" py:attrs="sel if locc == 'F2155' else {}">F2155 History of the Americas: Caribbean area. Caribbean sea</option>
-      <option value="F2201" py:attrs="sel if locc == 'F2201' else {}">F2201 Latin America local history: South America. General</option>
-      <option value="F2251" py:attrs="sel if locc == 'F2251' else {}">F2251 Latin America local history: Colombia</option>
-      <option value="F2301" py:attrs="sel if locc == 'F2301' else {}">F2301 Latin America local history: Venezuela</option>
-      <option value="F2351" py:attrs="sel if locc == 'F2351' else {}">F2351 Latin America local history: Guiana</option>
-      <option value="F2501" py:attrs="sel if locc == 'F2501' else {}">F2501 Latin America local history: Brazil</option>
-      <option value="F2661" py:attrs="sel if locc == 'F2661' else {}">F2661 Latin America local history: Paraguay</option>
-      <option value="F2701" py:attrs="sel if locc == 'F2701' else {}">F2701 Latin America local history: Uruguay</option>
-      <option value="F2801" py:attrs="sel if locc == 'F2801' else {}">F2801 Latin America local history: Argentina</option>
-      <option value="F296" py:attrs="sel if locc == 'F296' else {}">F296 United States local history: Gulf States. West Florida</option>
-      <option value="F3051" py:attrs="sel if locc == 'F3051' else {}">F3051 Latin America local history: Chile</option>
-      <option value="F3301" py:attrs="sel if locc == 'F3301' else {}">F3301 Latin America local history: Bolivia</option>
-      <option value="F3401" py:attrs="sel if locc == 'F3401' else {}">F3401 Latin America local history: Peru</option>
-      <option value="F350.5" py:attrs="sel if locc == 'F350.5' else {}">F350.5 United States local history: Mississippi River and Valley. Middle West</option>
-      <option value="F3701" py:attrs="sel if locc == 'F3701' else {}">F3701 Latin America local history: Ecuador</option>
-      <option value="F396" py:attrs="sel if locc == 'F396' else {}">F396 United States local history: Old Southwest. Lower Mississippi Valley</option>
-      <option value="F476" py:attrs="sel if locc == 'F476' else {}">F476 United States local history: Old Northwest. Northwest Territory</option>
-      <option value="F516" py:attrs="sel if locc == 'F516' else {}">F516 United States local history: Ohio River and Valley.</option>
-      <option value="F590.3" py:attrs="sel if locc == 'F590.3' else {}">F590.3 United States local history: The West. Trans-Mississippi Region. Great Plains</option>
-      <option value="F721" py:attrs="sel if locc == 'F721' else {}">F721 United States local history: Rocky Mountains. Yellowstone National Park</option>
-      <option value="F786" py:attrs="sel if locc == 'F786' else {}">F786 United States local history: New Southwest. Colorado River, Canyon, and Valley</option>
-      <option value="F850.5" py:attrs="sel if locc == 'F850.5' else {}">F850.5 United States local history: Pacific States</option>
-      <option value="F975" py:attrs="sel if locc == 'F975' else {}">F975 United States local history: Central American, West Indian, and other countries protected by and having close political affiliations with the United States</option>
-      <option value="G" py:attrs="sel if locc == 'G' else {}">G Geography, Anthropology, Recreation</option>
-      <option value="GA" py:attrs="sel if locc == 'GA' else {}">GA Geography, Anthropology, Recreation: Mathematical geography, Cartography</option>
-      <option value="GB" py:attrs="sel if locc == 'GB' else {}">GB Geography, Anthropology, Recreation: Physical geography</option>
-      <option value="GC" py:attrs="sel if locc == 'GC' else {}">GC Geography, Anthropology, Recreation: Oceanography</option>
-      <option value="GF" py:attrs="sel if locc == 'GF' else {}">GF Geography, Anthropology, Recreation: Human ecology, Anthropogeography</option>
-      <option value="GN" py:attrs="sel if locc == 'GN' else {}">GN Geography, Anthropology, Recreation: Anthropology</option>
-      <option value="GR" py:attrs="sel if locc == 'GR' else {}">GR Geography, Anthropology, Recreation: Folklore</option>
-      <option value="GT" py:attrs="sel if locc == 'GT' else {}">GT Geography, Anthropology, Recreation: Manners and customs</option>
-      <option value="GV" py:attrs="sel if locc == 'GV' else {}">GV Geography, Anthropology, Recreation: Recreation, Leisure</option>
-      <option value="H" py:attrs="sel if locc == 'H' else {}">H Social sciences</option>
-      <option value="HA" py:attrs="sel if locc == 'HA' else {}">HA Social sciences: Statistics</option>
-      <option value="HB" py:attrs="sel if locc == 'HB' else {}">HB Social sciences: Economic theory, Demography</option>
-      <option value="HC" py:attrs="sel if locc == 'HC' else {}">HC Social sciences: Economic history and conditions, Special topics</option>
-      <option value="HD" py:attrs="sel if locc == 'HD' else {}">HD Social sciences: Economic history and conditions, Production</option>
-      <option value="HE" py:attrs="sel if locc == 'HE' else {}">HE Social sciences: Transportation and communications</option>
-      <option value="HF" py:attrs="sel if locc == 'HF' else {}">HF Social sciences: Commerce</option>
-      <option value="HG" py:attrs="sel if locc == 'HG' else {}">HG Social sciences: Finance</option>
-      <option value="HJ" py:attrs="sel if locc == 'HJ' else {}">HJ Social sciences: Public finance</option>
-      <option value="HM" py:attrs="sel if locc == 'HM' else {}">HM Social sciences: Sociology</option>
-      <option value="HN" py:attrs="sel if locc == 'HN' else {}">HN Social sciences: Social history and conditions, Social problems</option>
-      <option value="HQ" py:attrs="sel if locc == 'HQ' else {}">HQ Social sciences: The family, Marriage, Sex and Gender</option>
-      <option value="HS" py:attrs="sel if locc == 'HS' else {}">HS Social sciences: Societies: secret, benevolent, etc.</option>
-      <option value="HT" py:attrs="sel if locc == 'HT' else {}">HT Social sciences: Communities, Classes, Races</option>
-      <option value="HV" py:attrs="sel if locc == 'HV' else {}">HV Social sciences: Social pathology, Social and Public Welfare</option>
-      <option value="HX" py:attrs="sel if locc == 'HX' else {}">HX Social sciences: Socialism, Communism, Anarchism</option>
-      <option value="J" py:attrs="sel if locc == 'J' else {}">J Political science</option>
-      <option value="JA" py:attrs="sel if locc == 'JA' else {}">JA Political science: Political science</option>
-      <option value="JC" py:attrs="sel if locc == 'JC' else {}">JC Political science: Political theory</option>
-      <option value="JF" py:attrs="sel if locc == 'JF' else {}">JF Political science: Political institutions and public administration</option>
-      <option value="JK" py:attrs="sel if locc == 'JK' else {}">JK Political science: Political inst. and pub. Admin.: United States</option>
-      <option value="JL" py:attrs="sel if locc == 'JL' else {}">JL Political science: Political inst. and pub. Admin.: America</option>
-      <option value="JN" py:attrs="sel if locc == 'JN' else {}">JN Political science: Political inst. and pub. Admin.: Europe</option>
-      <option value="JQ" py:attrs="sel if locc == 'JQ' else {}">JQ Political science: Political inst. and pub. Admin.: Asia, Africa and Oceania</option>
-      <option value="JS" py:attrs="sel if locc == 'JS' else {}">JS Political science: Local government, Municipal government</option>
-      <option value="JV" py:attrs="sel if locc == 'JV' else {}">JV Political science: Colonies and colonization, International migration</option>
-      <option value="JX" py:attrs="sel if locc == 'JX' else {}">JX Political science: International law</option>
-      <option value="JZ" py:attrs="sel if locc == 'JZ' else {}">JZ Political science: International relations</option>
-      <option value="K" py:attrs="sel if locc == 'K' else {}">K Law in general, Comparative and uniform law, Jurisprudence</option>
-      <option value="KBM" py:attrs="sel if locc == 'KBM' else {}">KBM Law in general, Comparative and uniform law, Jurisprudence: Jewish law</option>
-      <option value="KBR" py:attrs="sel if locc == 'KBR' else {}">KBR Law in general, Comparative and uniform law, Jurisprudence: History of canon law</option>
-      <option value="KD" py:attrs="sel if locc == 'KD' else {}">KD Law in general, Comparative and uniform law, Jurisprudence: United Kingdom and Ireland</option>
-      <option value="KDZ" py:attrs="sel if locc == 'KDZ' else {}">KDZ Law in general, Comparative and uniform law, Jurisprudence: America, North America</option>
-      <option value="KE" py:attrs="sel if locc == 'KE' else {}">KE Law in general, Comparative and uniform law, Jurisprudence: Canada</option>
-      <option value="KF" py:attrs="sel if locc == 'KF' else {}">KF Law in general, Comparative and uniform law, Jurisprudence: United States</option>
-      <option value="KH" py:attrs="sel if locc == 'KH' else {}">KH Law in general, Comparative and uniform law, Jurisprudence: South America</option>
-      <option value="KJ" py:attrs="sel if locc == 'KJ' else {}">KJ Law in general, Comparative and uniform law, Jurisprudence: Europe</option>
-      <option value="KL" py:attrs="sel if locc == 'KL' else {}">KL Law in general, Comparative and uniform law, Jurisprudence: Asia and Eurasia, Africa, Pacific Area, and Antarctica</option>
-      <option value="KN" py:attrs="sel if locc == 'KN' else {}">KN Law in general, Comparative and uniform law, Jurisprudence: South Asia, Southeast Asia, East Asia</option>
-      <option value="KNX" py:attrs="sel if locc == 'KNX' else {}">KNX Law in general, Comparative and uniform law, Jurisprudence: Japan</option>
-      <option value="KP" py:attrs="sel if locc == 'KP' else {}">KP Law in general, Comparative and uniform law, Jurisprudence: South Asia, Southeast Asia, East Asia</option>
-      <option value="KZ" py:attrs="sel if locc == 'KZ' else {}">KZ Law in general, Comparative and uniform law, Jurisprudence: Law of nations</option>
-      <option value="L" py:attrs="sel if locc == 'L' else {}">L Education</option>
-      <option value="LA" py:attrs="sel if locc == 'LA' else {}">LA Education: History of education</option>
-      <option value="LB" py:attrs="sel if locc == 'LB' else {}">LB Education: Theory and practice of education</option>
-      <option value="LC" py:attrs="sel if locc == 'LC' else {}">LC Education: Special aspects of education</option>
-      <option value="LD" py:attrs="sel if locc == 'LD' else {}">LD Education: Individual institutions: United States</option>
-      <option value="LE" py:attrs="sel if locc == 'LE' else {}">LE Education: Individual institutions: America (except US)</option>
-      <option value="LF" py:attrs="sel if locc == 'LF' else {}">LF Education: Individual institutions: Europe</option>
-      <option value="LH" py:attrs="sel if locc == 'LH' else {}">LH Education: College and school magazines and papers</option>
-      <option value="LT" py:attrs="sel if locc == 'LT' else {}">LT Education: Textbooks</option>
-      <option value="M" py:attrs="sel if locc == 'M' else {}">M Music</option>
-      <option value="ML" py:attrs="sel if locc == 'ML' else {}">ML Music: Literature of music</option>
-      <option value="MT" py:attrs="sel if locc == 'MT' else {}">MT Music: Musical instruction and study, Composition</option>
-      <option value="N" py:attrs="sel if locc == 'N' else {}">N Fine Arts</option>
-      <option value="NA" py:attrs="sel if locc == 'NA' else {}">NA Fine Arts: Architecture</option>
-      <option value="NB" py:attrs="sel if locc == 'NB' else {}">NB Fine Arts: Sculpture</option>
-      <option value="NC" py:attrs="sel if locc == 'NC' else {}">NC Fine Arts: Drawing, Design, Illustration</option>
-      <option value="ND" py:attrs="sel if locc == 'ND' else {}">ND Fine Arts: Painting</option>
-      <option value="NE" py:attrs="sel if locc == 'NE' else {}">NE Fine Arts: Print media</option>
-      <option value="NK" py:attrs="sel if locc == 'NK' else {}">NK Fine Arts: Decorative and Applied Arts, Decoration and Ornament</option>
-      <option value="NX" py:attrs="sel if locc == 'NX' else {}">NX Fine Arts: Arts in general</option>
-      <option value="P" py:attrs="sel if locc == 'P' else {}">P Language and Literatures</option>
-      <option value="PA" py:attrs="sel if locc == 'PA' else {}">PA Language and Literatures: Classical Languages and Literature</option>
-      <option value="PB" py:attrs="sel if locc == 'PB' else {}">PB Language and Literatures: General works</option>
-      <option value="PC" py:attrs="sel if locc == 'PC' else {}">PC Language and Literatures: Romance languages: Italian, French, Spanish, Portuguese</option>
-      <option value="PD" py:attrs="sel if locc == 'PD' else {}">PD Language and Literatures: Germanic and Scandinavian languages</option>
-      <option value="PE" py:attrs="sel if locc == 'PE' else {}">PE Language and Literatures: English</option>
-      <option value="PF" py:attrs="sel if locc == 'PF' else {}">PF Language and Literatures: West Germanic</option>
-      <option value="PG" py:attrs="sel if locc == 'PG' else {}">PG Language and Literatures: Slavic (including Russian), Languages and Literature</option>
-      <option value="PH" py:attrs="sel if locc == 'PH' else {}">PH Language and Literatures: Finno-Ugrian and Basque languages and literatures</option>
-      <option value="PJ" py:attrs="sel if locc == 'PJ' else {}">PJ Language and Literatures: Oriental languages and literatures</option>
-      <option value="PK" py:attrs="sel if locc == 'PK' else {}">PK Language and Literatures: Indo-Iranian literatures</option>
-      <option value="PL" py:attrs="sel if locc == 'PL' else {}">PL Language and Literatures: Languages and literatures of Eastern Asia, Africa, Oceania</option>
-      <option value="PM" py:attrs="sel if locc == 'PM' else {}">PM Language and Literatures: Indigenous American and Artificial Languages</option>
-      <option value="PN" py:attrs="sel if locc == 'PN' else {}">PN Language and Literatures: Literature: General, Criticism, Collections</option>
-      <option value="PQ" py:attrs="sel if locc == 'PQ' else {}">PQ Language and Literatures: Romance literatures: French, Italian, Spanish, Portuguese</option>
-      <option value="PR" py:attrs="sel if locc == 'PR' else {}">PR Language and Literatures: English literature</option>
-      <option value="PS" py:attrs="sel if locc == 'PS' else {}">PS Language and Literatures: American and Canadian literature</option>
-      <option value="PT" py:attrs="sel if locc == 'PT' else {}">PT Language and Literatures: Germanic, Scandinavian, and Icelandic literatures</option>
-      <option value="PZ" py:attrs="sel if locc == 'PZ' else {}">PZ Language and Literatures: Juvenile belles lettres</option>
-      <option value="Q" py:attrs="sel if locc == 'Q' else {}">Q Science</option>
-      <option value="QA" py:attrs="sel if locc == 'QA' else {}">QA Science: Mathematics</option>
-      <option value="QB" py:attrs="sel if locc == 'QB' else {}">QB Science: Astronomy</option>
-      <option value="QC" py:attrs="sel if locc == 'QC' else {}">QC Science: Physics</option>
-      <option value="QD" py:attrs="sel if locc == 'QD' else {}">QD Science: Chemistry</option>
-      <option value="QE" py:attrs="sel if locc == 'QE' else {}">QE Science: Geology</option>
-      <option value="QH" py:attrs="sel if locc == 'QH' else {}">QH Science: Natural history</option>
-      <option value="QH301" py:attrs="sel if locc == 'QH301' else {}">QH301 Science: Biology</option>
-      <option value="QK" py:attrs="sel if locc == 'QK' else {}">QK Science: Botany</option>
-      <option value="QL" py:attrs="sel if locc == 'QL' else {}">QL Science: Zoology</option>
-      <option value="QM" py:attrs="sel if locc == 'QM' else {}">QM Science: Human anatomy</option>
-      <option value="QP" py:attrs="sel if locc == 'QP' else {}">QP Science: Physiology</option>
-      <option value="QR" py:attrs="sel if locc == 'QR' else {}">QR Science: Microbiology</option>
-      <option value="R" py:attrs="sel if locc == 'R' else {}">R Medicine</option>
-      <option value="RA" py:attrs="sel if locc == 'RA' else {}">RA Medicine: Public aspects of medicine</option>
-      <option value="RB" py:attrs="sel if locc == 'RB' else {}">RB Medicine: Pathology</option>
-      <option value="RC" py:attrs="sel if locc == 'RC' else {}">RC Medicine: Internal medicine</option>
-      <option value="RD" py:attrs="sel if locc == 'RD' else {}">RD Medicine: Surgery</option>
-      <option value="RE" py:attrs="sel if locc == 'RE' else {}">RE Medicine: Ophthalmology</option>
-      <option value="RF" py:attrs="sel if locc == 'RF' else {}">RF Medicine: Otorhinolaryngology</option>
-      <option value="RG" py:attrs="sel if locc == 'RG' else {}">RG Medicine: Gynecology and obstetrics</option>
-      <option value="RJ" py:attrs="sel if locc == 'RJ' else {}">RJ Medicine: Pediatrics</option>
-      <option value="RK" py:attrs="sel if locc == 'RK' else {}">RK Medicine: Dentistry</option>
-      <option value="RL" py:attrs="sel if locc == 'RL' else {}">RL Medicine: Dermatology</option>
-      <option value="RM" py:attrs="sel if locc == 'RM' else {}">RM Medicine: Therapeutics, Pharmacology</option>
-      <option value="RS" py:attrs="sel if locc == 'RS' else {}">RS Medicine: Pharmacy and materia medica</option>
-      <option value="RT" py:attrs="sel if locc == 'RT' else {}">RT Medicine: Nursing</option>
-      <option value="RV" py:attrs="sel if locc == 'RV' else {}">RV Medicine: Botanic, Thomsonian, and eclectic medicine</option>
-      <option value="RX" py:attrs="sel if locc == 'RX' else {}">RX Medicine: Homeopathy</option>
-      <option value="RZ" py:attrs="sel if locc == 'RZ' else {}">RZ Medicine: Other systems of medicine</option>
-      <option value="S" py:attrs="sel if locc == 'S' else {}">S Agriculture</option>
-      <option value="SB" py:attrs="sel if locc == 'SB' else {}">SB Agriculture: Plant culture</option>
-      <option value="SD" py:attrs="sel if locc == 'SD' else {}">SD Agriculture: Forestry</option>
-      <option value="SF" py:attrs="sel if locc == 'SF' else {}">SF Agriculture: Animal culture</option>
-      <option value="SH" py:attrs="sel if locc == 'SH' else {}">SH Agriculture: Aquaculture, Fisheries, Angling</option>
-      <option value="SK" py:attrs="sel if locc == 'SK' else {}">SK Agriculture: Hunting sports</option>
-      <option value="T" py:attrs="sel if locc == 'T' else {}">T Technology</option>
-      <option value="TA" py:attrs="sel if locc == 'TA' else {}">TA Technology: Engineering and Civil engineering</option>
-      <option value="TC" py:attrs="sel if locc == 'TC' else {}">TC Technology: Ocean engineering</option>
-      <option value="TD" py:attrs="sel if locc == 'TD' else {}">TD Technology: Environmental technology, Sanitary engineering</option>
-      <option value="TE" py:attrs="sel if locc == 'TE' else {}">TE Technology: Highway engineering, Roads and pavements</option>
-      <option value="TF" py:attrs="sel if locc == 'TF' else {}">TF Technology: Railroad engineering and operation</option>
-      <option value="TG" py:attrs="sel if locc == 'TG' else {}">TG Technology: Bridge engineering</option>
-      <option value="TH" py:attrs="sel if locc == 'TH' else {}">TH Technology: Building construction</option>
-      <option value="TJ" py:attrs="sel if locc == 'TJ' else {}">TJ Technology: Mechanical engineering and machinery</option>
-      <option value="TK" py:attrs="sel if locc == 'TK' else {}">TK Technology: Electrical, Electronics and Nuclear engineering</option>
-      <option value="TL" py:attrs="sel if locc == 'TL' else {}">TL Technology: Motor vehicles, Aeronautics, Astronautics</option>
-      <option value="TN" py:attrs="sel if locc == 'TN' else {}">TN Technology: Mining engineering, Metallurgy</option>
-      <option value="TP" py:attrs="sel if locc == 'TP' else {}">TP Technology: Chemical technology</option>
-      <option value="TR" py:attrs="sel if locc == 'TR' else {}">TR Technology: Photography</option>
-      <option value="TS" py:attrs="sel if locc == 'TS' else {}">TS Technology: Manufactures</option>
-      <option value="TT" py:attrs="sel if locc == 'TT' else {}">TT Technology: Handicrafts, Arts and crafts</option>
-      <option value="TX" py:attrs="sel if locc == 'TX' else {}">TX Technology: Home economics</option>
-      <option value="U" py:attrs="sel if locc == 'U' else {}">U Military science</option>
-      <option value="UA" py:attrs="sel if locc == 'UA' else {}">UA Military science: Armies: Organization, distribution, military situation</option>
-      <option value="UB" py:attrs="sel if locc == 'UB' else {}">UB Military science: Military administration</option>
-      <option value="UC" py:attrs="sel if locc == 'UC' else {}">UC Military science: Maintenance and transportation</option>
-      <option value="UD" py:attrs="sel if locc == 'UD' else {}">UD Military science: Infantry</option>
-      <option value="UE" py:attrs="sel if locc == 'UE' else {}">UE Military science: Cavalry, Armor</option>
-      <option value="UF" py:attrs="sel if locc == 'UF' else {}">UF Military science: Artillery</option>
-      <option value="UG" py:attrs="sel if locc == 'UG' else {}">UG Military science: Military engineering</option>
-      <option value="UH" py:attrs="sel if locc == 'UH' else {}">UH Military science: Other services</option>
-      <option value="V" py:attrs="sel if locc == 'V' else {}">V Naval science</option>
-      <option value="VA" py:attrs="sel if locc == 'VA' else {}">VA Naval science: Navies: Organization, distribution, naval situation</option>
-      <option value="VB" py:attrs="sel if locc == 'VB' else {}">VB Naval science: Naval administration</option>
-      <option value="VE" py:attrs="sel if locc == 'VE' else {}">VE Naval science: Marines</option>
-      <option value="VF" py:attrs="sel if locc == 'VF' else {}">VF Naval science: Naval ordnance</option>
-      <option value="VG" py:attrs="sel if locc == 'VG' else {}">VG Naval science: Minor services of navies</option>
-      <option value="VK" py:attrs="sel if locc == 'VK' else {}">VK Naval science: Navigation, Merchant marine</option>
-      <option value="VM" py:attrs="sel if locc == 'VM' else {}">VM Naval science: Naval architecture, Shipbuilding, Marine engineering</option>
-      <option value="Z" py:attrs="sel if locc == 'Z' else {}">Z Bibliography, Library science</option>
+       <select id="locc" name="locc" title="Please choose a Library of Congress Class.">
+      <option selected="" value="">Any</option>
+      <option value="AC" >AC General Works: Collections, Series, Collected works, Pamphlets</option>
+      <option value="AE" >AE General Works: Encyclopedias</option>
+      <option value="AG" >AG General Works: Dictionaries and other general reference books</option>
+      <option value="AM" >AM General Works: Museums, Collectors and collecting</option>
+      <option value="AP" >AP General Works: Periodicals</option>
+      <option value="AS" >AS General Works: Academies and International Associations, Congresses</option>
+      <option value="AY" >AY General Works: Yearbooks, Almanacs, Directories</option>
+      <option value="AZ" >AZ General Works: History of scholarship and learning, The humanities</option>
+      <option value="B" >B Philosophy, Psychology, Religion</option>
+      <option value="BC" >BC Philosophy, Psychology, Religion: Logic</option>
+      <option value="BD" >BD Philosophy, Psychology, Religion: Speculative Philosophy, General Philosophical works</option>
+      <option value="BF" >BF Philosophy, Psychology, Religion: Psychology, Philosophy, Psychoanalysis</option>
+      <option value="BH" >BH Philosophy, Psychology, Religion: Aesthetics</option>
+      <option value="BJ" >BJ Philosophy, Psychology, Religion: Ethics, Social usages, Etiquette, Religion</option>
+      <option value="BL" >BL Philosophy, Psychology, Religion: Religion: General, Miscellaneous and Atheism</option>
+      <option value="BM" >BM Philosophy, Psychology, Religion: Judaism</option>
+      <option value="BP" >BP Philosophy, Psychology, Religion: Islam, Bahaism, Theosophy, Other and new beliefs</option>
+      <option value="BQ" >BQ Philosophy, Psychology, Religion: Buddhism</option>
+      <option value="BR" >BR Philosophy, Psychology, Religion: Christianity</option>
+      <option value="BS" >BS Philosophy, Psychology, Religion: Christianity: The Bible, Old and New Testament</option>
+      <option value="BT" >BT Philosophy, Psychology, Religion: Christianity: Doctrinal theology, God, Christology</option>
+      <option value="BV" >BV Philosophy, Psychology, Religion: Christianity: Practical theology, Worship</option>
+      <option value="BX" >BX Philosophy, Psychology, Religion: Christianity: Churches, Church movements</option>
+      <option value="CB" >CB History: History of civilization</option>
+      <option value="CC" >CC History: Archaeology</option>
+      <option value="CE" >CE History: Technical Chronology, Calendar</option>
+      <option value="CJ" >CJ History: Numismatics</option>
+      <option value="CN" >CN History: Inscriptions, Epigraphy</option>
+      <option value="CR" >CR History: Heraldry</option>
+      <option value="CS" >CS History: Genealogy</option>
+      <option value="CT" >CT History: Biography</option>
+      <option value="D" >D History: General and Eastern Hemisphere</option>
+      <option value="D501" >D501 History: General and Eastern Hemisphere: World War I</option>
+      <option value="D731" >D731 History: General and Eastern Hemisphere: World War II</option>
+      <option value="DA" >DA History: General and Eastern Hemisphere: Great Britain, Ireland, Central Europe</option>
+      <option value="DB" >DB History: General and Eastern Hemisphere: Austria, Hungary, Czech Republic, Slovakia</option>
+      <option value="DC" >DC History: General and Eastern Hemisphere: France, Andorra, Monaco</option>
+      <option value="DD" >DD History: General and Eastern Hemisphere: Germany</option>
+      <option value="DE" >DE History: General and Eastern Hemisphere: The Mediterranean Region, The Greco-Roman World</option>
+      <option value="DF" >DF History: General and Eastern Hemisphere: Greece</option>
+      <option value="DG" >DG History: General and Eastern Hemisphere: Italy, Vatican City, Malta</option>
+      <option value="DH" >DH History: General and Eastern Hemisphere: Netherlands, Belgium, Luxemburg</option>
+      <option value="DJ" >DJ History: General and Eastern Hemisphere: Netherlands</option>
+      <option value="DJK" >DJK History: General and Eastern Hemisphere: Eastern Europe</option>
+      <option value="DK" >DK History: General and Eastern Hemisphere: Russia, Former Soviet Republics, Poland</option>
+      <option value="DL" >DL History: General and Eastern Hemisphere: Northern Europe, Scandinavia</option>
+      <option value="DP" >DP History: General and Eastern Hemisphere: Spain, Portugal</option>
+      <option value="DQ" >DQ History: General and Eastern Hemisphere: Switzerland</option>
+      <option value="DR" >DR History: General and Eastern Hemisphere: Balkan Peninsula, Turkey</option>
+      <option value="DS" >DS History: General and Eastern Hemisphere: Asia</option>
+      <option value="DT" >DT History: General and Eastern Hemisphere: Africa</option>
+      <option value="DU" >DU History: General and Eastern Hemisphere: History of Oceania (South Seas)</option>
+      <option value="DX" >DX History: General and Eastern Hemisphere: History of Romanies</option>
+      <option value="E011" >E011 History: America: America</option>
+      <option value="E151" >E151 History: America: United States</option>
+      <option value="E186" >E186 History: America: Colonial History</option>
+      <option value="E201" >E201 History: America: Revolution</option>
+      <option value="E300" >E300 History: America: Revolution to the Civil War</option>
+      <option value="E456" >E456 History: America: Civil War period</option>
+      <option value="E660" >E660 History: America: Late nineteenth century</option>
+      <option value="E740" >E740 History: America: Twentieth century</option>
+      <option value="E838" >E838 History: America: Later twentieth century</option>
+      <option value="E895" >E895 History: America: Twenty-first century</option>
+      <option value="F001" >F001 United States local history: New England</option>
+      <option value="F1001" >F1001 North America local history: Canada</option>
+      <option value="F106" >F106 United States local history: Atlantic coast. Middle Atlantic States</option>
+      <option value="F1201" >F1201 North America local history: Mexico</option>
+      <option value="F1401" >F1401 Latin America local history: General</option>
+      <option value="F1461" >F1461 Latin America local history: Guatemala</option>
+      <option value="F1481" >F1481 Latin America local history: El Salvador</option>
+      <option value="F1501" >F1501 Latin America local history: Honduras</option>
+      <option value="F1521" >F1521 Latin America local history: Nicaragua</option>
+      <option value="F1541" >F1541 Latin America local history: Costa Rica</option>
+      <option value="F1561" >F1561 Latin America local history: Panama</option>
+      <option value="F1601" >F1601 History of the Americas: West Indies</option>
+      <option value="F1751" >F1751 History of the Americas: West Indies. Cuba</option>
+      <option value="F1861" >F1861 History of the Americas: West Indies. Jamaica</option>
+      <option value="F1900" >F1900 West Indies local history: Hispaniola (Haiti and Dominican Republic)</option>
+      <option value="F1951" >F1951 West Indies local history: Puerto Rico</option>
+      <option value="F2001" >F2001 History of the Americas: Lesser Antilles</option>
+      <option value="F206" >F206 United States local history: The South. South Atlantic States</option>
+      <option value="F2131" >F2131 History of the Americas: West Indies. British West Indies</option>
+      <option value="F2155" >F2155 History of the Americas: Caribbean area. Caribbean sea</option>
+      <option value="F2201" >F2201 Latin America local history: South America. General</option>
+      <option value="F2251" >F2251 Latin America local history: Colombia</option>
+      <option value="F2301" >F2301 Latin America local history: Venezuela</option>
+      <option value="F2351" >F2351 Latin America local history: Guiana</option>
+      <option value="F2501" >F2501 Latin America local history: Brazil</option>
+      <option value="F2661" >F2661 Latin America local history: Paraguay</option>
+      <option value="F2701" >F2701 Latin America local history: Uruguay</option>
+      <option value="F2801" >F2801 Latin America local history: Argentina</option>
+      <option value="F296" >F296 United States local history: Gulf States. West Florida</option>
+      <option value="F3051" >F3051 Latin America local history: Chile</option>
+      <option value="F3301" >F3301 Latin America local history: Bolivia</option>
+      <option value="F3401" >F3401 Latin America local history: Peru</option>
+      <option value="F350.5" >F350.5 United States local history: Mississippi River and Valley. Middle West</option>
+      <option value="F3701" >F3701 Latin America local history: Ecuador</option>
+      <option value="F396" >F396 United States local history: Old Southwest. Lower Mississippi Valley</option>
+      <option value="F476" >F476 United States local history: Old Northwest. Northwest Territory</option>
+      <option value="F516" >F516 United States local history: Ohio River and Valley.</option>
+      <option value="F590.3" >F590.3 United States local history: The West. Trans-Mississippi Region. Great Plains</option>
+      <option value="F721" >F721 United States local history: Rocky Mountains. Yellowstone National Park</option>
+      <option value="F786" >F786 United States local history: New Southwest. Colorado River, Canyon, and Valley</option>
+      <option value="F850.5" >F850.5 United States local history: Pacific States</option>
+      <option value="F975" >F975 United States local history: Central American, West Indian, and other countries protected by and having close political affiliations with the United States</option>
+      <option value="G" >G Geography, Anthropology, Recreation</option>
+      <option value="GA" >GA Geography, Anthropology, Recreation: Mathematical geography, Cartography</option>
+      <option value="GB" >GB Geography, Anthropology, Recreation: Physical geography</option>
+      <option value="GC" >GC Geography, Anthropology, Recreation: Oceanography</option>
+      <option value="GF" >GF Geography, Anthropology, Recreation: Human ecology, Anthropogeography</option>
+      <option value="GN" >GN Geography, Anthropology, Recreation: Anthropology</option>
+      <option value="GR" >GR Geography, Anthropology, Recreation: Folklore</option>
+      <option value="GT" >GT Geography, Anthropology, Recreation: Manners and customs</option>
+      <option value="GV" >GV Geography, Anthropology, Recreation: Recreation, Leisure</option>
+      <option value="H" >H Social sciences</option>
+      <option value="HA" >HA Social sciences: Statistics</option>
+      <option value="HB" >HB Social sciences: Economic theory, Demography</option>
+      <option value="HC" >HC Social sciences: Economic history and conditions, Special topics</option>
+      <option value="HD" >HD Social sciences: Economic history and conditions, Production</option>
+      <option value="HE" >HE Social sciences: Transportation and communications</option>
+      <option value="HF" >HF Social sciences: Commerce</option>
+      <option value="HG" >HG Social sciences: Finance</option>
+      <option value="HJ" >HJ Social sciences: Public finance</option>
+      <option value="HM" >HM Social sciences: Sociology</option>
+      <option value="HN" >HN Social sciences: Social history and conditions, Social problems</option>
+      <option value="HQ" >HQ Social sciences: The family, Marriage, Sex and Gender</option>
+      <option value="HS" >HS Social sciences: Societies: secret, benevolent, etc.</option>
+      <option value="HT" >HT Social sciences: Communities, Classes, Races</option>
+      <option value="HV" >HV Social sciences: Social pathology, Social and Public Welfare</option>
+      <option value="HX" >HX Social sciences: Socialism, Communism, Anarchism</option>
+      <option value="J" >J Political science</option>
+      <option value="JA" >JA Political science: Political science</option>
+      <option value="JC" >JC Political science: Political theory</option>
+      <option value="JF" >JF Political science: Political institutions and public administration</option>
+      <option value="JK" >JK Political science: Political inst. and pub. Admin.: United States</option>
+      <option value="JL" >JL Political science: Political inst. and pub. Admin.: America</option>
+      <option value="JN" >JN Political science: Political inst. and pub. Admin.: Europe</option>
+      <option value="JQ" >JQ Political science: Political inst. and pub. Admin.: Asia, Africa and Oceania</option>
+      <option value="JS" >JS Political science: Local government, Municipal government</option>
+      <option value="JV" >JV Political science: Colonies and colonization, International migration</option>
+      <option value="JX" >JX Political science: International law</option>
+      <option value="JZ" >JZ Political science: International relations</option>
+      <option value="K" >K Law in general, Comparative and uniform law, Jurisprudence</option>
+      <option value="KBM" >KBM Law in general, Comparative and uniform law, Jurisprudence: Jewish law</option>
+      <option value="KBR" >KBR Law in general, Comparative and uniform law, Jurisprudence: History of canon law</option>
+      <option value="KD" >KD Law in general, Comparative and uniform law, Jurisprudence: United Kingdom and Ireland</option>
+      <option value="KDZ" >KDZ Law in general, Comparative and uniform law, Jurisprudence: America, North America</option>
+      <option value="KE" >KE Law in general, Comparative and uniform law, Jurisprudence: Canada</option>
+      <option value="KF" >KF Law in general, Comparative and uniform law, Jurisprudence: United States</option>
+      <option value="KH" >KH Law in general, Comparative and uniform law, Jurisprudence: South America</option>
+      <option value="KJ" >KJ Law in general, Comparative and uniform law, Jurisprudence: Europe</option>
+      <option value="KL" >KL Law in general, Comparative and uniform law, Jurisprudence: Asia and Eurasia, Africa, Pacific Area, and Antarctica</option>
+      <option value="KN" >KN Law in general, Comparative and uniform law, Jurisprudence: South Asia, Southeast Asia, East Asia</option>
+      <option value="KNX" >KNX Law in general, Comparative and uniform law, Jurisprudence: Japan</option>
+      <option value="KP" >KP Law in general, Comparative and uniform law, Jurisprudence: South Asia, Southeast Asia, East Asia</option>
+      <option value="KZ" >KZ Law in general, Comparative and uniform law, Jurisprudence: Law of nations</option>
+      <option value="L" >L Education</option>
+      <option value="LA" >LA Education: History of education</option>
+      <option value="LB" >LB Education: Theory and practice of education</option>
+      <option value="LC" >LC Education: Special aspects of education</option>
+      <option value="LD" >LD Education: Individual institutions: United States</option>
+      <option value="LE" >LE Education: Individual institutions: America (except US)</option>
+      <option value="LF" >LF Education: Individual institutions: Europe</option>
+      <option value="LH" >LH Education: College and school magazines and papers</option>
+      <option value="LT" >LT Education: Textbooks</option>
+      <option value="M" >M Music</option>
+      <option value="ML" >ML Music: Literature of music</option>
+      <option value="MT" >MT Music: Musical instruction and study, Composition</option>
+      <option value="N" >N Fine Arts</option>
+      <option value="NA" >NA Fine Arts: Architecture</option>
+      <option value="NB" >NB Fine Arts: Sculpture</option>
+      <option value="NC" >NC Fine Arts: Drawing, Design, Illustration</option>
+      <option value="ND" >ND Fine Arts: Painting</option>
+      <option value="NE" >NE Fine Arts: Print media</option>
+      <option value="NK" >NK Fine Arts: Decorative and Applied Arts, Decoration and Ornament</option>
+      <option value="NX" >NX Fine Arts: Arts in general</option>
+      <option value="P" >P Language and Literatures</option>
+      <option value="PA" >PA Language and Literatures: Classical Languages and Literature</option>
+      <option value="PB" >PB Language and Literatures: General works</option>
+      <option value="PC" >PC Language and Literatures: Romance languages: Italian, French, Spanish, Portuguese</option>
+      <option value="PD" >PD Language and Literatures: Germanic and Scandinavian languages</option>
+      <option value="PE" >PE Language and Literatures: English</option>
+      <option value="PF" >PF Language and Literatures: West Germanic</option>
+      <option value="PG" >PG Language and Literatures: Slavic (including Russian), Languages and Literature</option>
+      <option value="PH" >PH Language and Literatures: Finno-Ugrian and Basque languages and literatures</option>
+      <option value="PJ" >PJ Language and Literatures: Oriental languages and literatures</option>
+      <option value="PK" >PK Language and Literatures: Indo-Iranian literatures</option>
+      <option value="PL" >PL Language and Literatures: Languages and literatures of Eastern Asia, Africa, Oceania</option>
+      <option value="PM" >PM Language and Literatures: Indigenous American and Artificial Languages</option>
+      <option value="PN" >PN Language and Literatures: Literature: General, Criticism, Collections</option>
+      <option value="PQ" >PQ Language and Literatures: Romance literatures: French, Italian, Spanish, Portuguese</option>
+      <option value="PR" >PR Language and Literatures: English literature</option>
+      <option value="PS" >PS Language and Literatures: American and Canadian literature</option>
+      <option value="PT" >PT Language and Literatures: Germanic, Scandinavian, and Icelandic literatures</option>
+      <option value="PZ" >PZ Language and Literatures: Juvenile belles lettres</option>
+      <option value="Q" >Q Science</option>
+      <option value="QA" >QA Science: Mathematics</option>
+      <option value="QB" >QB Science: Astronomy</option>
+      <option value="QC" >QC Science: Physics</option>
+      <option value="QD" >QD Science: Chemistry</option>
+      <option value="QE" >QE Science: Geology</option>
+      <option value="QH" >QH Science: Natural history</option>
+      <option value="QH301" >QH301 Science: Biology</option>
+      <option value="QK" >QK Science: Botany</option>
+      <option value="QL" >QL Science: Zoology</option>
+      <option value="QM" >QM Science: Human anatomy</option>
+      <option value="QP" >QP Science: Physiology</option>
+      <option value="QR" >QR Science: Microbiology</option>
+      <option value="R" >R Medicine</option>
+      <option value="RA" >RA Medicine: Public aspects of medicine</option>
+      <option value="RB" >RB Medicine: Pathology</option>
+      <option value="RC" >RC Medicine: Internal medicine</option>
+      <option value="RD" >RD Medicine: Surgery</option>
+      <option value="RE" >RE Medicine: Ophthalmology</option>
+      <option value="RF" >RF Medicine: Otorhinolaryngology</option>
+      <option value="RG" >RG Medicine: Gynecology and obstetrics</option>
+      <option value="RJ" >RJ Medicine: Pediatrics</option>
+      <option value="RK" >RK Medicine: Dentistry</option>
+      <option value="RL" >RL Medicine: Dermatology</option>
+      <option value="RM" >RM Medicine: Therapeutics, Pharmacology</option>
+      <option value="RS" >RS Medicine: Pharmacy and materia medica</option>
+      <option value="RT" >RT Medicine: Nursing</option>
+      <option value="RV" >RV Medicine: Botanic, Thomsonian, and eclectic medicine</option>
+      <option value="RX" >RX Medicine: Homeopathy</option>
+      <option value="RZ" >RZ Medicine: Other systems of medicine</option>
+      <option value="S" >S Agriculture</option>
+      <option value="SB" >SB Agriculture: Plant culture</option>
+      <option value="SD" >SD Agriculture: Forestry</option>
+      <option value="SF" >SF Agriculture: Animal culture</option>
+      <option value="SH" >SH Agriculture: Aquaculture, Fisheries, Angling</option>
+      <option value="SK" >SK Agriculture: Hunting sports</option>
+      <option value="T" >T Technology</option>
+      <option value="TA" >TA Technology: Engineering and Civil engineering</option>
+      <option value="TC" >TC Technology: Ocean engineering</option>
+      <option value="TD" >TD Technology: Environmental technology, Sanitary engineering</option>
+      <option value="TE" >TE Technology: Highway engineering, Roads and pavements</option>
+      <option value="TF" >TF Technology: Railroad engineering and operation</option>
+      <option value="TG" >TG Technology: Bridge engineering</option>
+      <option value="TH" >TH Technology: Building construction</option>
+      <option value="TJ" >TJ Technology: Mechanical engineering and machinery</option>
+      <option value="TK" >TK Technology: Electrical, Electronics and Nuclear engineering</option>
+      <option value="TL" >TL Technology: Motor vehicles, Aeronautics, Astronautics</option>
+      <option value="TN" >TN Technology: Mining engineering, Metallurgy</option>
+      <option value="TP" >TP Technology: Chemical technology</option>
+      <option value="TR" >TR Technology: Photography</option>
+      <option value="TS" >TS Technology: Manufactures</option>
+      <option value="TT" >TT Technology: Handicrafts, Arts and crafts</option>
+      <option value="TX" >TX Technology: Home economics</option>
+      <option value="U" >U Military science</option>
+      <option value="UA" >UA Military science: Armies: Organization, distribution, military situation</option>
+      <option value="UB" >UB Military science: Military administration</option>
+      <option value="UC" >UC Military science: Maintenance and transportation</option>
+      <option value="UD" >UD Military science: Infantry</option>
+      <option value="UE" >UE Military science: Cavalry, Armor</option>
+      <option value="UF" >UF Military science: Artillery</option>
+      <option value="UG" >UG Military science: Military engineering</option>
+      <option value="UH" >UH Military science: Other services</option>
+      <option value="V" >V Naval science</option>
+      <option value="VA" >VA Naval science: Navies: Organization, distribution, naval situation</option>
+      <option value="VB" >VB Naval science: Naval administration</option>
+      <option value="VE" >VE Naval science: Marines</option>
+      <option value="VF" >VF Naval science: Naval ordnance</option>
+      <option value="VG" >VG Naval science: Minor services of navies</option>
+      <option value="VK" >VK Naval science: Navigation, Merchant marine</option>
+      <option value="VM" >VM Naval science: Naval architecture, Shipbuilding, Marine engineering</option>
+      <option value="Z" >Z Bibliography, Library science</option>
        </select>
       </p>
       <p>
        <label for="filetype" accesskey="f">Filetype:</label>
-       <select id="filetype" name="filetype" py:with="filetype = params.get('filetype', '')" title="Please choose a file type.">
-	       <option selected="" value="" py:attrs="sel if not filetype else {}">Any</option>
-      <option value="readme" py:attrs="sel if filetype == 'readme' else {}">Readme (readme)</option>
-      <option value="license" py:attrs="sel if filetype == 'license' else {}">License (license)</option>
-      <option value="index" py:attrs="sel if filetype == 'index' else {}">Audio Book Index (index)</option>
-      <option value="html" py:attrs="sel if filetype == 'html' else {}">HTML (html)</option>
-      <option value="html.gen" py:attrs="sel if filetype == 'html.gen' else {}">Generated HTML (html.gen)</option>
-      <option value="html.noimages" py:attrs="sel if filetype == 'html.noimages' else {}">Generated HTML (no images) (html.noimages)</option>
-      <option value="html.images" py:attrs="sel if filetype == 'html.images' else {}">Generated HTML (with images) (html.images)</option>
-      <option value="iso" py:attrs="sel if filetype == 'iso' else {}">ISO CD/DVD Image (iso)</option>
-      <option value="epub.dp" py:attrs="sel if filetype == 'epub.dp' else {}">EPUB (hand-crafted) (epub.dp)</option>
-      <option value="epub.noimages" py:attrs="sel if filetype == 'epub.noimages' else {}">EPUB (no images) (epub.noimages)</option>
-      <option value="epub.images" py:attrs="sel if filetype == 'epub.images' else {}">EPUB (with images) (epub.images)</option>
-      <option value="pdf.gen" py:attrs="sel if filetype == 'pdf.gen' else {}">Generated PDF (pdf.gen)</option>
-      <option value="pdf.noimages" py:attrs="sel if filetype == 'pdf.noimages' else {}">Generated PDF (no images) (pdf.noimages)</option>
-      <option value="pdf.images" py:attrs="sel if filetype == 'pdf.images' else {}">Generated PDF (with images) (pdf.images)</option>
-      <option value="kindle.noimages" py:attrs="sel if filetype == 'kindle.noimages' else {}">Kindle (no images) (kindle.noimages)</option>
-      <option value="kindle.images" py:attrs="sel if filetype == 'kindle.images' else {}">Kindle (with images) (kindle.images)</option>
-      <option value="md5" py:attrs="sel if filetype == 'md5' else {}">MD5 Checksum (md5)</option>
-      <option value="iso.split" py:attrs="sel if filetype == 'iso.split' else {}">Part of ISO CD/DVD Image (iso.split)</option>
-      <option value="pdf" py:attrs="sel if filetype == 'pdf' else {}">PDF (pdf)</option>
-      <option value="css" py:attrs="sel if filetype == 'css' else {}">CSS Stylesheet (css)</option>
-      <option value="eps" py:attrs="sel if filetype == 'eps' else {}">Encapsulated PostScript (eps)</option>
-      <option value="mus" py:attrs="sel if filetype == 'mus' else {}">Finale (mus)</option>
-      <option value="fen" py:attrs="sel if filetype == 'fen' else {}">Forsyth–Edwards Notation (fen)</option>
-      <option value="gif" py:attrs="sel if filetype == 'gif' else {}">GIF Picture (gif)</option>
-      <option value="jpg" py:attrs="sel if filetype == 'jpg' else {}">JPEG Picture (jpg)</option>
-      <option value="ly" py:attrs="sel if filetype == 'ly' else {}">LilyPond (ly)</option>
-      <option value="mid" py:attrs="sel if filetype == 'mid' else {}">MIDI (mid)</option>
-      <option value="mpg" py:attrs="sel if filetype == 'mpg' else {}">MPEG Video (mpg)</option>
-      <option value="lit" py:attrs="sel if filetype == 'lit' else {}">MS Lit for PocketPC (lit)</option>
-      <option value="rtf" py:attrs="sel if filetype == 'rtf' else {}">MS Rich Text Format (rtf)</option>
-      <option value="avi" py:attrs="sel if filetype == 'avi' else {}">MS Video (avi)</option>
-      <option value="wav" py:attrs="sel if filetype == 'wav' else {}">MS Wave Audio (wav)</option>
-      <option value="doc" py:attrs="sel if filetype == 'doc' else {}">MS Word Document (doc)</option>
-      <option value="ogg" py:attrs="sel if filetype == 'ogg' else {}">Ogg Vorbis Audio (ogg)</option>
-      <option value="pdb" py:attrs="sel if filetype == 'pdb' else {}">Palm Database (pdb)</option>
-      <option value="prc" py:attrs="sel if filetype == 'prc' else {}">Palm Database (prc)</option>
-      <option value="plucker" py:attrs="sel if filetype == 'plucker' else {}">Plucker (plucker)</option>
-      <option value="png" py:attrs="sel if filetype == 'png' else {}">PNG Picture (png)</option>
-      <option value="ps" py:attrs="sel if filetype == 'ps' else {}">PostScript (ps)</option>
-      <option value="ps2" py:attrs="sel if filetype == 'ps2' else {}">PostScript Level 2 (ps2)</option>
-      <option value="qioo" py:attrs="sel if filetype == 'qioo' else {}">QiOO Mobile (qioo)</option>
-      <option value="mov" py:attrs="sel if filetype == 'mov' else {}">Quicktime Video (mov)</option>
-      <option value="qt" py:attrs="sel if filetype == 'qt' else {}">Quicktime Video (qt)</option>
-      <option value="sib" py:attrs="sel if filetype == 'sib' else {}">Sibelius (sib)</option>
-      <option value="svg" py:attrs="sel if filetype == 'svg' else {}">SVG (svg)</option>
-      <option value="dvi" py:attrs="sel if filetype == 'dvi' else {}">TeX Device Independent (dvi)</option>
-      <option value="tiff" py:attrs="sel if filetype == 'tiff' else {}">TIFF Picture (tiff)</option>
-      <option value="tr" py:attrs="sel if filetype == 'tr' else {}">Tome Raider (tr)</option>
-      <option value="xsl" py:attrs="sel if filetype == 'xsl' else {}">XSLT Stylesheet (xsl)</option>
-      <option value="m4b" py:attrs="sel if filetype == 'm4b' else {}">Apple iTunes Audiobook (m4b)</option>
-      <option value="m4a" py:attrs="sel if filetype == 'm4a' else {}">Apple iTunes Audiobook (m4a)</option>
-      <option value="mp4" py:attrs="sel if filetype == 'mp4' else {}">MPEG 4 Part 14 (mp4)</option>
-      <option value="mp3" py:attrs="sel if filetype == 'mp3' else {}">MP3 Audio (mp3)</option>
-      <option value="spx" py:attrs="sel if filetype == 'spx' else {}">Speex Audio (spx)</option>
+       <select id="filetype" name="filetype" title="Please choose a file type.">
+	       <option selected="" value="">Any</option>
+      <option value="readme" >Readme (readme)</option>
+      <option value="license" >License (license)</option>
+      <option value="index" >Audio Book Index (index)</option>
+      <option value="html" >HTML (html)</option>
+      <option value="html.gen" >Generated HTML (html.gen)</option>
+      <option value="html.noimages" >Generated HTML (no images) (html.noimages)</option>
+      <option value="html.images" >Generated HTML (with images) (html.images)</option>
+      <option value="iso" >ISO CD/DVD Image (iso)</option>
+      <option value="epub.dp" >EPUB (hand-crafted) (epub.dp)</option>
+      <option value="epub.noimages" >EPUB (no images) (epub.noimages)</option>
+      <option value="epub.images" >EPUB (with images) (epub.images)</option>
+      <option value="pdf.gen" >Generated PDF (pdf.gen)</option>
+      <option value="pdf.noimages" >Generated PDF (no images) (pdf.noimages)</option>
+      <option value="pdf.images" >Generated PDF (with images) (pdf.images)</option>
+      <option value="kindle.noimages" >Kindle (no images) (kindle.noimages)</option>
+      <option value="kindle.images" >Kindle (with images) (kindle.images)</option>
+      <option value="md5" >MD5 Checksum (md5)</option>
+      <option value="iso.split" >Part of ISO CD/DVD Image (iso.split)</option>
+      <option value="pdf" >PDF (pdf)</option>
+      <option value="css" >CSS Stylesheet (css)</option>
+      <option value="eps" >Encapsulated PostScript (eps)</option>
+      <option value="mus" >Finale (mus)</option>
+      <option value="fen" >Forsyth–Edwards Notation (fen)</option>
+      <option value="gif" >GIF Picture (gif)</option>
+      <option value="jpg" >JPEG Picture (jpg)</option>
+      <option value="ly" >LilyPond (ly)</option>
+      <option value="mid" >MIDI (mid)</option>
+      <option value="mpg" >MPEG Video (mpg)</option>
+      <option value="lit" >MS Lit for PocketPC (lit)</option>
+      <option value="rtf" >MS Rich Text Format (rtf)</option>
+      <option value="avi" >MS Video (avi)</option>
+      <option value="wav" >MS Wave Audio (wav)</option>
+      <option value="doc" >MS Word Document (doc)</option>
+      <option value="ogg" >Ogg Vorbis Audio (ogg)</option>
+      <option value="pdb" >Palm Database (pdb)</option>
+      <option value="prc" >Palm Database (prc)</option>
+      <option value="plucker" >Plucker (plucker)</option>
+      <option value="png" >PNG Picture (png)</option>
+      <option value="ps" >PostScript (ps)</option>
+      <option value="ps2" >PostScript Level 2 (ps2)</option>
+      <option value="qioo" >QiOO Mobile (qioo)</option>
+      <option value="mov" >Quicktime Video (mov)</option>
+      <option value="qt" >Quicktime Video (qt)</option>
+      <option value="sib" >Sibelius (sib)</option>
+      <option value="svg" >SVG (svg)</option>
+      <option value="dvi" >TeX Device Independent (dvi)</option>
+      <option value="tiff" >TIFF Picture (tiff)</option>
+      <option value="tr" >Tome Raider (tr)</option>
+      <option value="xsl" >XSLT Stylesheet (xsl)</option>
+      <option value="m4b" >Apple iTunes Audiobook (m4b)</option>
+      <option value="m4a" >Apple iTunes Audiobook (m4a)</option>
+      <option value="mp4" >MPEG 4 Part 14 (mp4)</option>
+      <option value="mp3" >MP3 Audio (mp3)</option>
+      <option value="spx" >Speex Audio (spx)</option>
       <option value="txt.utf-8">Plain Text UTF-8 (txt.utf-8)</option>
-      <option value="txt" py:attrs="sel if filetype == 'txt' else {}">Plain Text (txt)</option>
-      <option value="aac" py:attrs="sel if filetype == 'aac' else {}">AAC (Advanced Audio Coding) (aac)</option>
-      <option value="flv" py:attrs="sel if filetype == 'flv' else {}">Flash Video (flv)</option>
-      <option value="xls" py:attrs="sel if filetype == 'xls' else {}">Microsoft Excel (xls)</option>
-      <option value="nfo" py:attrs="sel if filetype == 'nfo' else {}">Proprietary `Folio' format (nfo)</option>
-      <option value="pageimages" py:attrs="sel if filetype == 'pageimages' else {}">Raw Page Images (pageimages)</option>
-      <option value="rdf" py:attrs="sel if filetype == 'rdf' else {}">RDF (rdf)</option>
-      <option value="rst.gen" py:attrs="sel if filetype == 'rst.gen' else {}">reStructuredText (rst.gen)</option>
-      <option value="tei" py:attrs="sel if filetype == 'tei' else {}">TEI Text Encoding Initiative (tei)</option>
-      <option value="tex" py:attrs="sel if filetype == 'tex' else {}">TeX (tex)</option>
-      <option value="wma" py:attrs="sel if filetype == 'wma' else {}">Windows Media Audio (wma)</option>
-      <option value="xml" py:attrs="sel if filetype == 'xml' else {}">XML (xml)</option>
-      <option value="rst" py:attrs="sel if filetype == 'rst' else {}">reStructuredText (rst)</option>
-      <option value="cover.medium" py:attrs="sel if filetype == 'cover.medium' else {}">Cover Medium (cover.medium)</option>
-      <option value="cover.small" py:attrs="sel if filetype == 'cover.small' else {}">Cover Thumbnail (cover.small)</option>
-      <option value="rst.master" py:attrs="sel if filetype == 'rst.master' else {}">reStructuredText Master (rst.master)</option>
+      <option value="txt" >Plain Text (txt)</option>
+      <option value="aac" >AAC (Advanced Audio Coding) (aac)</option>
+      <option value="flv" >Flash Video (flv)</option>
+      <option value="xls" >Microsoft Excel (xls)</option>
+      <option value="nfo" >Proprietary `Folio' format (nfo)</option>
+      <option value="pageimages" >Raw Page Images (pageimages)</option>
+      <option value="rdf" >RDF (rdf)</option>
+      <option value="rst.gen" >reStructuredText (rst.gen)</option>
+      <option value="tei" >TEI Text Encoding Initiative (tei)</option>
+      <option value="tex" >TeX (tex)</option>
+      <option value="wma" >Windows Media Audio (wma)</option>
+      <option value="xml" >XML (xml)</option>
+      <option value="rst" >reStructuredText (rst)</option>
+      <option value="cover.medium" >Cover Medium (cover.medium)</option>
+      <option value="cover.small" >Cover Thumbnail (cover.small)</option>
+      <option value="rst.master" >reStructuredText Master (rst.master)</option>
       <option value="?">Unspecified (?)</option>
        </select>
       </p>

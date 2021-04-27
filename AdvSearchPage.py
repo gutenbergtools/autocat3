@@ -26,6 +26,7 @@ import cherrypy
 import routes
 
 from sqlalchemy import or_, and_, select
+from genshi.filters import HTMLFormFiller
 
 from libgutenberg.Models import (
     Alias, Attribute, Author, Book, BookAuthor, Category, File, Lang, Locc, Subject)
@@ -201,6 +202,7 @@ class AdvSearchPage(Page):
         else:
             os.entries = entries(resultpks, offset)
         os.search_terms = selections
-        rendered = self.formatter.render('advresults', os)
+        instance_filter = HTMLFormFiller(data=params)
+        rendered = self.formatter.render('advresults', os, instance_filter)
         session.close()
         return rendered

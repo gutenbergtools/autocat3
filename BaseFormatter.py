@@ -71,7 +71,7 @@ class BaseFormatter(object):
         cherrypy.response.headers['Content-Type'] = self.CONTENT_TYPE
 
 
-    def render(self, page, os):
+    def render(self, page, os, instance_filter=None):
         """ Render and send to browser. """
 
         self.send_headers()
@@ -82,6 +82,9 @@ class BaseFormatter(object):
         stream = template.stream
         for filter_ in template.filters:
             stream = filter_(iter(stream), ctxt)
+        if instance_filter:
+            stream = instance_filter(stream)
+
 
         # there's no easy way in genshi to pass collapse_lines to this filter
         stream = WHITESPACE_FILTER(stream, collapse_lines=COLLAPSE_LINES)
