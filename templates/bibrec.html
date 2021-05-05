@@ -31,7 +31,7 @@ Gutenberg metadata much faster than by scraping.
     old_header = os.entries[0].header # suppress first header as already in <h1>
     def help_page (s = ''):
         s = s.replace (' ', '_')
-        return '%s#%s' % ('/wiki/Gutenberg:Help_on_Bibliographic_Record_Page', s)
+        return '%s#%s' % ('/help/bibliographic_record.html', s)
     def explain (s):
         return _('Explain {topic}.').format (topic = _(s))
     def _ (s):
