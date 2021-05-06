@@ -383,7 +383,7 @@ ${site_top()}
       ${site_footer()}
 
 
-    <script>
+    <script>//<![CDATA[
       function getBookMetadata(){
         return {
           bookId: "${os.id}",
@@ -398,7 +398,7 @@ ${site_top()}
 
       const currentList = JSON.parse(localStorage.getItem('booklist'))
 
-      if (currentList &amp;&amp; currentList[bookId]) {
+      if (currentList && currentList[bookId]) {
         // book already in list
         addbtn.innerHTML = '-'
         addbtn.setAttribute('title', 'Remove book from My Book List')
@@ -440,7 +440,7 @@ ${site_top()}
         addbtn.setAttribute('style', 'background-color: cornflowerblue;')
       }
     }
-    </script>
+    //]]></script>
 
   </body>
 </html>
