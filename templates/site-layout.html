@@ -12,15 +12,12 @@
   ?>
   <py:def function="site_head">
     <style >
-      .icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
+      .icon   { background: transparent url(/pics/sprite.png) 0 0 no-repeat; }
     </style>
 
-    <link rel="stylesheet" type="text/css"
-	    href="/gutenberg/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
-    <link rel="stylesheet" type="text/css"
-        href="/gutenberg/new_nav.css?${cherrypy.config['css_mtime']}"/>
-    <link rel="stylesheet" type="text/css"
-        href="/gutenberg/style.css?${cherrypy.config['css_mtime']}"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/pg-desktop-one.css" />
+    <link rel="stylesheet" type="text/css" href="/gutenberg/new_nav.css"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/style.css"/>
 
     <!--! IE8 does not recognize application/javascript -->
     <script>//<![CDATA[
@@ -32,8 +29,7 @@
       var dialog_message  = "${os.user_dialog[0]}";
     //]]></script>
 
-    <script
-	    src="/js/pg-desktop-one.js?${cherrypy.config['js_mtime']}" />
+    <script src="/js/pg-desktop-one.js" />
 
     <link rel="shortcut icon"             href="/gutenberg/favicon.ico" />
     <link rel="canonical"                 href="${os.canonical_url}" />

@@ -157,12 +157,6 @@ def main():
 
     cherrypy.log("Continuing App Init", context='ENGINE', severity=logging.INFO)
 
-    # Used to bust the cache on js and css files.  This should be the
-    # files' mtime, but the files are not stored on the app server.
-    # This is a `good enough´ replacement though.
-    t = str(int(time.time()))
-    cherrypy.config['css_mtime'] = t
-    cherrypy.config['js_mtime']  = t
 
     cherrypy.config['all_hosts'] = (
         cherrypy.config['host'], cherrypy.config['file_host'])
