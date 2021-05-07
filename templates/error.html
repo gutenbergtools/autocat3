@@ -13,28 +13,22 @@
 
   <head>
     <style>
-      .icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
+      .icon   { background: transparent url(/pics/sprite.png) 0 0 no-repeat; }
     </style>
-    <link rel="stylesheet" type="text/css"
-	  href="/gutenberg/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
-	<link rel="stylesheet" type="text/css"
-        href="/gutenberg/new_nav.css?${cherrypy.config['css_mtime']}"/>
-    <link rel="stylesheet" type="text/css"
-        href="/gutenberg/style.css?${cherrypy.config['css_mtime']}"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/pg-desktop-one.css" />
+	<link rel="stylesheet" type="text/css" href="/gutenberg/new_nav.css"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/style.css"/>
 
     <script type="text/javascript">//<![CDATA[
         //<![CDATA[
-        var json_search     = "/ebooks/suggest/";
         var canonical_url   = "https://www.gutenberg.org/ebooks/";
         var lang            = "en";
-        var fb_lang         = "en_US"; /* FB accepts only xx_XX */
         var msg_load_more   = "Load More Results…";
         var page_mode       = "screen";
         var dialog_title    = "";
         var dialog_message  = "";
         //]]></script>
-    <script type="text/javascript"
-	    src="/js/pg-desktop-one.js?${cherrypy.config['js_mtime']}" />
+    <script type="text/javascript" src="/js/pg-desktop-one.js" />
     <link rel="shortcut icon"             href="/gutenberg/favicon.ico" />
     <meta http-equiv="Content-Type"       content="text/html; charset=UTF-8" />
     <meta http-equiv="Content-Style-Type" content="text/css" />
@@ -45,7 +39,7 @@
   </head>
   <body>
     <div class="container">
-    ${site_top()}
+    <xi:include href="menu.html" />
     <div id="page_content" i18n:comment="error page." style="margin-top: 4em">
      
 	<h1>${os.message}</h1>

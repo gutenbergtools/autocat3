@@ -31,7 +31,7 @@ Gutenberg metadata much faster than by scraping.
     old_header = os.entries[0].header # suppress first header as already in <h1>
     def help_page (s = ''):
         s = s.replace (' ', '_')
-        return '%s#%s' % ('/wiki/Gutenberg:Help_on_Bibliographic_Record_Page', s)
+        return '%s#%s' % ('/help/bibliographic_record.html', s)
     def explain (s):
         return _('Explain {topic}.').format (topic = _(s))
     def _ (s):
@@ -66,8 +66,7 @@ Gutenberg metadata much faster than by scraping.
 
   <body>
     <div class="container">
-${site_top()}
-
+    <xi:include href="menu.html" />
     <div class="page_content" id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
 
       <div class="breadcrumbs noprint">
@@ -176,9 +175,6 @@ ${site_top()}
                    title="Send to Google Drive." rel="nofollow"><span class="icon icon_gdrive" /></a>
                   </td>
                   <td class="noprint">
-                <a py:if="file_.honeypot_url"
-                   href="${file_.honeypot_url}"
-                   title="Send to MegaUpload." rel="nofollow" />
                 <a py:if="file_.msdrive_url"
                    href="${file_.msdrive_url}"
                    title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
