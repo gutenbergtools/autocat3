@@ -37,6 +37,7 @@ import SuggestionsPage
 from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, BookshelfSearchPage, \
     AuthorPage, SubjectPage, BookshelfPage, AlsoDownloadedPage
 from BibrecPage import BibrecPage
+from AdvSearchPage import AdvSearchPage
 import CoverPages
 import QRCodePage
 import diagnostics
@@ -156,12 +157,6 @@ def main():
 
     cherrypy.log("Continuing App Init", context='ENGINE', severity=logging.INFO)
 
-    # Used to bust the cache on js and css files.  This should be the
-    # files' mtime, but the files are not stored on the app server.
-    # This is a `good enough´ replacement though.
-    t = str(int(time.time()))
-    cherrypy.config['css_mtime'] = t
-    cherrypy.config['js_mtime']  = t
 
     cherrypy.config['all_hosts'] = (
         cherrypy.config['host'], cherrypy.config['file_host'])
@@ -231,6 +226,9 @@ def main():
     d.connect('bookshelf_search', r'/ebooks/bookshelves/search{.format}/',
                controller=BookshelfSearchPage())
 
+    d.connect('results', r'/ebooks/results{.format}/',
+               controller=AdvSearchPage())
+
     # 'id' pages
 
     d.connect('author', r'/ebooks/author/{id:\d+}{.format}',
@@ -271,9 +269,6 @@ def main():
                controller=diagnostics.DiagnosticsPage())
 
     d.connect('stats', r'/stats/',
-               controller=Page.NullPage(), _static=True)
-
-    d.connect('honeypot_send', r'/ebooks/send/megaupload/{id:\d+}.{filetype}',
                controller=Page.NullPage(), _static=True)
 
     # /w/captcha/question/ so varnish will cache it

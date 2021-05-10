@@ -491,7 +491,6 @@ class OpenSearch(object):
             lang = self.lang_to_default_locale.get(lang, 'en_US')
         lang2 = self.lang[:2]
 
-        self.fb_lang = lang if lang in FB_LANGS else 'en_US'
         self.paypal_lang = lang if lang in PAYPAL_LANGS else 'en_US'
         self.flattr_lang = lang if lang in FLATTR_LANGS else 'en_US'
 
@@ -553,7 +552,6 @@ class OpenSearch(object):
         self.show_next_page_link = (self.end_index < self.total_results)
 
         self.desktop_search = self.url('search', format = None)
-        self.json_search = self.url('suggest', format = None)
 
         self.base_url = self.url(host = self.file_host, protocol='https')
 
