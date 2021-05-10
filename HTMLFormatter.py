@@ -94,10 +94,6 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
                     file_.filename = file_.filename + '?' + urllib.parse.urlencode (
                         { 'session_id': str (cherrypy.session.id) } )
 
-        for file_ in dc.files:
-            file_.honeypot_url = os.url (
-                'honeypot_send', id = dc.project_gutenberg_id, filetype = file_.filetype)
-            break
 
 
     def format (self, page, os):
