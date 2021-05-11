@@ -12,30 +12,24 @@
   ?>
   <py:def function="site_head">
     <style >
-      .icon   { background: transparent url(/pics/sprite.png?${cherrypy.config['css_mtime']}) 0 0 no-repeat; }
+      .icon   { background: transparent url(/pics/sprite.png) 0 0 no-repeat; }
     </style>
 
-    <link rel="stylesheet" type="text/css"
-	    href="/gutenberg/pg-desktop-one.css?${cherrypy.config['css_mtime']}" />
-    <link rel="stylesheet" type="text/css"
-        href="/gutenberg/new_nav.css?${cherrypy.config['css_mtime']}"/>
-    <link rel="stylesheet" type="text/css"
-        href="/gutenberg/style.css?${cherrypy.config['css_mtime']}"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/pg-desktop-one.css" />
+    <link rel="stylesheet" type="text/css" href="/gutenberg/new_nav.css"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/style.css"/>
 
     <!--! IE8 does not recognize application/javascript -->
     <script>//<![CDATA[
-      var json_search     = "${os.json_search}";
       var canonical_url   = "${os.canonical_url}";
       var lang            = "${os.lang}";
-      var fb_lang         = "${os.fb_lang}"; /* FB accepts only xx_XX */
       var msg_load_more   = "${_('Load More Results…')}";
       var page_mode       = "${os.page_mode}";
       var dialog_title    = "${os.user_dialog[1]}";
       var dialog_message  = "${os.user_dialog[0]}";
     //]]></script>
 
-    <script
-	    src="/js/pg-desktop-one.js?${cherrypy.config['js_mtime']}" />
+    <script src="/js/pg-desktop-one.js" />
 
     <link rel="shortcut icon"             href="/gutenberg/favicon.ico" />
     <link rel="canonical"                 href="${os.canonical_url}" />
@@ -115,10 +109,6 @@
     <div class="copyright" i18n:comment="The copyright notice on the footer of every page.">
       © 2020 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
     </div>
-  </py:def>
-
-  <py:def function="site_top">
-    <xi:include href="menu.html" />
   </py:def>
 
   <py:def function="site_footer">
