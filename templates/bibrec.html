@@ -393,7 +393,7 @@ Gutenberg metadata much faster than by scraping.
         try{
           const bookData = getBookMetadata();
           const newList = { ...JSON.parse(localStorage.getItem('booklist')) }
-          newList[bookId] = bookData
+          newList[bookData.bookId] = bookData
 
           addbtn.classList.add('book-in-list')
           addbtn.innerHTML = '-'
@@ -409,8 +409,9 @@ Gutenberg metadata much faster than by scraping.
       }
 
       function removeBook () {
+        const bookData = getBookMetadata();
         const newlist = JSON.parse(localStorage.getItem('booklist'))
-        delete newlist[bookId]
+        delete newlist[bookData.bookId]
         localStorage.setItem('booklist', JSON.stringify(newlist))
         console.log(localStorage.getItem('booklist'))
         addbtn.classList.remove('book-in-list')
