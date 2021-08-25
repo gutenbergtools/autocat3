@@ -154,7 +154,7 @@ class HTMLFormatter (XMLishFormatter):
         dc.magnetlink = None
 
         # hide all txt files but the first one
-        txtcount = showncount = 0
+        txtcount = showncount = htmlcount = 0
 
         for file_ in dc.files + dc.generated_files:
             filetype = file_.filetype or ''
@@ -173,7 +173,10 @@ class HTMLFormatter (XMLishFormatter):
             if file_.encoding:
                 file_.hr_filetype += ' ' + file_.encoding.upper ()
             if filetype.startswith ('html') and file_.compression == 'none':
+                if htmlcount > 0:
+                    file_.hidden = True
                 file_.hr_filetype = 'Read this book online: {}'.format (file_.hr_filetype)
+                htmlcount += 1
             if not file_.hidden:
                 showncount += 1
 
