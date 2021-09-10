@@ -60,7 +60,7 @@
         <!-- start content -->
 <py:if test='os.search_terms'>
         <p>You selected:</p>
-        <ul>
+        <ul class="booklist">
             <py:for each="term, value, count in os.search_terms">
                 <li>${term} = ${value} (${count} items match)</li>
             </py:for>
@@ -109,7 +109,7 @@
                 &nbsp;
             </td>
             <td>
-                <ul>
+                <ul class="booklist">
                     <py:for each="author in book.authors">
                         <li><a href="/browse/authors/${author.first_letter}#a${author.id}">${DublinCore.format_author_date_role(author)}</a></li>
                     </py:for>
