@@ -4,7 +4,7 @@
 """
 CoverPages.py
 
-Copyright 2009-2010 by Marcello Perathoner
+Copyright 2009-2021 by Project Gutenberg
 
 Distributable under the GNU General Public License Version 3 or newer.
 
@@ -13,11 +13,9 @@ Serve cover images of most popular and latest ebooks.
 """
 
 from __future__ import unicode_literals
-import re
 
 import cherrypy
 import six
-import textwrap
 from sqlalchemy import select
 
 from libgutenberg import GutenbergGlobals as gg
@@ -29,15 +27,13 @@ class CoverPages(object):
     """ Output a gallery of cover pages. """
 
     @staticmethod
-    def serve (books, size, session):
+    def serve(books, size, session):
         """ Output a gallery of coverpages. """
 
         cherrypy.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         cherrypy.response.headers['Content-Language'] = 'en'
-        
         s = ''
         for book_id in books:
-            print(book_id, size)
             dc = DublinCoreMapping.DublinCoreObject(session=session, pooled=True)
             dc.load_from_database(book_id)
             cover = session.execute(select(Models.File.archive_path).where(
@@ -48,7 +44,7 @@ class CoverPages(object):
             url = '/' + cover
 
             href = '/ebooks/%d' % book_id
-            if dc.title: 
+            if dc.title:
                 title = gg.xmlspecialchars(dc.title) # handles <,>,&
                 #Shortening long titles for latest covers
                 title = title.replace('"', '&quot;')
@@ -57,9 +53,7 @@ class CoverPages(object):
                 title = '!! missing title !!'
 
             short_title = dc.make_pretty_title()
-            
             authors = dc.authors[0].name
-            
 
             s += f"""
                 <a href="{href}" title="{title}" target="_top">
@@ -78,12 +72,11 @@ class CoverPages(object):
                 """
         return s.encode('utf-8')
 
- 
+
     def index(self, count, size, order, **kwargs):
         """ Internal help function. """
 
         session = cherrypy.engine.pool.Session()
-        
         try:
             count = int(count)
             if count < 1:
@@ -110,4 +103,4 @@ class CoverPages(object):
             pass
         finally:
             session.close()
-        raise cherrypy.HTTPError (500, 'Internal Server Error.')
+        raise cherrypy.HTTPError(500, 'Internal Server Error.')
