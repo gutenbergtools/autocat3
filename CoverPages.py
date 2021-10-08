@@ -18,41 +18,50 @@ import re
 import cherrypy
 import six
 import textwrap
+from sqlalchemy import select
 
 from libgutenberg import GutenbergGlobals as gg
+from libgutenberg import DublinCoreMapping, Models
 
-import BaseSearcher
+
 
 class CoverPages(object):
     """ Output a gallery of cover pages. """
 
-    orders = {'latest': 'release_date',
-              'popular': 'downloads'}
-
     @staticmethod
-    def serve (rows, size):
+    def serve (books, size, session):
         """ Output a gallery of coverpages. """
 
         cherrypy.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         cherrypy.response.headers['Content-Language'] = 'en'
+        
         s = ''
-        for row in rows:
-            url = '/' + row.filename
-            href = '/ebooks/%d' % row.pk
-            if row.title: 
-                title = gg.xmlspecialchars (row.title) # handles <,>,&
+        for book_id in books:
+            print(book_id, size)
+            dc = DublinCoreMapping.DublinCoreObject(session=session, pooled=True)
+            dc.load_from_database(book_id)
+            cover = session.execute(select(Models.File.archive_path).where(
+                Models.File.fk_books == book_id,
+                Models.File.fk_filetypes == size)).scalars().first()
+            if not cover:
+                continue
+            url = '/' + cover
+
+            href = '/ebooks/%d' % book_id
+            if dc.title: 
+                title = gg.xmlspecialchars(dc.title) # handles <,>,&
                 #Shortening long titles for latest covers
                 title = title.replace('"', '&quot;')
                 title = title.replace("'", '&apos;')
             else:
                 title = '!! missing title !!'
-            short_title = title
-            title_len = len(title)
-            short_title = re.sub(r"\-+", " ", short_title)
-            short_title = short_title.splitlines()[0]	    
-            if(title_len > 80):
-                short_title = textwrap.wrap(short_title, 80)[0]
-            s += """
+
+            short_title = dc.make_pretty_title()
+            
+            authors = dc.authors[0].name
+            
+
+            s += f"""
                 <a href="{href}" title="{title}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
@@ -61,39 +70,44 @@ class CoverPages(object):
                         <div class="cover_title">
                             <h5>{short_title}</h5>
                         </div>
+                        <div class="authors">
+                            <h5>{authors}</h5>
+                        </div>
                     </div>
                 </a>
-                """.format(url=url, href=href, title=title, short_title=short_title, size=size)
-
+                """
         return s.encode('utf-8')
 
  
     def index(self, count, size, order, **kwargs):
         """ Internal help function. """
 
+        session = cherrypy.engine.pool.Session()
+        
         try:
             count = int(count)
             if count < 1:
                 raise ValueError('count < 0')
             if size not in ('small', 'medium'):
                 raise ValueError('bogus size')
-            order = 'books.%s' % self.orders[order]
+            size = 'cover.%s' % size
 
-            rows = BaseSearcher.SQLSearcher.execute(
-                """SELECT files.filename, books.pk, books.title FROM files, books
-                WHERE files.fk_books = books.pk
-                  AND files.diskstatus = 0
-                  AND files.fk_filetypes = %%(size)s
-                ORDER BY %s DESC
-                OFFSET 1 LIMIT %%(count)s -- %s""" % (order, cherrypy.request.remote.ip),
-                {'count': count, 'size': 'cover.%s' % size,}
-            )
+            if order == 'popular':
+                order_by = Models.Book.downloads.desc()
+            else:
+                order_by = Models.Book.release_date.desc()
+            rows = session.execute(select(Models.Book.pk).where(
+                Models.Book.pk == Models.File.fk_books,
+                Models.File.fk_filetypes == size
+            ).order_by(order_by).limit(count)).scalars().all()
 
             if rows:
-                return self.serve(rows, size)
+                return self.serve(rows, size, session)
 
         except (ValueError, KeyError) as what:
             raise cherrypy.HTTPError (400, 'Bad Request. %s' % six.text_type(what))
         except IOError:
             pass
+        finally:
+            session.close()
         raise cherrypy.HTTPError (500, 'Internal Server Error.')
