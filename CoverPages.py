@@ -53,23 +53,30 @@ class CoverPages(object):
                 title = '!! missing title !!'
 
             short_title = dc.make_pretty_title()
-            authors = dc.authors[0].name
+
+            def author_name(author):
+                return make_pretty_name(author.name)
+            
+            author_name_list = map(author_name, dc.authors)
+
+            authors = ','.join(author_name_list)
+            
 
             s += f"""
-                <a href="{href}" title="{title}" target="_top">
+                <a href="{href}" title="{title}" authors="{authors}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
-                            <img src="{url}" alt="{title}" title="{title}" draggable="false">
+                            <img src="{url}" alt="{title}" title="{title}"
+                             alt="{authors}" authors="{authors}" draggable="false">
                         </div>
                         <div class="cover_title">
                             <h5>{short_title}</h5>
                         </div>
-                        <div class="authors">
-                            <h5>{authors}</h5>
-                        </div>
                     </div>
                 </a>
                 """
+
+                
         return s.encode('utf-8')
 
 
