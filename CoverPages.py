@@ -19,7 +19,7 @@ import six
 from sqlalchemy import select
 
 from libgutenberg import GutenbergGlobals as gg
-from libgutenberg import DublinCore, DublinCoreMapping, Models
+from libgutenberg import DublinCoreMapping, Models
 
 
 
@@ -55,19 +55,19 @@ class CoverPages(object):
             short_title = dc.make_pretty_title()
 
             def author_name(author):
-                return DublinCore.DublinCore.make_pretty_name(author.name)
+                return make_pretty_name(author.name)
             
             author_name_list = map(author_name, dc.authors)
 
-            authors = ','.join(author_name_list)
+            authors = ', '.join(author_name_list)
             
 
             s += f"""
                 <a href="{href}" title="{title}" authors="{authors}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
-                            <img src="{url}" alt="{title}" title="{title}"
-                             alt="{authors}" authors="{authors}" draggable="false">
+                            <img src="{url}" alt="{title}, {authors}" title="{title}"
+                             authors="{authors}" draggable="false">
                         </div>
                         <div class="cover_title">
                             <h5>{short_title}</h5>
@@ -111,3 +111,4 @@ class CoverPages(object):
         finally:
             session.close()
         raise cherrypy.HTTPError(500, 'Internal Server Error.')
+
