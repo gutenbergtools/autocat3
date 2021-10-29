@@ -59,15 +59,15 @@ class CoverPages(object):
             
             author_name_list = map(author_name, dc.authors)
 
-            authors = ','.join(author_name_list)
+            authors = ', '.join(author_name_list)
             
 
             s += f"""
                 <a href="{href}" title="{title}" authors="{authors}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
-                            <img src="{url}" alt="{title}" title="{title}"
-                             alt="{authors}" authors="{authors}" draggable="false">
+                            <img src="{url}" alt="{title}, {authors}" title="{title}"
+                             authors="{authors}" draggable="false">
                         </div>
                         <div class="cover_title">
                             <h5>{short_title}</h5>
