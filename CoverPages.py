@@ -56,9 +56,11 @@ class CoverPages(object):
 
             def author_name(author):
                 return DublinCore.DublinCore.make_pretty_name(author.name)
+
             author_name_list = map(author_name, dc.authors)
 
             authors = ', '.join(author_name_list)
+
 
             s += f"""
                 <a href="{href}" title="{title}, {authors}" target="_top">
@@ -74,6 +76,7 @@ class CoverPages(object):
                 </a>
                 """
 
+                
         return s.encode('utf-8')
 
 
