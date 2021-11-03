@@ -29,7 +29,8 @@ import BaseFormatter
 from i18n_tool import ugettext as _
 
 # filetypes ignored on desktop site
-NO_DESKTOP_FILETYPES = 'plucker qioo rdf rst rst.gen rst.master tei cover.medium cover.small'.split ()
+NO_DESKTOP_FILETYPES = {'plucker', 'qioo', 'rdf', 'rst', 'rst.gen', 'rst.master', 'tei', 
+    'cover.medium', 'cover.small', 'pageimages'}
 
 # filetypes which are usually handed over to a separate app on mobile devices
 HANDOVER_TYPES = (mt.epub, mt.mobi, mt.pdf)
