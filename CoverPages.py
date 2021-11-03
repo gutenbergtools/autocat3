@@ -56,14 +56,14 @@ class CoverPages(object):
 
             def author_name(author):
                 return DublinCore.DublinCore.make_pretty_name(author.name)
-            
+
             author_name_list = map(author_name, dc.authors)
 
             authors = ', '.join(author_name_list)
-            
+
 
             s += f"""
-                <a href="{href}" title="{title}" authors="{authors}" target="_top">
+                <a href="{href}" title="{title}, {authors}" authors="{authors}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
                             <img src="{url}" alt="{title}, {authors}" title="{title}"
@@ -76,7 +76,7 @@ class CoverPages(object):
                 </a>
                 """
 
-                
+
         return s.encode('utf-8')
 
 
