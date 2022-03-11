@@ -304,7 +304,7 @@ class BookshelfPage (SearchPage):
     """ bookshelf id => books on bookshelf """
 
     def setup (self, os, sql):
-        os.sort_orders = ('downloads', 'title', 'release_date')
+        os.sort_orders = ('downloads', 'title', 'author', 'release_date')
         os.title_icon = 'bookshelf'
         os.icon = 'book'
         os.class_ += 'booklink'

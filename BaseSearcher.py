@@ -298,6 +298,8 @@ class SQLStatement(object):
                 query += " ORDER BY filing"
             elif self.sort_order == 'alpha':
                 query += " ORDER BY title"
+            elif self.sort_order == 'author':
+                query += " ORDER BY author"
             elif self.sort_order == 'release_date':
                 query += " ORDER BY release_date DESC, pk DESC"
             else:
