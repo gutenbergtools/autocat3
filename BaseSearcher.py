@@ -52,7 +52,7 @@ USER_FORMATS = 'html mobile print opds stanza json'.split()
 MAX_RESULTS = 1000
 
 # sort orders available to the user
-USER_SORT_ORDERS = 'downloads release_date title alpha quantity nentry random'.split()
+USER_SORT_ORDERS = 'downloads author release_date title alpha quantity nentry random'.split()
 # internally used sort orders
 SORT_ORDERS = USER_SORT_ORDERS + 'nentry'.split()
 
@@ -475,7 +475,8 @@ class OpenSearch(object):
             'release_date': _("sorted by release date"),
             'quantity': _("sorted by quantity of books"),
             'title': _("sorted alphabetically"),
-            'alpha': _("sorted alphabetically"),
+            'alpha': _("sorted alphabetically by title"),
+            'author': _("sorted alphabetically by author"),
             'nentry': _("sorted by relevance"),
             'random': _("in random order"),
             }
@@ -742,6 +743,7 @@ class OpenSearch(object):
         # content of extra field depends on sorting
         self.f_format_extra = {
             'alpha': self.format_none,
+            'author': self.format_none,
             'title': self.format_none,
             'downloads': self.format_downloads,
             'quantity': self.format_quantity,
