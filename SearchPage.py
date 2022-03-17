@@ -191,7 +191,7 @@ class BookshelfSearchPage (SearchPage):
     def setup (self, os, sql):
         os.f_format_url = BaseSearcher.SearchUrlFormatter ('bookshelf')
         os.f_format_thumb_url = os.format_none
-        os.sort_orders = ('downloads', 'quantity', 'alpha', 'release_date')
+        os.sort_orders = ('downloads', 'quantity', 'alpha', 'release_date', 'authors')
         os.icon = 'bookshelf'
         os.class_ += 'navlink'
         os.title = _('All Bookshelves')
@@ -304,7 +304,7 @@ class BookshelfPage (SearchPage):
     """ bookshelf id => books on bookshelf """
 
     def setup (self, os, sql):
-        os.sort_orders = ('downloads', 'title', 'release_date')
+        os.sort_orders = ('downloads', 'title', 'author', 'release_date')
         os.title_icon = 'bookshelf'
         os.icon = 'book'
         os.class_ += 'booklink'

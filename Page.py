@@ -192,6 +192,8 @@ class SearchPage (Page):
                 self.sort_by_title (os)
             if 'alpha' in os.alternate_sort_orders:
                 self.sort_alphabetically (os)
+            if 'author' in os.alternate_sort_orders:
+                self.sort_by_author (os)
             if 'quantity' in os.alternate_sort_orders:
                 self.sort_by_quantity (os)
 
@@ -220,11 +222,11 @@ class SearchPage (Page):
 
     @staticmethod
     def sort_alphabetically (os):
-        """ Append the sort alphabetically link. """
+        """ Append the sort alphabetically by title link. """
 
         cat = BaseSearcher.Cat ()
         cat.rel = 'alphabethical'
-        cat.title = _('Sort Alphabetically')
+        cat.title = _('Sort Alphabetically by Title')
         cat.url = os.url_carry (sort_order = 'alpha')
         cat.class_ += 'navlink grayed'
         cat.icon = 'alpha'
@@ -233,15 +235,28 @@ class SearchPage (Page):
 
     @staticmethod
     def sort_by_title (os):
-        """ Append the sort alphabetically link. """
+        """ Append the sort alphabetically by title link. """
 
         cat = BaseSearcher.Cat ()
         cat.rel = 'alphabethical'
-        cat.title = _('Sort Alphabetically')
+        cat.title = _('Sort Alphabetically by Title')
         cat.url = os.url_carry (sort_order = 'title')
         cat.class_ += 'navlink grayed'
         cat.icon = 'alpha'
         cat.order = 4.1
+        os.entries.insert (0, cat)
+
+    @staticmethod
+    def sort_by_author (os):
+        """ Append the sort alphabetically by author link. """
+
+        cat = BaseSearcher.Cat ()
+        cat.rel = 'alphabethical'
+        cat.title = _('Sort Alphabetically by Author')
+        cat.url = os.url_carry (sort_order = 'author')
+        cat.class_ += 'navlink grayed'
+        cat.icon = 'alpha'
+        cat.order = 4.2
         os.entries.insert (0, cat)
 
     @staticmethod
@@ -254,7 +269,7 @@ class SearchPage (Page):
         cat.url = os.url_carry (sort_order = 'quantity')
         cat.class_ += 'navlink grayed'
         cat.icon = 'quantity'
-        cat.order = 4.2
+        cat.order = 4.3
         os.entries.insert (0, cat)
 
     @staticmethod
@@ -267,7 +282,7 @@ class SearchPage (Page):
         cat.url = os.url_carry (sort_order = 'release_date')
         cat.class_ += 'navlink grayed'
         cat.icon = 'date'
-        cat.order = 4.3
+        cat.order = 4.4
         os.entries.insert (0, cat)
 
     @staticmethod
