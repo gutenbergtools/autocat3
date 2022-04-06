@@ -20,7 +20,7 @@ libgutenberg = "==0.8.16"
 netaddr = "*"
 oauth = "*"
 oauthlib = "*"
-Pillow = "==8.4.0"
+Pillow = ">=9.1.0"
 #pycurl = "*"
 #PyGObject = "*"
 pyparsing = "*"
@@ -34,15 +34,16 @@ requests-oauthlib = "*"
 Routes = "*"
 simplejson = "*"
 six = "*"
-SQLAlchemy = "*"
+SQLAlchemy = "<2"
 #ufw = "*"
 #unattended-upgrades = "*"
 urllib3 = "==1.26.5"
-psycopg2 = "==2.7.7"
 lxml = "==4.6.5"
+psycopg2-binary = "*"
+psycopg2 = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.8"
 
 [pipenv]
 allow_prereleases = true
