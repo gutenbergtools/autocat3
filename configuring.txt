@@ -37,13 +37,17 @@ chmod 400 .pgpass
 
 #set default python - only needed if pu3 is 
 scl enable rh-python36 bash
-echo 'source scl_source enable rh-python36' >> /var/lib/autocat/.bash_profile
+echo 'source scl_source enable rh-python38' >> /var/lib/autocat/.bash_profile
 
 git clone git@github.com:gutenbergtools/autocat3.git
 cd autocat3
 pipenv --three
 git checkout remotes/origin/master
+
+# if the install chokes on psycopg2, probably you need to add pg_config to your PATH
+# on rhel7 may need to install rh-python38-python-devel, libffi-devel and postgresql-devel
 pipenv install
+
 
 # add local conf file. keep secrets here!
 # for production .autocat3 should set values for these parameters:
@@ -65,6 +69,7 @@ sudo mkdir /var/run/autocat
 sudo touch /var/run/autocat/autocat3.pid
 # sudo chown autocat /var/run/autocat/autocat3.pid
 # Better to set the group name as pgweb for /var/run/autocat
+# for local development, just chown to your username in stead of autocat
 sudo chown -R autocat:pgweb /var/run/autocat
 
 #####
