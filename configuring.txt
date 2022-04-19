@@ -36,8 +36,9 @@ chmod 400 .ssh/id_rsa
 chmod 400 .pgpass
 
 #set default python - only needed if pu3 is 
-scl enable rh-python36 bash
-echo 'source scl_source enable rh-python38' >> /var/lib/autocat/.bash_profile
+#scl enable rh-python36 bash
+source scl_source enable rh-python39
+#echo 'source scl_source enable rh-python39' >> /var/lib/autocat/.bash_profile
 
 git clone git@github.com:gutenbergtools/autocat3.git
 cd autocat3
@@ -112,6 +113,8 @@ git fetch origin
 git checkout remotes/origin/gutenberg1
 # for gutenberg2
 git checkout remotes/origin/gutenberg2
+# for gutenberg-app1
+git checkout remotes/origin/py39
 
 pipenv install --ignore-pipfile
 
