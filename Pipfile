@@ -38,7 +38,7 @@ SQLAlchemy = "<2"
 #ufw = "*"
 #unattended-upgrades = "*"
 urllib3 = "==1.26.5"
-lxml = "==4.6.5"
+lxml = "==4.9.1"
 psycopg2-binary = "*"
 psycopg2 = "*"
 
