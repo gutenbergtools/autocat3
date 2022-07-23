@@ -14,6 +14,7 @@ sudo yum groupinstall 'Development Tools'
 # pip is not on secure_path
 sudo /opt/rh/rh-python36/root/usr/bin/pip install --upgrade pip
 sudo /opt/rh/rh-python36/root/usr/bin/pip install pipenv
+echo 'export PATH="/var/lib/autocat/.local/bin:$PATH"' >> ~/.bashrc
 
 # create autocat user with home directory /var/lib/autocat
 
