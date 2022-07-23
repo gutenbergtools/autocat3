@@ -91,10 +91,6 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
             # these are used as relative links
             if file_.generated and not file_.filetype.startswith ('cover.'):
                 file_.filename = "ebooks/%d.%s" % (dc.project_gutenberg_id, file_.filetype)
-                if m in HANDOVER_TYPES:
-                    file_.filename = file_.filename + '?' + urllib.parse.urlencode (
-                        { 'session_id': str (cherrypy.session.id) } )
-
 
 
     def format (self, page, os):
