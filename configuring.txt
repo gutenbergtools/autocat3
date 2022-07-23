@@ -74,6 +74,8 @@ sudo touch /var/run/autocat/autocat3.pid
 # for local development, just chown to your username in stead of autocat
 sudo chown -R autocat:pgweb /var/run/autocat
 
+python CherryPyApp.py
+
 #####
 ##### To install or update the autocat3 service
 #####
