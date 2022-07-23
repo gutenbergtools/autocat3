@@ -38,6 +38,7 @@ HANDOVER_TYPES = (mt.epub, mt.mobi, mt.pdf)
 # self-contained files we can send to dropbox
 CLOUD_TYPES = (mt.epub, mt.mobi, mt.pdf)
 STD_PDF_MATCH = re.compile (r'files/\d+/\d+-pdf.pdf$')
+NEW_FILETYPES = {'kf8.images', 'epub3.images'}
 
 class XMLishFormatter (BaseFormatter.BaseFormatter):
     """ Produce XMLish output. """
@@ -152,6 +153,7 @@ class HTMLFormatter (XMLishFormatter):
 
         # hide all txt files but the first one
         txtcount = showncount = htmlcount = 0
+        show_new_ft = cherrypy.config['version'] >= 12
 
         for file_ in dc.files + dc.generated_files:
             filetype = file_.filetype or ''
@@ -170,10 +172,12 @@ class HTMLFormatter (XMLishFormatter):
             if file_.encoding:
                 file_.hr_filetype += ' ' + file_.encoding.upper ()
             if filetype.startswith ('html') and file_.compression == 'none':
-                if htmlcount > 0:
+                if htmlcount > 0 and not show_new_ft:
                     file_.hidden = True
                 file_.hr_filetype = 'Read this book online: {}'.format (file_.hr_filetype)
                 htmlcount += 1
+            if filetype in NEW_FILETYPES and not show_new_ft:
+                file_.hidden = True
             if not file_.hidden:
                 showncount += 1
 
