@@ -268,16 +268,16 @@ Gutenberg metadata much faster than by scraping.
 			  ${ Markup (gg.insert_breaks (text)) }
 			</td>
 			<td py:when="marc.code=='245'" itemprop="headline">
-			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
 			</td>
 			<td py:when="marc.code=='240'" itemprop="alternativeHeadline">
-			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
 			</td>
 			<td py:when="marc.code=='246'" itemprop="alternativeHeadline">
-			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
 			</td>
 			<td py:otherwise="">
-			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text))) }
+			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
 			</td>
 		      </py:choose>
 		    </tr>

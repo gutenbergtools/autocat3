@@ -30,6 +30,15 @@ class CoverPages(object):
     def serve(books, size, session):
         """ Output a gallery of coverpages. """
 
+        def escape(_string):
+            _string = gg.xmlspecialchars(_string) # handles <,>,&
+            _string = _string.replace('"', '&quot;')
+            _string = _string.replace("'", '&apos;')
+            return _string
+
+        def author_name(author):
+            return escape(DublinCore.DublinCore.make_pretty_name(author.name))
+
         cherrypy.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         cherrypy.response.headers['Content-Language'] = 'en'
         s = ''
@@ -45,17 +54,12 @@ class CoverPages(object):
 
             href = '/ebooks/%d' % book_id
             if dc.title:
-                title = gg.xmlspecialchars(dc.title) # handles <,>,&
-                #Shortening long titles for latest covers
-                title = title.replace('"', '&quot;')
-                title = title.replace("'", '&apos;')
+                title = escape(dc.title)
             else:
                 title = '!! missing title !!'
 
-            short_title = dc.make_pretty_title()
+            short_title = escape(dc.make_pretty_title())
 
-            def author_name(author):
-                return DublinCore.DublinCore.make_pretty_name(author.name)
             
             author_name_list = map(author_name, dc.authors)
 
