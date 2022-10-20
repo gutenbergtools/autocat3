@@ -74,7 +74,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
                 if abs (dedupable[ft + '.images'].extent - dedupable[ft + '.noimages'].extent) < 3:
                     do_dedupe = True
         if do_dedupe:
-            for ft in ['epub', 'kindle', 'pdf', 'html']:
+            for ft in ['epub', 'pdf', 'html']:
                 if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
                     dc.files.remove(dedupable[ft + '.images'])
                 
