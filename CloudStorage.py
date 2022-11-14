@@ -258,8 +258,10 @@ class EbookMetaData (object):
     accepted_filetypes = (
         'epub.images',
         'epub.noimages',
+        'epub3.images',
         'kindle.images',
         'kindle.noimages',
+        'kf8.images',
         'pdf')
 
 
