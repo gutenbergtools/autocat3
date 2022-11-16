@@ -112,7 +112,13 @@ Gutenberg metadata much faster than by scraping.
 	      </li>
 	      <li>
 		<a onclick="printpage()" title="Print this page"><span class="icon icon_print" /></a>
-	      </li>
+        </li>
+        <li>
+          <div class="social-button booklist">
+              <button title="Add book to My Book List" id="add-to-booklist"
+                  style="background-color: cornflowerblue;">+</button>
+          </div>
+      </li>
 	    </ul>
 	  </div>
 
@@ -351,26 +357,69 @@ Gutenberg metadata much faster than by scraping.
       <div id="dialog" class="hidden">
       </div>
 
-      <!--!
-	<a href="http://validator.w3.org/check?uri=referer" rel="nofollow"
-	   title="This page contains RDFa metadata."><img
-	   src="http://www.w3.org/Icons/valid-xhtml-rdfa-blue"
-	   width="88"
-	   height="31"
-	   alt="Valid XHTML + RDFa"
-	   about=""
-	   rel="dcterms:conformsTo"
-	   resource="http://www.w3.org/TR/rdfa-syntax" /></a>
-	<a href="${os.url_carry ('bibrec', format='rdf')}"
-	   title="Download RDF/XML Metadata for this ebook."><img
-	   src="http://www.w3.org/RDF/icons/rdf_metadata_button.32"
-	   width="76"
-	   height="32"
-	   alt="RDF/XML Metadata" /></a>
-      -->
     </div>
       ${site_footer()}
 
+
+    <script>//<![CDATA[
+      function getBookMetadata(){
+        return {
+          bookId: "${os.id}",
+          title: "${os.title}",
+          imgSrc: "${os.cover_image_url}",
+          url: window.location.href
+        }
+      }
+      window.onload = function() {
+
+      const addbtn = document.getElementById('add-to-booklist')
+
+      const currentList = JSON.parse(localStorage.getItem('booklist'))
+
+      if (currentList && currentList[bookId]) {
+        // book already in list
+        addbtn.innerHTML = '-'
+        addbtn.setAttribute('title', 'Remove book from My Book List')
+        addbtn.setAttribute('style', 'background-color: indianred;')
+        addbtn.classList.add('book-in-list')
+      }
+
+      addbtn.onclick = function () {
+        if(addbtn.classList.contains('book-in-list')){
+          removeBook()
+          return
+        }
+        try{
+          const bookData = getBookMetadata();
+          const newList = { ...JSON.parse(localStorage.getItem('booklist')) }
+          newList[bookData.bookId] = bookData
+
+          addbtn.classList.add('book-in-list')
+          addbtn.innerHTML = '-'
+          addbtn.setAttribute('title', 'Remove book from My Book List')
+          addbtn.setAttribute('style', 'background-color: indianred;')
+
+          localStorage.setItem('booklist', JSON.stringify(newList))
+          console.log(localStorage.getItem('booklist'))
+        }
+        catch(err){
+          console.log('Error adding book', err)
+        }
+      }
+
+      function removeBook () {
+        const bookData = getBookMetadata();
+        const newlist = JSON.parse(localStorage.getItem('booklist'))
+        delete newlist[bookData.bookId]
+        localStorage.setItem('booklist', JSON.stringify(newlist))
+        console.log(localStorage.getItem('booklist'))
+        addbtn.classList.remove('book-in-list')
+        addbtn.innerHTML = '+'
+        addbtn.setAttribute('title', 'Add book to My Book List')
+        addbtn.setAttribute('style', 'background-color: cornflowerblue;')
+      }
+    }
+    //]]></script>
 
   </body>
 </html>
