@@ -233,6 +233,9 @@ class AuthorPage (SearchPage):
         sql.params['fk_authors'] = os.id
 
     def fixup (self, os):
+        for e in os.entries:
+            if '$' in e.title:
+                e.title = DublinCore.strip_marc_subfields (e.title)
 
         if (os.start_index == 1 and len (os.entries) > 0):
 
