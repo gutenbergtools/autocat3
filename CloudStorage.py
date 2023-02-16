@@ -290,8 +290,10 @@ class EbookMetaData (object):
     def get_extension (self):
         """ Get the ebook filename extension. """
         ext = self.filetype.split ('.', 1)[0]
-        if ext == 'kindle':
+        if ext == 'kindle' or ext == 'kf8':
             ext = 'mobi'
+        elif ext == 'epub3':
+            ext = '3.epub'
         return ext
 
 
