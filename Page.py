@@ -18,6 +18,7 @@ import logging
 
 import cherrypy
 
+from libgutenberg.DublinCore import DublinCore
 from libgutenberg.MediaTypes import mediatypes as mt
 from libgutenberg.GutenbergDatabase import DatabaseError
 
@@ -82,7 +83,9 @@ class SearchPage (Page):
 
     def fixup (self, os):
         """ Give derived classes a chance to further manipulate database results. """
-        pass
+        for e in os.entries:
+            if '$' in e.title:
+                e.title = DublinCore.strip_marc_subfields (e.title)
 
     def finalize (self, os):
         """ Give derived classes a chance to fix default finalization. """
