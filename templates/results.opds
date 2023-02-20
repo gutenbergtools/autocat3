@@ -44,7 +44,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 
   <updated>${os.now}</updated>
   <title>${os.title}</title>
-  <subtitle>Free ebooks since 1971.</subtitle>
+  <subtitle>Free eBooks since 1971.</subtitle>
   <author>
     <name>Project Gutenberg</name>
     <uri>https://www.gutenberg.org</uri>
@@ -205,7 +205,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 	      </py:choose>
 	    </py:for>
 	    <p py:for="author in e.authors">${author.role}: ${author.name_and_dates}</p>
-	    <p>Ebook No.: ${e.project_gutenberg_id}</p>
+	    <p>EBook No.: ${e.project_gutenberg_id}</p>
 	    <p>Published: ${e.hr_release_date}</p>
 	    <p>Downloads: ${e.downloads}</p>
 	    <p py:for="language in e.languages">Language: ${language.language}</p>

@@ -75,7 +75,7 @@ class BibrecPage (Page.Page):
                     os.breadcrumbs.append ((
                         __('One by {author}', '{count} by {author}', book_cnt).format (
                                 count = book_cnt, author = dc.make_pretty_name (a.name)),
-                        _('Find more ebooks by the same author.'),
+                        _('Find more eBooks by the same author.'),
                          os.url ('author', id = a.id)
                         ))
 
