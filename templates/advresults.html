@@ -16,6 +16,8 @@
   <?python
   from itertools import cycle
   from libgutenberg.DublinCore import DublinCore
+  from libgutenberg import GutenbergGlobals as gg
+  
   ?>
 
   <xi:include href="site-layout.html" />
@@ -115,7 +117,7 @@
                     </py:for>
                 </ul>
             </td>
-            <td><a href="/ebooks/${book.pk}">${book.title}</a></td>
+            <td><a href="/ebooks/${book.pk}">${ Markup(gg.insert_breaks(book.title, self_closing=False)) }</a></td>
             <td>${[lang.language for lang in book.langs]}</td>
         </tr>
     </py:for>
