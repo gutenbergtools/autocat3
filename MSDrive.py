@@ -47,7 +47,7 @@ class MSDrive(CloudStorage.CloudStorage):
         filename = self.fix_filename(session.ebook.get_filename())
         item_data = {
             'name': filename,
-            'description': 'A Project Gutenberg Ebook',
+            'description': 'A Project Gutenberg eBook',
             "@microsoft.graph.conflictBehavior": "rename", 
         }
         filesize = len(response.content)
