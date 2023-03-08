@@ -388,7 +388,7 @@ class OpenSearch(object):
             books_in_archive, locale = str(cherrypy.response.i18n.locale))
         self.breadcrumbs  = [
             (_('Project Gutenberg'), _('Go to the Main page.'), '/'),
-            (__('1 free ebook', '{count} free ebooks', books_in_archive).format(
+            (__('1 free eBook', '{count} free eBooks', books_in_archive).format(
                 count = self.books_in_archive), _('Start a new search.'), '/ebooks/'),
         ]
 
@@ -459,10 +459,10 @@ class OpenSearch(object):
         # NOTE: For page titles etc.
         self.pg = self.title = _('Project Gutenberg')
         # NOTE: The tagline at the top of every page.
-        self.tagline = _('Project Gutenberg offers {count} free ebooks to download.').format(
+        self.tagline = _('Project Gutenberg offers {count} free eBooks to download.').format(
             count = self.books_in_archive)
         # NOTE: The site's description in the html meta tags.
-        self.description = _('Project Gutenberg offers {count} free ebooks for '
+        self.description = _('Project Gutenberg offers {count} free eBooks for '
                              'Kindle, iPad, Nook, Android, and iPhone.').format(
                                  count = self.books_in_archive)
         # NOTE: The placeholder inside an empty search box.
@@ -518,7 +518,7 @@ class OpenSearch(object):
             if msg == 'welcome_stranger':
                 self.user_dialog = (
                     _("Welcome to Project Gutenberg. "
-                      "You'll find here {count} ebooks completely free of charge.")
+                      "You'll find here {count} eBooks completely free of charge.")
                     .format(count = self.books_in_archive),
                     _('Welcome'))
 

@@ -265,7 +265,7 @@ Gutenberg metadata much faster than by scraping.
 			    text = re.sub(r'(//\S+)', r'<a href="\1">\1</a>', text)
 			    text = re.sub(r'#(\d+)',  r'<a href="/ebooks/\1">#\1</a>', text)
 			  ?>
-			  ${ Markup (gg.insert_breaks (text)) }
+			  ${ Markup (gg.insert_breaks(text, self_closing=False)) }
 			</td>
 			<td py:when="marc.code=='245'" itemprop="headline">
 			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
@@ -362,7 +362,7 @@ Gutenberg metadata much faster than by scraping.
 	   rel="dcterms:conformsTo"
 	   resource="http://www.w3.org/TR/rdfa-syntax" /></a>
 	<a href="${os.url_carry ('bibrec', format='rdf')}"
-	   title="Download RDF/XML Metadata for this ebook."><img
+	   title="Download RDF/XML Metadata for this eBook."><img
 	   src="http://www.w3.org/RDF/icons/rdf_metadata_button.32"
 	   width="76"
 	   height="32"

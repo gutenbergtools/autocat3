@@ -154,7 +154,7 @@ class CloudStorage (object):
         if 'id' in kwargs:
             session.ebook = EbookMetaData (kwargs)
         if session.ebook is None:
-            raise cherrypy.HTTPError (400, "No ebook selected. Are your cookies enabled?")
+            raise cherrypy.HTTPError (400, "No eBook selected. Are your cookies enabled?")
 
         name = self.name
 
