@@ -3,7 +3,7 @@
 <!--
 DON'T USE THIS PAGE FOR SCRAPING.
 Seriously. You'll only get your IP blocked.
-Read http://www.gutenberg.org/feeds/ to learn how to download Project
+Read https://www.gutenberg.org/feeds/ to learn how to download Project
 Gutenberg metadata much faster than by scraping.
 -->
 
@@ -53,7 +53,7 @@ Gutenberg metadata much faster than by scraping.
 
     ${site_head()}
 
-    <title>${os.title} - Free Ebook</title>
+    <title>${os.title} | Project Gutenberg</title>
 
     <link rel="alternate nofollow" type="${mt.rdf}"
 	  href="${os.url ('bibrec', id = os.id, format = 'rdf')}" />
@@ -129,7 +129,7 @@ Gutenberg metadata much faster than by scraping.
               <py:if test="isinstance(e, bs.DC)">
             <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
 
-              <h2>Download This eBook</h2>
+              <h2>Read now or download (free!)k</h2>
 
               <table class="files">
                 <colgroup>
@@ -235,7 +235,7 @@ Gutenberg metadata much faster than by scraping.
 
 		<div typeof="pgterms:ebook" about="[ebook:$e.project_gutenberg_id]">
 
-		  <h2>Bibliographic Record <span>${help (_('Table: Bibliographic Record'))}</span></h2>
+		  <h2>About this eBook <span>${help (_('Table: Bibliographic Record'))}</span></h2>
 
 		  <table class="bibrec" >
 		    <colgroup>
@@ -332,7 +332,7 @@ Gutenberg metadata much faster than by scraping.
 		    </tr>
 
 		    <tr itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">		      
-		      <td colspan="2"><span itemprop="priceCurrency" content="USD" /><span itemprop="price" content="$0.00"><em>Project Gutenberg books are always free!</em></span><span itemprop="availability"  content="In Stock" ><a href="http://schema.org/InStock"></a></span></td>
+		      <td colspan="2"><span itemprop="priceCurrency" content="USD" /><span itemprop="price" content="$0.00"><em>Project Gutenberg eBooks are always free!</em></span><span itemprop="availability"  content="In Stock" ><a href="http://schema.org/InStock"></a></span></td>
 		    </tr>
 
 		  </table>
