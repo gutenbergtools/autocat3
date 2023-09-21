@@ -66,7 +66,5 @@ class DublinCoreI18nMixin (object):
                 lang.language = cherrypy.response.i18n.locale.languages[lang.id].capitalize ()
         for file_ in self.files:
             file_.hr_filetype = _(file_.hr_filetype)
-        for file_ in self.generated_files:
-            file_.hr_filetype = _(file_.hr_filetype)
 
         self.translated = True

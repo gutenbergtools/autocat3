@@ -56,12 +56,6 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
 
         super (XMLishFormatter, self).fix_dc (dc, os)
 
-        # generated_files always [] AFAICT -esh
-        for file_ in dc.generated_files:
-            file_.help_topic = file_.hr_filetype
-            file_.compression = 'none'
-            file_.encoding  = None
-
         dedupable = {}
         for file_ in dc.files:
             if file_.filetype and file_.filetype.endswith('images'):
@@ -77,7 +71,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
                 if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
                     dc.files.remove(dedupable[ft + '.images'])
                 
-        for file_ in dc.files + dc.generated_files:
+        for file_ in dc.files:
             type_ = six.text_type (file_.mediatypes[0])
             m = type_.partition (';')[0]
             if m in CLOUD_TYPES and has_std_path (file_):
@@ -153,7 +147,7 @@ class HTMLFormatter (XMLishFormatter):
         # hide all txt files but the first one
         txtcount = showncount = htmlcount = 0
 
-        for file_ in dc.files + dc.generated_files:
+        for file_ in dc.files:
             filetype = file_.filetype or ''
             file_.hidden = False
 
@@ -179,5 +173,5 @@ class HTMLFormatter (XMLishFormatter):
 
         # if we happened to hide everything, show all files
         if showncount == 0:
-            for file_ in dc.files + dc.generated_files:
+            for file_ in dc.files:
                 file_.hidden = False
