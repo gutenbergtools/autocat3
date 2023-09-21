@@ -324,8 +324,16 @@ Gutenberg metadata much faster than by scraping.
 		    </tr>
 
 		    <tr itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">		      
-		      <td colspan="2"><span itemprop="priceCurrency" content="USD" /><span itemprop="price" content="$0.00"><em>Project Gutenberg eBooks are always free!</em></span><span itemprop="availability"  content="In Stock" ><a href="http://schema.org/InStock"></a></span></td>
-		    </tr>
+		      <td colspan="2">
+		      <span itemprop="priceCurrency" content="USD" />
+		      <span itemprop="price" content="$0.00">
+		        <em>Project Gutenberg eBooks are always free!</em>
+		      </span>
+		      <span itemprop="availability" content="In Stock" >
+		        <a href="http://schema.org/InStock"></a>
+		      </span>  
+              </td> 
+            </tr>    
 
 		  </table>
 
@@ -342,24 +350,6 @@ Gutenberg metadata much faster than by scraping.
 </div>
       <div id="dialog" class="hidden">
       </div>
-
-      <!--!
-	<a href="http://validator.w3.org/check?uri=referer" rel="nofollow"
-	   title="This page contains RDFa metadata."><img
-	   src="http://www.w3.org/Icons/valid-xhtml-rdfa-blue"
-	   width="88"
-	   height="31"
-	   alt="Valid XHTML + RDFa"
-	   about=""
-	   rel="dcterms:conformsTo"
-	   resource="http://www.w3.org/TR/rdfa-syntax" /></a>
-	<a href="${os.url_carry ('bibrec', format='rdf')}"
-	   title="Download RDF/XML Metadata for this eBook."><img
-	   src="http://www.w3.org/RDF/icons/rdf_metadata_button.32"
-	   width="76"
-	   height="32"
-	   alt="RDF/XML Metadata" /></a>
-      -->
     </div>
       ${site_footer()}
 
