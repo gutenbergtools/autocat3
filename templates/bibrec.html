@@ -180,20 +180,12 @@ Gutenberg metadata much faster than by scraping.
                    title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
                   </td>
                 </tr>
-
-                <!--! more files ... -->
                 <tr py:if="e.base_dir"
                 class="${i%2 and 'odd' or 'even'}">
                   <td><span class="icon icon_folder" /></td>
-                  <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
-                i18n:comment="Link to the directory containing all files.">More Files…</a></td>
-                  <td class="noscreen">${os.qualify (e.base_dir)}</td>
-                  <td/>
-                  <td class="noprint"><!--! dropbox column --></td>
-                  <td class="noprint"><!--! gdrive  column --></td>
-                  <td class="noprint"><!--! msdrive  column --></td>
+                    <td colspan='6'><span class="small"> 
+                  There may be <a class="subtle_link" rel="nofollow" href="${e.base_dir}" >more files</a> related to this item.</span></td>
                 </tr>
-
               </table>
             </div>
               </py:if>
