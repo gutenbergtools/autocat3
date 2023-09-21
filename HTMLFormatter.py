@@ -153,7 +153,10 @@ class HTMLFormatter (XMLishFormatter):
 
             if filetype in NO_DESKTOP_FILETYPES:
                 file_.hidden = True
-            if file_.compression != 'none':
+            if file_.compression == 'zip' and file_.archive_path.startswith('cache/epub'):
+                file_.hr_filetype = 'Download HTML5 zip archive'
+                file_.mediatypes.append('application/zip')
+            elif file_.compression != 'none':
                 file_.hidden = True
             if filetype.startswith ('txt'):
                 if txtcount > 0:
