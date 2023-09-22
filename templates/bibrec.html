@@ -70,10 +70,9 @@ Gutenberg metadata much faster than by scraping.
     <div class="page_content" id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
 
       <div class="breadcrumbs noprint">
-	<ul>
+	<ul itemscope="itemscope" itemtype="https://schema.org/BreadcrumbList">
 	  <py:for each="n, bc in enumerate (os.breadcrumbs)">
-	    <li class="breadcrumb ${'first' if n == 0 else 'next'}"
-		itemscope="itemscope" itemtype="http://data-vocabulary.org/Breadcrumb">
+	    <li class="breadcrumb ${'first' if n == 0 else 'next'}"  itemprop="itemListElement" itemscope="itemscope" itemtype="https://schema.org/ListItem">
 	      <span class="breadcrumb-separator"></span>
 	      <a href="${bc[2]}" title="${bc[1]}" itemprop="url"><span itemprop="title">${bc[0]}</span></a>
 	    </li>
