@@ -162,7 +162,7 @@ Gutenberg metadata much faster than by scraping.
                   <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
                   class="unpadded icon_save"
                   ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" class="link"
-                      title="${'Read online' if file_.filetype.startswith('html') else 'Download'}">${file_.hr_filetype}</a></td>
+                      title="${'Read online' if file_.filetype and file_.filetype.startswith('html') else 'Download'}">${file_.hr_filetype}</a></td>
                   <td class="noscreen">${file_.url}</td>
                   <td  class="right"
                    property="dcterms:extent" content="${file_.extent}">${file_.hr_extent}</td>
