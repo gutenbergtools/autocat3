@@ -33,7 +33,7 @@ Gutenberg metadata much faster than by scraping.
         s = s.replace (' ', '_')
         return '%s#%s' % ('/help/bibliographic_record.html', s)
     def explain (s):
-        return _('Explain {topic}.').format (topic = _(s))
+        return _('Information about {topic}.').format (topic = _(s))
     def _ (s):
         return s
     i = 0
@@ -143,7 +143,7 @@ Gutenberg metadata much faster than by scraping.
 
                 <tr>
                   <th />
-                  <th>Format <span>${help ('Format')}</span></th>
+                  <th>Choose how to read this book <span>${help ('format')}</span></th>
                   <th class="noscreen">Url</th>
                   <th i18n:comment="Size of a file." class="right">Size</th>
                   <th class="noprint"><span>${help ('Dropbox')}</span></th>
@@ -159,7 +159,7 @@ Gutenberg metadata much faster than by scraping.
                   <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
                   class="unpadded icon_save"
                   ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" class="link"
-                      title="Download">${file_.hr_filetype}</a></td>
+                      title="${'Read online' if file_.filetype.startswith('html') else 'Download'}">${file_.hr_filetype}</a></td>
                   <td class="noscreen">${file_.url}</td>
                   <td  class="right"
                    property="dcterms:extent" content="${file_.extent}">${file_.hr_extent}</td>

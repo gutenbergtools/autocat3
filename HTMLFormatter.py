@@ -154,7 +154,7 @@ class HTMLFormatter (XMLishFormatter):
             if filetype in NO_DESKTOP_FILETYPES:
                 file_.hidden = True
             if file_.compression == 'zip' and file_.archive_path.startswith('cache/epub'):
-                file_.hr_filetype = 'Download HTML5 zip archive'
+                file_.hr_filetype = 'Download HTML (zip)'
                 file_.mediatypes.append('application/zip')
             elif file_.compression != 'none':
                 file_.hidden = True
@@ -169,7 +169,7 @@ class HTMLFormatter (XMLishFormatter):
             if filetype.startswith ('html') and file_.compression == 'none':
                 if htmlcount > 0:
                     file_.hidden = True
-                file_.hr_filetype = 'Read this book online: {}'.format (file_.hr_filetype)
+                file_.hr_filetype = 'Read online (web)'
                 htmlcount += 1
             if not file_.hidden:
                 showncount += 1
