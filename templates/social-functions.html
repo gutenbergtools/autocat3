@@ -52,6 +52,23 @@
     </div>
   </py:def>
 
+  <py:def function="masto_share(url, text)">
+    <!-- toot without javascript -->
+    <?python
+      params = {
+	  'text': str(text + ' ' + url).encode('utf-8'),
+	  }
+    ?>
+    <div class="social-button masto-share-button">
+      <a href="https://toot.kytta.dev/?${p(params)}"
+	 title="Share on Mastodon"
+	 onclick="open_share_popup(this.href, this.target, 640, 320)"
+	 target="_top">
+ 	<span class="icon icon_masto" />
+      </a>
+    </div>
+  </py:def>
+
 
   <py:def function="rss_follow()">
     <div class="social-button rss-follow-button">

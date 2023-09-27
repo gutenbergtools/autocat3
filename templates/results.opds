@@ -1,16 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!--
-
-DON'T USE THIS PAGE FOR SCRAPING.
-
-Seriously. You'll only get your IP blocked.
-
-Download https://www.gutenberg.org/feeds/catalog.rdf.bz2 instead,
-which contains *all* Project Gutenberg metadata in one RDF/XML file.
-
--->
-
 <?python
   import re
   from libgutenberg import GutenbergGlobals as gg

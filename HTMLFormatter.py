@@ -38,7 +38,6 @@ HANDOVER_TYPES = (mt.epub, mt.mobi, mt.pdf)
 # self-contained files we can send to dropbox
 CLOUD_TYPES = (mt.epub, mt.mobi, mt.pdf)
 STD_PDF_MATCH = re.compile (r'files/\d+/\d+-pdf.pdf$')
-NEW_FILETYPES = {'kf8.images', 'epub3.images'}
 
 class XMLishFormatter (BaseFormatter.BaseFormatter):
     """ Produce XMLish output. """
@@ -57,12 +56,6 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
 
         super (XMLishFormatter, self).fix_dc (dc, os)
 
-        # generated_files always [] AFAICT -esh
-        for file_ in dc.generated_files:
-            file_.help_topic = file_.hr_filetype
-            file_.compression = 'none'
-            file_.encoding  = None
-
         dedupable = {}
         for file_ in dc.files:
             if file_.filetype and file_.filetype.endswith('images'):
@@ -78,7 +71,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
                 if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
                     dc.files.remove(dedupable[ft + '.images'])
                 
-        for file_ in dc.files + dc.generated_files:
+        for file_ in dc.files:
             type_ = six.text_type (file_.mediatypes[0])
             m = type_.partition (';')[0]
             if m in CLOUD_TYPES and has_std_path (file_):
@@ -153,15 +146,17 @@ class HTMLFormatter (XMLishFormatter):
 
         # hide all txt files but the first one
         txtcount = showncount = htmlcount = 0
-        show_new_ft = cherrypy.config['version'] >= 12
 
-        for file_ in dc.files + dc.generated_files:
+        for file_ in dc.files:
             filetype = file_.filetype or ''
             file_.hidden = False
 
             if filetype in NO_DESKTOP_FILETYPES:
                 file_.hidden = True
-            if file_.compression != 'none':
+            if file_.compression == 'zip' and file_.archive_path.startswith('cache/epub'):
+                file_.hr_filetype = 'Download HTML (zip)'
+                file_.mediatypes.append('application/zip')
+            elif file_.compression != 'none':
                 file_.hidden = True
             if filetype.startswith ('txt'):
                 if txtcount > 0:
@@ -172,16 +167,14 @@ class HTMLFormatter (XMLishFormatter):
             if file_.encoding:
                 file_.hr_filetype += ' ' + file_.encoding.upper ()
             if filetype.startswith ('html') and file_.compression == 'none':
-                if htmlcount > 0 and not show_new_ft:
+                if htmlcount > 0:
                     file_.hidden = True
-                file_.hr_filetype = 'Read this book online: {}'.format (file_.hr_filetype)
+                file_.hr_filetype = 'Read online (web)'
                 htmlcount += 1
-            if filetype in NEW_FILETYPES and not show_new_ft:
-                file_.hidden = True
             if not file_.hidden:
                 showncount += 1
 
         # if we happened to hide everything, show all files
         if showncount == 0:
-            for file_ in dc.files + dc.generated_files:
+            for file_ in dc.files:
                 file_.hidden = False

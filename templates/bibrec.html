@@ -33,7 +33,7 @@ Gutenberg metadata much faster than by scraping.
         s = s.replace (' ', '_')
         return '%s#%s' % ('/help/bibliographic_record.html', s)
     def explain (s):
-        return _('Explain {topic}.').format (topic = _(s))
+        return _('Information about {topic}.').format (topic = _(s))
     def _ (s):
         return s
     i = 0
@@ -70,10 +70,9 @@ Gutenberg metadata much faster than by scraping.
     <div class="page_content" id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
 
       <div class="breadcrumbs noprint">
-	<ul>
+	<ul itemscope="itemscope" itemtype="https://schema.org/BreadcrumbList">
 	  <py:for each="n, bc in enumerate (os.breadcrumbs)">
-	    <li class="breadcrumb ${'first' if n == 0 else 'next'}"
-		itemscope="itemscope" itemtype="http://data-vocabulary.org/Breadcrumb">
+	    <li class="breadcrumb ${'first' if n == 0 else 'next'}"  itemprop="itemListElement" itemscope="itemscope" itemtype="https://schema.org/ListItem">
 	      <span class="breadcrumb-separator"></span>
 	      <a href="${bc[2]}" title="${bc[1]}" itemprop="url"><span itemprop="title">${bc[0]}</span></a>
 	    </li>
@@ -104,6 +103,9 @@ Gutenberg metadata much faster than by scraping.
 
 	  <div id="social" class="noprint">
 	    <ul>
+	      <li>
+		     ${masto_share(os.canonical_url, "Free book at Project Gutenberg: " + os.title)}
+	      </li>
 	      <li>
 		     ${tw_share(os.canonical_url, os.twit)}
 	      </li>
@@ -144,7 +146,7 @@ Gutenberg metadata much faster than by scraping.
 
                 <tr>
                   <th />
-                  <th>Format <span>${help ('Format')}</span></th>
+                  <th>Choose how to read this book <span>${help ('format')}</span></th>
                   <th class="noscreen">Url</th>
                   <th i18n:comment="Size of a file." class="right">Size</th>
                   <th class="noprint"><span>${help ('Dropbox')}</span></th>
@@ -160,7 +162,7 @@ Gutenberg metadata much faster than by scraping.
                   <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
                   class="unpadded icon_save"
                   ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" class="link"
-                      title="Download">${file_.hr_filetype}</a></td>
+                      title="${'Read online' if file_.filetype and file_.filetype.startswith('html') else 'Download'}">${file_.hr_filetype}</a></td>
                   <td class="noscreen">${file_.url}</td>
                   <td  class="right"
                    property="dcterms:extent" content="${file_.extent}">${file_.hr_extent}</td>
@@ -180,20 +182,12 @@ Gutenberg metadata much faster than by scraping.
                    title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
                   </td>
                 </tr>
-
-                <!--! more files ... -->
                 <tr py:if="e.base_dir"
                 class="${i%2 and 'odd' or 'even'}">
                   <td><span class="icon icon_folder" /></td>
-                  <td class="unpadded icon_file"><a href="${e.base_dir}" class="link"
-                i18n:comment="Link to the directory containing all files.">More Files…</a></td>
-                  <td class="noscreen">${os.qualify (e.base_dir)}</td>
-                  <td/>
-                  <td class="noprint"><!--! dropbox column --></td>
-                  <td class="noprint"><!--! gdrive  column --></td>
-                  <td class="noprint"><!--! msdrive  column --></td>
+                    <td colspan='6'><span class="small"> 
+                  There may be <a class="subtle_link" rel="nofollow" href="${e.base_dir}" >more files</a> related to this item.</span></td>
                 </tr>
-
               </table>
             </div>
               </py:if>
@@ -332,8 +326,16 @@ Gutenberg metadata much faster than by scraping.
 		    </tr>
 
 		    <tr itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">		      
-		      <td colspan="2"><span itemprop="priceCurrency" content="USD" /><span itemprop="price" content="$0.00"><em>Project Gutenberg eBooks are always free!</em></span><span itemprop="availability"  content="In Stock" ><a href="http://schema.org/InStock"></a></span></td>
-		    </tr>
+		      <td colspan="2">
+		      <span itemprop="priceCurrency" content="USD" />
+		      <span itemprop="price" content="$0.00">
+		        <em>Project Gutenberg eBooks are always free!</em>
+		      </span>
+		      <span itemprop="availability" content="In Stock" >
+		        <a href="http://schema.org/InStock"></a>
+		      </span>  
+              </td> 
+            </tr>    
 
 		  </table>
 
@@ -350,24 +352,6 @@ Gutenberg metadata much faster than by scraping.
 </div>
       <div id="dialog" class="hidden">
       </div>
-
-      <!--!
-	<a href="http://validator.w3.org/check?uri=referer" rel="nofollow"
-	   title="This page contains RDFa metadata."><img
-	   src="http://www.w3.org/Icons/valid-xhtml-rdfa-blue"
-	   width="88"
-	   height="31"
-	   alt="Valid XHTML + RDFa"
-	   about=""
-	   rel="dcterms:conformsTo"
-	   resource="http://www.w3.org/TR/rdfa-syntax" /></a>
-	<a href="${os.url_carry ('bibrec', format='rdf')}"
-	   title="Download RDF/XML Metadata for this eBook."><img
-	   src="http://www.w3.org/RDF/icons/rdf_metadata_button.32"
-	   width="76"
-	   height="32"
-	   alt="RDF/XML Metadata" /></a>
-      -->
     </div>
       ${site_footer()}
 

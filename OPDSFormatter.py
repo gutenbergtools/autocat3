@@ -126,7 +126,7 @@ class OPDSFormatter (BaseFormatter.BaseFormatter):
 
         dc.authors.sort (key = key_role)
 
-        for file_ in dc.files + dc.generated_files:
+        for file_ in dc.files:
             if len (file_.mediatypes) == 1:
                 type_ = six.text_type (file_.mediatypes[0])
                 filetype = file_.filetype or ''
