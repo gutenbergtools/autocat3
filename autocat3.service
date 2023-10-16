@@ -8,7 +8,7 @@ Type=simple
 RuntimeDirectory=autocat
 WorkingDirectory=/var/lib/autocat/autocat3
 ExecStartPre=-/usr/bin/mkdir -p /var/run/autocat
-ExecStart=/usr/local/bin/pipenv run python CherryPyApp.py
+ExecStart=/usr/bin/pipenv run python CherryPyApp.py
 LimitNOFILE=infinity
 
 
