@@ -1,3 +1,5 @@
+########################################
+# old centos servers
 sudo yum install git
 #sudo yum install postgresql-server
 #sudo yum install postgresql-contrib
@@ -7,7 +9,6 @@ sudo yum install git
 #sudo yum install centos-release-scl
 #sudo yum install rh-python36
 #scl enable rh-python36 bash
-
 #install pip
 
 sudo yum groupinstall 'Development Tools'
@@ -15,7 +16,35 @@ sudo yum groupinstall 'Development Tools'
 sudo /opt/rh/rh-python36/root/usr/bin/pip install --upgrade pip
 sudo /opt/rh/rh-python36/root/usr/bin/pip install pipenv
 echo 'export PATH="/var/lib/autocat/.local/bin:$PATH"' >> ~/.bashrc
+#
+########################################
+#
+# new debian servers
+#
+# install pyenv and desired python
 
+curl -L https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer | bash
+
+# Load pyenv automatically by appending
+# the following to 
+~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
+and ~/.bashrc (for interactive shells) :
+
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+# Restart your shell for the changes to take effect.
+
+# Load pyenv-virtualenv automatically by adding
+# the following to ~/.bashrc:
+
+eval "$(pyenv virtualenv-init -)"
+pyenv install 3.9.18
+pyenv local 3.9.18
+
+#
+########################################
 # create autocat user with home directory /var/lib/autocat
 
 sudo useradd -d /var/lib/ autocat
@@ -28,8 +57,9 @@ mkdir .ssh
 install -m 600 .ssh/id_rsa
 touch .ssh/id_rsa.pub
 #!! from local
-# scp [local:]~.ssh/github [autocat@host:]~/.ssh/id_rsa
-# scp [local:]~.ssh/github.pub [autocat@host:]~/.ssh/id_rsa.pub
+# scp [local:].ssh/github [autocat@host:]~/.ssh/id_rsa
+# scp [local:].ssh/github.pub [autocat@host:]~/.ssh/id_rsa.pub
+# currently id_ecdsa and id_ed25519
 chmod 400 .ssh/id_rsa
 
 # create ~/.pgpass file to store password in format
@@ -100,9 +130,8 @@ create a "feature" branch on on the git repo, using either master or development
 when your code is working, submit a pull request to master or development as appropriate.
 
 ## updates
-# currently gutenberg1 is production deployment, gutenberg2 is dev deployment
-# to do a new deployment, first pull from the master or dev as appropriate
-# into gutenberg1 or gutenberg2.
+# currently gutenberg-app1 is production deployment, gutenberg-appdev1 is dev deployment
+# to do a new deployment, first update from master 
 # DONT edit files on the deployment servers, they should always be updated from the git remote.
 
 su - autocat
@@ -112,12 +141,14 @@ cd autocat3
 
 git fetch origin
 
-#for gutenberg1
-git checkout remotes/origin/gutenberg1
-# for gutenberg2
-git checkout remotes/origin/gutenberg2
+#for local development
+git checkout remotes/origin/dev
+
+do NOT develop on the following branches, update them from master.
 # for gutenberg-app1
-git checkout remotes/origin/py39
+git checkout remotes/origin/prod
+# for gutenberg-appdev1
+git checkout remotes/origin/appdev
 
 pipenv install --ignore-pipfile
 
