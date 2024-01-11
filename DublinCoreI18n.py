@@ -50,6 +50,12 @@ class DublinCoreI18nMixin (object):
         self.hr_release_date = babel.dates.format_date (
             self.release_date, locale = str (cherrypy.response.i18n.locale))
 
+        if self.update_date > self.release_date:
+            self.hr_update_date = babel.dates.format_date (
+                self.update_date, locale = str (cherrypy.response.i18n.locale))
+        else:
+            self.hr_update_date = ''
+
         if cherrypy.response.i18n.locale.language == 'en':
             # no translation required
             return
