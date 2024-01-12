@@ -47,7 +47,8 @@ class BibrecPage (Page.Page):
         dc.url = None
 
         for file_ in dc.files:
-            dc.update_date = max(dc.update_date, file_.modified.date())
+            if not file_.generated:
+                dc.update_date = max(dc.update_date, file_.modified.date())
 
         dc.translate ()
         dc.header = gg.cut_at_newline (dc.title)
