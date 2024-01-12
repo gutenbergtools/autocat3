@@ -47,7 +47,8 @@ class BibrecPage (Page.Page):
         dc.url = None
 
         for file_ in dc.files:
-            if not file_.generated:
+            # note that generated zip files don't get the "generated" bit or filetype set
+            if not file_.generated and file_.filetype:
                 dc.update_date = max(dc.update_date, file_.modified.date())
 
         dc.translate ()
