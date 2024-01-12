@@ -74,7 +74,7 @@ Gutenberg metadata much faster than by scraping.
 	  <py:for each="n, bc in enumerate (os.breadcrumbs)">
 	    <li class="breadcrumb ${'first' if n == 0 else 'next'}"  itemprop="itemListElement" itemscope="itemscope" itemtype="https://schema.org/ListItem">
 	      <span class="breadcrumb-separator"></span>
-	      <a href="${bc[2]}" title="${bc[1]}" itemprop="url"><span itemprop="name">${bc[0]}</span></a><meta itemprop="position" content="${n}" />
+	      <a href="${bc[2]}" title="${bc[1]}" itemprop="item" typeof="WebPage"><span itemprop="name">${bc[0]}</span></a><meta itemprop="position" content="${n}" />
 	    </li>
 	  </py:for>
 	</ul>
@@ -245,7 +245,7 @@ Gutenberg metadata much faster than by scraping.
 			   itemprop="creator">${author.name_and_dates}</a></td>
 		    </tr>
 
-		    <tr py:for="marc in e.marcs">
+		    <tr py:for="marc in e.marcs" py:if="marc.text">
 		      <th>${marc.caption}</th>
 		      <py:choose test="">
 			<td py:when="marc.code == '010'">
@@ -310,9 +310,15 @@ Gutenberg metadata much faster than by scraping.
 		      <td>${e.project_gutenberg_id}</td>
 		    </tr>
 
-		    <tr property="dcterms:issued" datatype="xsd:date" content="${e.xsd_release_date_time}">
+		    <tr property="dcterms:issued" datatype="xsd:date" content="${e.update_date}">
 		      <th>Release Date</th>
 		      <td itemprop="datePublished">${e.hr_release_date}</td>
+		    </tr>
+
+		    <tr property="dcterms:modified" datatype="xsd:date" content="${e.xsd_release_date_time}"
+		        py:if="e.update_date > e.release_date">
+		      <th>Most Recently Updated</th>
+		      <td itemprop="dateModified">${e.hr_update_date}</td>
 		    </tr>
 
 		    <tr>
