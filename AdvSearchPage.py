@@ -41,7 +41,7 @@ config = cherrypy.config
 
 BROWSE_KEYS = {'lang': 'languages', 'locc': 'loccs', 'category': 'categories'}
 PAGESIZE = 100
-MAX_RESULTS = 1000
+MAX_RESULTS = 5000
 
 _langs = {}
 def langname(langcode):
