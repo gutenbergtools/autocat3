@@ -10,6 +10,8 @@ WorkingDirectory=/var/lib/autocat/autocat3
 ExecStartPre=-/usr/bin/mkdir -p /var/run/autocat
 ExecStart=/usr/bin/pipenv run python CherryPyApp.py
 LimitNOFILE=infinity
+Restart=always
+RestartSec=3s
 
 
 [Install]
