@@ -96,7 +96,7 @@ class SearchPage (Page):
         os.entries.insert (0, self.no_records_found (os))
 
 
-    def output_suggestions (self, os, max_suggestions_per_word = 3):
+    def output_suggestions(self, os, max_suggestions_per_word=3, max_suggestions=9):
         """ Make suggestions. """
 
         # similarity == matching_trigrams / (len1 + len2 - matching_trigrams)
@@ -110,25 +110,31 @@ class SearchPage (Page):
             WHERE word %% %(word)s
             ORDER BY sml DESC, nentry DESC LIMIT %(suggestions)s;"""
 
-        q = os.query.lower ()
+        q = os.query.lower()
+        words = q.split()
+        words.sort(key=len, reverse=True) # only suggest on the longest words
         sugg = []
-        for word in q.split ():
-            if len (word) > 3:
+        done_words = []
+        for word in words:
+            if len(word) > 3 and word not in done_words:
+                done_words.append(word)
                 try:
-                    rows = BaseSearcher.SQLSearcher().execute (
+                    rows = BaseSearcher.SQLSearcher().execute(
                         sql_query,
-                        { 'word': word, 'suggestions': max_suggestions_per_word + 1})
-                    for i, row in enumerate (rows):
+                        {'word': word, 'suggestions': max_suggestions_per_word + 1})
+                    for i, row in enumerate(rows):
                         if i >= max_suggestions_per_word:
                             break
                         corr = row.word
-                        if corr != word:
-                            sugg.append ( (word, corr) )
+                        if corr != word and (word, corr) not in sugg:
+                            sugg.append((word, corr))
                 except DatabaseError:
                     pass
+            if len(sugg) > max_suggestions:
+                break
+        for word, corr in reversed(sugg):
+            os.entries.insert(0, self.did_you_mean(os, corr, q.replace(word, corr)))
 
-        for word, corr in reversed (sugg):
-            os.entries.insert (0, self.did_you_mean (os, corr, q.replace (word, corr)))
 
 
 
