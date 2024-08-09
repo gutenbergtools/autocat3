@@ -262,6 +262,8 @@ class EbookMetaData (object):
         'kindle.images',
         'kindle.noimages',
         'kf8.images',
+        'pdf.images',
+        'pdf.noimages',
         'pdf')
 
 
