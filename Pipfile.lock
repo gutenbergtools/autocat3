@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d214987fb3b05150d9789d48efb6121dafe336086befb03e830de2ab8f1299b1"
+            "sha256": "7e45e5e75164cda641489e73a732de2e5e2c860f91ebda03048505fb4abd5287"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -316,10 +316,10 @@
         },
         "libgutenberg": {
             "hashes": [
-                "sha256:84e61ef09e6ee74cecb3daf50ae66b0d8c6ac9e9d0d9e40edd2a703f98fc79d3"
+                "sha256:d16b84b532368c2e236afa09f5c0a6a17bf1bd7359b05f8055deaafc9a4af93e"
             ],
             "index": "pypi",
-            "version": "==0.10.26"
+            "version": "==0.10.30"
         },
         "lxml": {
             "hashes": [
