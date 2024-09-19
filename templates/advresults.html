@@ -17,6 +17,7 @@
   from itertools import cycle
   from libgutenberg.DublinCore import DublinCore
   from libgutenberg import GutenbergGlobals as gg
+  from AdvSearchPage import MAX_RESULTS
   
   ?>
 
@@ -70,11 +71,11 @@
         <p>${os.total_results} books found. </p>
 </py:if>
 
-<py:if test='os.total_results &gt; 1000'>
-    <p>More than 1000 books matched your search. Please refine your query to see results.</p>
+<py:if test='os.total_results &gt; MAX_RESULTS'>
+    <p>More than ${MAX_RESULTS} books matched your search. Please refine your query to see results.</p>
 </py:if>
 
-<py:if test='os.total_results and (os.total_results &lt;= 1000)'>
+<py:if test='os.total_results and (os.total_results &lt;= MAX_RESULTS)'>
 <py:if test="os.total_results &gt; os.items_per_page">
     <p class="center resultpages">
     <a py:if="os.prevpage" href="${os.url(pageno=os.prevpage)}">previous</a>
