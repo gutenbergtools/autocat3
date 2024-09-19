@@ -6,9 +6,8 @@ CherryPy is used as the web framwork which is easy to develop.
 If mainly implemented the search functionality and rate limiter. Also return results pages based on templates. 
 
 ## How it works.
-Currently, the dev environment and production environment share the same server **login1**. 
-The production version of autocat3 is on **gutenberg2**. 
-This application in this repository is on **gutenberg1**.
+The production version of autocat3 is on **app1**. 
+This application in this repository is on **appdev1**.
 
 Previously, the old version of autocat3 relies on dependencies installed directly on the system. To make it more flexible and easy to deploy, we tend to use virtual env rather than the previous method. To use virtual env, we use pipenv instead of using pip and virtual env separately. 
 
