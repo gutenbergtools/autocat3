@@ -49,7 +49,7 @@ MEDIATYPE_TO_FORMAT = {
 USER_FORMATS = 'html mobile print opds stanza json'.split()
 
 # max no. of results returned by search
-MAX_RESULTS = 1000
+MAX_RESULTS = 5000
 
 # sort orders available to the user
 USER_SORT_ORDERS = 'downloads author release_date title alpha quantity nentry random'.split()
