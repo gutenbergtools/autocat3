@@ -3,6 +3,12 @@ name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
+[requires]
+python_version = "3.8"
+
+[pipenv]
+allow_prereleases = true
+
 [dev-packages]
 
 [packages]
@@ -41,9 +47,3 @@ urllib3 = "==1.26.5"
 lxml = ">=4.9.1"
 psycopg2-binary = "*"
 psycopg2 = "*"
-
-[requires]
-python_version = ">=3.8"
-
-[pipenv]
-allow_prereleases = true
