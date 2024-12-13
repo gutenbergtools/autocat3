@@ -23,73 +23,7 @@
         <label for="language">Language:</label>
         <select id="lang" name="lang" title="Language">
               <option value="">Any</option>
-              <option value="af">Afrikaans</option>
-              <option value="ale">Aleut</option>
-              <option value="ar">Arabic</option>
-              <option value="arp">Arapaho</option>
-              <option value="brx">Bodo</option>
-              <option value="br">Breton</option>
-              <option value="bg">Bulgarian</option>
-              <option value="rmq">Caló</option>
-              <option value="ca">Catalan</option>
-              <option value="ceb">Cebuano</option>
-              <option value="zh">Chinese</option>
-              <option value="cs">Czech</option>
-              <option value="da">Danish</option>
-              <option value="nl">Dutch</option>
-              <option value="en">English</option>
-              <option value="eo">Esperanto</option>
-              <option value="et">Estonian</option>
-              <option value="fa">Farsi</option>
-              <option value="fi">Finnish</option>
-              <option value="fr">French</option>
-              <option value="fy">Frisian</option>
-              <option value="fur">Friulian</option>
-              <option value="gla">Gaelic, Scottish</option>
-              <option value="gl">Galician</option>
-              <option value="kld">Gamilaraay</option>
-              <option value="de">German</option>
-              <option value="el">Greek</option>
-              <option value="grc">Greek, Ancient</option>
-              <option value="he">Hebrew</option>
-              <option value="hu">Hungarian</option>
-              <option value="is">Icelandic</option>
-              <option value="ilo">Iloko</option>
-              <option value="ia">Interlingua</option>
-              <option value="iu">Inuktitut</option>
-              <option value="ga">Irish</option>
-              <option value="it">Italian</option>
-              <option value="ja">Japanese</option>
-              <option value="csb">Kashubian</option>
-              <option value="kha">Khasi</option>
-              <option value="ko">Korean</option>
-              <option value="la">Latin</option>
-              <option value="lt">Lithuanian</option>
-              <option value="mi">Maori</option>
-              <option value="myn">Mayan Languages</option>
-              <option value="enm">Middle English</option>
-              <option value="nah">Nahuatl</option>
-              <option value="nap">Napoletano-Calabrese</option>
-              <option value="nav">Navajo</option>
-              <option value="nai">North American Indian</option>
-              <option value="no">Norwegian</option>
-              <option value="oc">Occitan</option>
-              <option value="oji">Ojibwa</option>
-              <option value="ang">Old English</option>
-              <option value="pl">Polish</option>
-              <option value="pt">Portuguese</option>
-              <option value="ro">Romanian</option>
-              <option value="ru">Russian</option>
-              <option value="sa">Sanskrit</option>
-              <option value="sr">Serbian</option>
-              <option value="sl">Slovenian</option>
-              <option value="es">Spanish</option>
-              <option value="sv">Swedish</option>
-              <option value="bgs">Tagabawa</option>
-              <option value="tl">Tagalog</option>
-              <option value="te">Telugu</option>
-              <option value="cy">Welsh</option>
-              <option value="yi">Yiddish</option>
+              ${Markup(langoptions())}
         </select>
       </p>
       <p>
@@ -532,75 +466,10 @@
     <a href="/browse/titles/other">other</a>&nbsp;
   </p>
   <p>Languages with more than 50 books:
-    <a href="/browse/languages/zh" title="Chinese (441)">Chinese</a>&nbsp;
-    <a href="/browse/languages/da" title="Danish (68)">Danish</a>&nbsp;
-    <a href="/browse/languages/nl" title="Dutch (800)">Dutch</a>&nbsp;
-    <a href="/browse/languages/en" title="English (48426)">English</a>&nbsp;
-    <a href="/browse/languages/eo" title="Esperanto (118)">Esperanto</a>&nbsp;
-    <a href="/browse/languages/fi" title="Finnish (2006)">Finnish</a>&nbsp;
-    <a href="/browse/languages/fr" title="French (2964)">French</a>&nbsp;
-    <a href="/browse/languages/de" title="German (1756)">German</a>&nbsp;
-    <a href="/browse/languages/el" title="Greek (220)">Greek</a>&nbsp;
-    <a href="/browse/languages/hu" title="Hungarian (183)">Hungarian</a>&nbsp;
-    <a href="/browse/languages/it" title="Italian (759)">Italian</a>&nbsp;
-    <a href="/browse/languages/la" title="Latin (122)">Latin</a>&nbsp;
-    <a href="/browse/languages/pt" title="Portuguese (552)">Portuguese</a>&nbsp;
-    <a href="/browse/languages/es" title="Spanish (630)">Spanish</a>&nbsp;
-    <a href="/browse/languages/sv" title="Swedish (193)">Swedish</a>&nbsp;
-    <a href="/browse/languages/tl" title="Tagalog (60)">Tagalog</a>&nbsp;
+    ${Markup(langlots())}
   </p>
   <p>Languages with up to 50 books:
-    <a href="/browse/languages/af" title="Afrikaans (4)">Afrikaans</a>&nbsp;
-    <a href="/browse/languages/ale" title="Aleut (1)">Aleut</a>&nbsp;
-    <a href="/browse/languages/ar" title="Arabic (1)">Arabic</a>&nbsp;
-    <a href="/browse/languages/arp" title="Arapaho (2)">Arapaho</a>&nbsp;
-    <a href="/browse/languages/brx" title="Bodo (2)">Bodo</a>&nbsp;
-    <a href="/browse/languages/br" title="Breton (1)">Breton</a>&nbsp;
-    <a href="/browse/languages/bg" title="Bulgarian (6)">Bulgarian</a>&nbsp;
-    <a href="/browse/languages/rmq" title="Caló (1)">Caló</a>&nbsp;
-    <a href="/browse/languages/ca" title="Catalan (33)">Catalan</a>&nbsp;
-    <a href="/browse/languages/ceb" title="Cebuano (3)">Cebuano</a>&nbsp;
-    <a href="/browse/languages/cs" title="Czech (10)">Czech</a>&nbsp;
-    <a href="/browse/languages/et" title="Estonian (1)">Estonian</a>&nbsp;
-    <a href="/browse/languages/fa" title="Farsi (1)">Farsi</a>&nbsp;
-    <a href="/browse/languages/fy" title="Frisian (2)">Frisian</a>&nbsp;
-    <a href="/browse/languages/fur" title="Friulian (7)">Friulian</a>&nbsp;
-    <a href="/browse/languages/gla" title="Gaelic, Scottish (2)">Gaelic, Scottish</a>&nbsp;
-    <a href="/browse/languages/gl" title="Galician (2)">Galician</a>&nbsp;
-    <a href="/browse/languages/kld" title="Gamilaraay (1)">Gamilaraay</a>&nbsp;
-    <a href="/browse/languages/grc" title="Greek, Ancient (3)">Greek, Ancient</a>&nbsp;
-    <a href="/browse/languages/he" title="Hebrew (6)">Hebrew</a>&nbsp;
-    <a href="/browse/languages/is" title="Icelandic (7)">Icelandic</a>&nbsp;
-    <a href="/browse/languages/ilo" title="Iloko (3)">Iloko</a>&nbsp;
-    <a href="/browse/languages/ia" title="Interlingua (1)">Interlingua</a>&nbsp;
-    <a href="/browse/languages/iu" title="Inuktitut (1)">Inuktitut</a>&nbsp;
-    <a href="/browse/languages/ga" title="Irish (2)">Irish</a>&nbsp;
-    <a href="/browse/languages/ja" title="Japanese (22)">Japanese</a>&nbsp;
-    <a href="/browse/languages/csb" title="Kashubian (1)">Kashubian</a>&nbsp;
-    <a href="/browse/languages/kha" title="Khasi (1)">Khasi</a>&nbsp;
-    <a href="/browse/languages/ko" title="Korean (1)">Korean</a>&nbsp;
-    <a href="/browse/languages/lt" title="Lithuanian (1)">Lithuanian</a>&nbsp;
-    <a href="/browse/languages/mi" title="Maori (2)">Maori</a>&nbsp;
-    <a href="/browse/languages/myn" title="Mayan Languages (2)">Mayan Languages</a>&nbsp;
-    <a href="/browse/languages/enm" title="Middle English (6)">Middle English</a>&nbsp;
-    <a href="/browse/languages/nah" title="Nahuatl (3)">Nahuatl</a>&nbsp;
-    <a href="/browse/languages/nap" title="Napoletano-Calabrese (1)">Napoletano-Calabrese</a>&nbsp;
-    <a href="/browse/languages/nav" title="Navajo (3)">Navajo</a>&nbsp;
-    <a href="/browse/languages/nai" title="North American Indian (3)">North American Indian</a>&nbsp;
-    <a href="/browse/languages/no" title="Norwegian (19)">Norwegian</a>&nbsp;
-    <a href="/browse/languages/oc" title="Occitan (1)">Occitan</a>&nbsp;
-    <a href="/browse/languages/oji" title="Ojibwa (1)">Ojibwa</a>&nbsp;
-    <a href="/browse/languages/ang" title="Old English (4)">Old English</a>&nbsp;
-    <a href="/browse/languages/pl" title="Polish (31)">Polish</a>&nbsp;
-    <a href="/browse/languages/ro" title="Romanian (2)">Romanian</a>&nbsp;
-    <a href="/browse/languages/ru" title="Russian (9)">Russian</a>&nbsp;
-    <a href="/browse/languages/sa" title="Sanskrit (1)">Sanskrit</a>&nbsp;
-    <a href="/browse/languages/sr" title="Serbian (4)">Serbian</a>&nbsp;
-    <a href="/browse/languages/sl" title="Slovenian (1)">Slovenian</a>&nbsp;
-    <a href="/browse/languages/bgs" title="Tagabawa (1)">Tagabawa</a>&nbsp;
-    <a href="/browse/languages/te" title="Telugu (6)">Telugu</a>&nbsp;
-    <a href="/browse/languages/cy" title="Welsh (13)">Welsh</a>&nbsp;
-    <a href="/browse/languages/yi" title="Yiddish (1)">Yiddish</a>&nbsp;
+    ${Markup(langless())}
   </p>
   <p>Special Categories:
     <a href="/browse/categories/2" title="Audio Book, computer-generated (370)">Audio Book, computer-generated</a>&nbsp;

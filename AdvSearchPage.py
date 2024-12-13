@@ -43,14 +43,51 @@ BROWSE_KEYS = {'lang': 'languages', 'locc': 'loccs', 'category': 'categories'}
 PAGESIZE = 100
 MAX_RESULTS = 5000
 
-_langs = {}
-def langname(langcode):
-    """ cache of Language names"""
-    if not _langs:
-        session = cherrypy.engine.pool.Session()
-        for lang in session.query(Lang).all():
-            _langs[lang.id] = lang.language
-    return _langs.get(langcode, langcode)
+_LANGOPTIONS = ''
+_LANGLOTS = ''
+_LANGLESS = ''
+
+# can't make a session until CherryPy is finished starting
+def makelists():
+    global _LANGOPTIONS, _LANGLOTS, _LANGLESS
+    if _LANGOPTIONS or _LANGLOTS or _LANGLESS:
+        return
+    session = cherrypy.engine.pool.Session()
+    for lang in session.execute(select(Lang.id, Lang.language).order_by(Lang.language)).all():
+        langnum = session.query(Book).filter(Book.langs.any(id=lang[0])).count()
+        _LANGOPTIONS += f'<option value="{lang[0]}">{lang[1]}</option>'
+        if langnum > 50:
+            _LANGLOTS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a>&nbsp;'
+        elif langnum > 0:
+            _LANGLESS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a>&nbsp;'
+
+def langoptions():
+    ''' option list for langs dropdown '''
+    global _LANGOPTIONS
+    if _LANGOPTIONS:
+        return _LANGOPTIONS
+    else:
+        makelists()
+        return _LANGOPTIONS
+
+def langlots():
+    ''' list of links for langs with more than 50 books '''
+    global _LANGLOTS
+    if _LANGLOTS:
+        return _LANGLOTS
+    else:
+        makelists()
+        return _LANGLOTS
+
+def langless():
+    ''' list of links for langs with up to 50 books '''
+    global _LANGLESS
+    if _LANGLESS:
+        return _LANGLESS
+    else:
+        makelists()
+        return _LANGLESS
+
 
 _cats = {}
 def catname(catpk):
@@ -146,7 +183,7 @@ class AdvSearchPage(Page):
 
             elif key == 'lang':
                 pks = query.join(Book.langs).filter(Lang.id == val).all()
-                val = langname(val)
+                val = BaseSearcher.language_map.get(val, val)
                 key = 'Language'
 
             elif key == 'locc':
