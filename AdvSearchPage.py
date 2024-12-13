@@ -181,6 +181,14 @@ class AdvSearchPage(Page):
                 )).all()
                 key = 'Title'
 
+            elif key == 'summary':
+                word = "% {} %".format(val)
+                pks = query.join(Book.attributes).filter(and_(
+                    Attribute.fk_attriblist == 520,
+                    Attribute.text.ilike(word),
+                )).all()
+                key = 'Summary'
+
             elif key == 'subject':
                 word = "%{}%".format(val)
                 pks = query.join(Book.subjects).filter(                    
