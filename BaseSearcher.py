@@ -59,6 +59,8 @@ SORT_ORDERS = USER_SORT_ORDERS + 'nentry'.split()
 # fk_categories of sound files
 AUDIOBOOK_CATEGORIES = set([1, 2, 3, 6])
 
+language_map = gg.language_map()
+
 # updated by cron thread
 books_in_archive = 0
 
@@ -762,7 +764,7 @@ class OpenSearch(object):
         title = gg.cut_at_newline(row.get('title') or 'No Title')
         for lang_id in row.get('fk_langs') or []:
             if lang_id != 'en':
-                title += " (%s)" % cherrypy.response.i18n.locale.languages.get(lang_id, lang_id)
+                title += " (%s)" % language_map.get(lang_id, lang_id)
         return title
 
     @staticmethod
@@ -771,7 +773,7 @@ class OpenSearch(object):
         title = gg.cut_at_newline(row.get('filing') or 'No Title')
         for lang_id in row.get('fk_langs') or []:
             if lang_id != 'en':
-                title += " (%s)" % cherrypy.response.i18n.locale.languages.get(lang_id, lang_id)
+                title += " (%s)" % language_map.get(lang_id, lang_id)
         return title
 
     @staticmethod
@@ -786,9 +788,7 @@ class OpenSearch(object):
     @staticmethod
     def format_language(row):
         """ Format a language name for display in results. """
-        if row.pk in cherrypy.response.i18n.locale.languages:
-            return cherrypy.response.i18n.locale.languages[row.pk]
-        return row.title
+        return language_map.get(row.pk, row.pk)
 
     @staticmethod
     def format_none(dummy_row):

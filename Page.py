@@ -96,6 +96,7 @@ class SearchPage(Page):
         os.entries.insert(0, self.no_records_found(os))
 
 
+    # this method is turned off; should remove it at some point
     def output_suggestions(self, os, max_suggestions_per_word=3, max_suggestions=9):
         """ Make suggestions. """
 
@@ -187,8 +188,8 @@ class SearchPage(Page):
             self.nothing_found(os)
 
         # suggest alternate queries
-        if os.total_results < 5:
-            self.output_suggestions(os)
+        #if os.total_results < 5:
+        #    self.output_suggestions(os)
 
         # add sort by links
         if os.start_index == 1 and os.total_results > 1:
@@ -320,15 +321,15 @@ class SearchPage(Page):
         cat.order = 11
         return cat
 
-    @staticmethod
-    def did_you_mean(os, corr, corrected_query):
-        """ Message. """
-
-        cat = BaseSearcher.Cat()
-        cat.rel = '__didyoumean__'
-        cat.title = _('Did you mean: {correction}').format(correction=corr)
-        cat.url = os.url('search', query=corrected_query)
-        cat.class_ += 'navlink'
-        cat.icon = 'suggestion'
-        cat.order = 12
-        return cat
+#    @staticmethod
+#    def did_you_mean(os, corr, corrected_query):
+#        """ Message. """
+#
+#        cat = BaseSearcher.Cat()
+#        cat.rel = '__didyoumean__'
+#        cat.title = _('Did you mean: {correction}').format(correction=corr)
+#        cat.url = os.url('search', query=corrected_query)
+#        cat.class_ += 'navlink'
+#        cat.icon = 'suggestion'
+#        cat.order = 12
+#        return cat

@@ -5,6 +5,12 @@ verify_ssl = true
 
 [dev-packages]
 
+[requires]
+python_version = "3.9"
+
+[pipenv]
+allow_prereleases = true
+
 [packages]
 "repoze.lru" = "*"
 Babel = "*"
@@ -42,8 +48,3 @@ lxml = ">=4.9.1"
 psycopg2-binary = "*"
 psycopg2 = "*"
 
-[requires]
-python_version = ">=3.8"
-
-[pipenv]
-allow_prereleases = true
