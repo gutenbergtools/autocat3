@@ -139,12 +139,13 @@ class AdvSearchPage(Page):
 
         os = AdvSearcher()
         params = cherrypy.request.params.copy()
+        fullpage = not bool(params.get("strip", ""))
         try:
             pageno = abs(int(params.pop("pageno", 1)))
         except KeyError:
             pageno = 1
         os.pageno = pageno
-        for key in ["submit_search", "route_name", "controller", "action"]:
+        for key in ["submit_search", "route_name", "controller", "action", "strip"]:
             params.pop(key, None)
         terms = [key for key in params if params[key]]
 
@@ -154,7 +155,10 @@ class AdvSearchPage(Page):
         if len(terms) == 0:
             os.total_results = 0
             os.finalize()
-            return self.formatter.render('advresults', os)
+            if fullpage:
+                return self.formatter.render('advresults', os)
+            else:
+                return self.formatter.render('searchbrowse', os)
 
         # single term, redirect if browsable
         if len(terms) == 1:
