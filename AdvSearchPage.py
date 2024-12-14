@@ -176,6 +176,7 @@ class AdvSearchPage(Page):
             else:
                 searchterms.append((key, params[key]))
 
+        pks = []
         for key, val in searchterms:
             if key == 'filetype':
                 pks = query.join(File).filter(File.fk_filetypes == val).all()
