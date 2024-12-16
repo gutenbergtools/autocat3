@@ -240,7 +240,7 @@ def main():
     d.connect('bookshelf', r'/ebooks/bookshelf/{id:\d+}{.format}',
                controller=BookshelfPage(), conditions=dict(function=check_id))
 
-    d.connect('also', r'/ebooks/{id:\d+}/also/{.format}',
+    d.connect('also', r'/ebooks/{id:\d+}/also/',
                controller=AlsoDownloadedPage(), conditions=dict(function=check_id))
 
     # bibrec pages
