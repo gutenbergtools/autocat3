@@ -250,11 +250,6 @@
 		href="${link.url}" />
 	</py:for>
 
-	<link type="${os.type_opds}"
-	      rel="related"
-	      href="${os.url ('also', id = e.project_gutenberg_id)}"
-	      title="Readers also downloaded…" />
-
 	<py:for each="author in e.authors">
 	  <link type="${os.type_opds}"
 		rel="related"
