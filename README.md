@@ -29,3 +29,5 @@ Currently, we use the following steps to deploy autocat3 on a different server.
 5. **Start virtual env**: ```pipenv shell```
 
 Copyright 2009-2010 by Marcello Perathoner
+Copyright 2019-present by Project Gutenberg
+

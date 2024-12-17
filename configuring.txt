@@ -154,3 +154,7 @@ pipenv install --ignore-pipfile
 
 sudo systemctl restart autocat3
 
+## How to test
+
+the file test_post.html is provided for testing advanced search when running on 127.0.0.1:8000
+

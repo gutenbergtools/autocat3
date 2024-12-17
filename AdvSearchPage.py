@@ -43,14 +43,51 @@ BROWSE_KEYS = {'lang': 'languages', 'locc': 'loccs', 'category': 'categories'}
 PAGESIZE = 100
 MAX_RESULTS = 5000
 
-_langs = {}
-def langname(langcode):
-    """ cache of Language names"""
-    if not _langs:
-        session = cherrypy.engine.pool.Session()
-        for lang in session.query(Lang).all():
-            _langs[lang.id] = lang.language
-    return _langs.get(langcode, langcode)
+_LANGOPTIONS = ''
+_LANGLOTS = ''
+_LANGLESS = ''
+
+# can't make a session until CherryPy is finished starting
+def makelists():
+    global _LANGOPTIONS, _LANGLOTS, _LANGLESS
+    if _LANGOPTIONS or _LANGLOTS or _LANGLESS:
+        return
+    session = cherrypy.engine.pool.Session()
+    for lang in session.execute(select(Lang.id, Lang.language).order_by(Lang.language)).all():
+        langnum = session.query(Book).filter(Book.langs.any(id=lang[0])).count()
+        _LANGOPTIONS += f'<option value="{lang[0]}">{lang[1]}</option>'
+        if langnum > 50:
+            _LANGLOTS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a>&nbsp;'
+        elif langnum > 0:
+            _LANGLESS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a>&nbsp;'
+
+def langoptions():
+    ''' option list for langs dropdown '''
+    global _LANGOPTIONS
+    if _LANGOPTIONS:
+        return _LANGOPTIONS
+    else:
+        makelists()
+        return _LANGOPTIONS
+
+def langlots():
+    ''' list of links for langs with more than 50 books '''
+    global _LANGLOTS
+    if _LANGLOTS:
+        return _LANGLOTS
+    else:
+        makelists()
+        return _LANGLOTS
+
+def langless():
+    ''' list of links for langs with up to 50 books '''
+    global _LANGLESS
+    if _LANGLESS:
+        return _LANGLESS
+    else:
+        makelists()
+        return _LANGLESS
+
 
 _cats = {}
 def catname(catpk):
@@ -102,12 +139,13 @@ class AdvSearchPage(Page):
 
         os = AdvSearcher()
         params = cherrypy.request.params.copy()
+        fullpage = not bool(params.get("strip", ""))
         try:
             pageno = abs(int(params.pop("pageno", 1)))
         except KeyError:
             pageno = 1
         os.pageno = pageno
-        for key in ["submit_search", "route_name", "controller", "action"]:
+        for key in ["submit_search", "route_name", "controller", "action", "strip"]:
             params.pop(key, None)
         terms = [key for key in params if params[key]]
 
@@ -117,7 +155,10 @@ class AdvSearchPage(Page):
         if len(terms) == 0:
             os.total_results = 0
             os.finalize()
-            return self.formatter.render('advresults', os)
+            if fullpage:
+                return self.formatter.render('advresults', os)
+            else:
+                return self.formatter.render('searchbrowse', os)
 
         # single term, redirect if browsable
         if len(terms) == 1:
@@ -139,6 +180,7 @@ class AdvSearchPage(Page):
             else:
                 searchterms.append((key, params[key]))
 
+        pks = []
         for key, val in searchterms:
             if key == 'filetype':
                 pks = query.join(File).filter(File.fk_filetypes == val).all()
@@ -146,7 +188,7 @@ class AdvSearchPage(Page):
 
             elif key == 'lang':
                 pks = query.join(Book.langs).filter(Lang.id == val).all()
-                val = langname(val)
+                val = BaseSearcher.language_map.get(val, val)
                 key = 'Language'
 
             elif key == 'locc':
@@ -180,6 +222,14 @@ class AdvSearchPage(Page):
                     Attribute.text.ilike(word),
                 )).all()
                 key = 'Title'
+
+            elif key == 'summary':
+                word = "% {} %".format(val)
+                pks = query.join(Book.attributes).filter(and_(
+                    Attribute.fk_attriblist == 520,
+                    Attribute.text.ilike(word),
+                )).all()
+                key = 'Summary'
 
             elif key == 'subject':
                 word = "%{}%".format(val)
