@@ -80,7 +80,7 @@ Gutenberg metadata much faster than by scraping.
 	</ul>
       </div>
 	<h1 itemprop="name">${os.title}</h1>
-     
+
 
       <div class="page-body">
         <div property="dcterms:publisher" itemprop="publisher" content="Project Gutenberg" />
@@ -126,6 +126,29 @@ Gutenberg metadata much faster than by scraping.
 	<div id="tabs-wrapper">
 	<div id="tabs">
         <div id="download" i18n:comment="On the 'Download' tab of the 'bibrec' page.">
+
+			<!-- Display the summary with toggling functionality -->
+			<py:if test="os.initial_summary">
+				<div class="summary-text-container">
+				<span class="readmore-container">
+					<!-- Always visible content -->
+					${Markup(gg.insert_breaks(os.initial_summary, self_closing=False))}
+					<!-- Hidden checkbox to control the toggle -->
+					<input type="checkbox" id="toggle" class="toggle" style="display:none;" />
+					<!-- Clickable label to show more -->
+					<label for="toggle" class="readmore">
+						... <span id="read_more"> Read More</span>
+					</label>
+					<!-- The extra text that is initially hidden -->
+					<span class="toggle-content">
+					  ${Markup(gg.insert_breaks(os.remaining_summary, self_closing=False))}
+					</span>
+					<!-- Clickable label to show less -->
+					<label for="toggle" class="showless"> Show Less</label>
+				</span>
+				</div>
+			</py:if>
+
 
             <py:for each="e in os.entries">
               <py:if test="isinstance(e, bs.DC)">
@@ -185,7 +208,7 @@ Gutenberg metadata much faster than by scraping.
                 <tr py:if="e.base_dir"
                 class="${i%2 and 'odd' or 'even'}">
                   <td><span class="icon icon_folder" /></td>
-                    <td colspan='6'><span class="small"> 
+                    <td colspan='6'><span class="small">
                   There may be <a class="subtle_link" rel="nofollow" href="${e.base_dir}" >more files</a> related to this item.</span></td>
                 </tr>
               </table>
@@ -245,7 +268,7 @@ Gutenberg metadata much faster than by scraping.
 			   itemprop="creator">${author.name_and_dates}</a></td>
 		    </tr>
 
-		    <tr py:for="marc in e.marcs" py:if="marc.text">
+			<tr py:for="marc in e.marcs" py:if="marc.text and marc.code != '520'">
 		      <th>${marc.caption}</th>
 		      <py:choose test="">
 			<td py:when="marc.code == '010'">
@@ -331,7 +354,7 @@ Gutenberg metadata much faster than by scraping.
 		      <td itemprop="interactionCount" i18n:msg="count">${e.downloads} downloads in the last 30 days.</td>
 		    </tr>
 
-		    <tr itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">		      
+		    <tr itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">
 		      <td colspan="2">
 		      <span itemprop="priceCurrency" content="USD" />
 		      <span itemprop="price" content="$0.00">
@@ -339,9 +362,9 @@ Gutenberg metadata much faster than by scraping.
 		      </span>
 		      <span itemprop="availability" content="In Stock" >
 		        <a href="http://schema.org/InStock"></a>
-		      </span>  
-              </td> 
-            </tr>    
+		      </span>
+              </td>
+            </tr>
 
 		  </table>
 
