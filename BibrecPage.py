@@ -27,6 +27,31 @@ import Page
 class BibrecPage (Page.Page):
     """ Implements the bibrec page. """
 
+    def split_summary(self, text, word_count=72):
+        """ Split summary into initial and remaining parts for toggling in the interface. """
+        if not text:
+            return None, None
+        words = text.split()
+        initial = ' '.join(words[:word_count])
+        remaining = ' '.join(words[word_count:]) if len(words) > word_count else None
+        return initial, remaining
+
+
+    def get_book_summary(self, book_id):
+        """ Get book summary directly from database. """
+        sql = "SELECT text FROM attributes WHERE fk_books = %s AND fk_attriblist = 520 LIMIT 1"
+        conn = cherrypy.engine.pool.connect()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, (book_id,))
+                result = cursor.fetchone()
+                if result:
+                    return self.split_summary(result[0])
+                return None, None
+        finally:
+            conn.close()
+
+
     def index (self, **dummy_kwargs):
         """ A bibrec page. """
 
@@ -63,6 +88,11 @@ class BibrecPage (Page.Page):
         os.title_icon = dc.icon
         os.twit = os.title
         os.qrcode_url = '/cache/epub/%d/pg%d.qrcode.png' % (os.id, os.id)
+
+        initial_summary, remaining_summary = self.get_book_summary(os.id)
+        os.initial_summary = initial_summary
+        os.remaining_summary = remaining_summary
+
 
         os.entries.append (dc)
 
