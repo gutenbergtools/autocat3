@@ -37,19 +37,11 @@ class BibrecPage (Page.Page):
         return initial, remaining
 
 
-    def get_book_summary(self, book_id):
-        """ Get book summary directly from database. """
-        sql = "SELECT text FROM attributes WHERE fk_books = %s AND fk_attriblist = 520 LIMIT 1"
-        conn = cherrypy.engine.pool.connect()
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute(sql, (book_id,))
-                result = cursor.fetchone()
-                if result:
-                    return self.split_summary(result[0])
-                return None, None
-        finally:
-            conn.close()
+    def get_book_summary(self, dc, book_id):
+        for marc in dc.marcs:
+            if marc.code == '520' and "This is an automatically generated summary" in marc.text:
+                return self.split_summary(marc.text)
+        return None, None
 
 
     def index (self, **dummy_kwargs):
