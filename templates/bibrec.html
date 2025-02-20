@@ -268,7 +268,7 @@ Gutenberg metadata much faster than by scraping.
 			   itemprop="creator">${author.name_and_dates}</a></td>
 		    </tr>
 
-			<tr py:for="marc in e.marcs" py:if="marc.text and marc.code != '520'">
+		 <tr py:for="marc in e.marcs" py:if="marc.text and 'This is an automatically generated summary' not in marc.text">
 		      <th>${marc.caption}</th>
 		      <py:choose test="">
 			<td py:when="marc.code == '010'">
