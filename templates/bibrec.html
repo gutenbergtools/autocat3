@@ -63,6 +63,39 @@ Gutenberg metadata much faster than by scraping.
     </style>
     <link rel="stylesheet" type="text/css" href="/gutenberg/book_page.css" />
     <meta name="google" content="notranslate" />
+    <style>
+	/* Attempt to "fix" the mobile page */
+	@media (max-width: 768px) {
+		h1{
+			padding-bottom: 8px;
+		}
+		
+		.page-body {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+		}
+
+		#cover-social-wrapper {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				width: 100%;
+		}
+
+		#tabs-wrapper {
+				margin: 50px 0 0 0;
+		}
+
+		#tabs {
+				margin-left: 0;
+		}
+
+		.summary-text-container {
+			text-align: center;
+		}
+	}
+    </style>
   </head>
 
   <body>
