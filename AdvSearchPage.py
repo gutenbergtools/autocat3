@@ -237,7 +237,9 @@ class AdvSearchPage(Page):
                     Subject.subject.ilike(word),
                 ).all()
                 key = 'Subject'
-
+            else:
+                pks = []
+                continue
             pks = {row[0] for row in pks}
             resultpks = resultpks.intersection(pks) if resultpks is not None else pks
             num_rows = len(pks)
