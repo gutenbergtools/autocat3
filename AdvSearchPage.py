@@ -218,7 +218,7 @@ class AdvSearchPage(Page):
             elif key == 'title':
                 word = "%{}%".format(val)
                 pks = query.join(Book.attributes).filter(and_(
-                    Attribute.fk_attriblist.in_([240, 245, 246, 505]),
+                    Attribute.fk_attriblist.in_([240, 245, 246]),
                     Attribute.text.ilike(word),
                 )).all()
                 key = 'Title'
