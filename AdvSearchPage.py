@@ -183,7 +183,8 @@ class AdvSearchPage(Page):
                 for word in RE_SPLIT.split(params[key]):
                     if len(word) > 1:
                         word_set.add(word)
-                searchterms.extend([(key, word) for word in word_set][:MAX_WORDS])
+                word_list = sorted(word_set, key=lambda x: -len(x))
+                searchterms.extend([(key, word) for word in word_list][:MAX_WORDS])
             else:
                 searchterm = params[key].strip()
                 if len(searchterm) > 0:
