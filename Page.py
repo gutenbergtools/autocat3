@@ -158,7 +158,9 @@ class SearchPage(Page):
         try:
             self.setup(os, sql)
         except ValueError as what:
-            raise cherrypy.HTTPError(400, 'Bad Request. ' + str(what))
+            cherrypy.log("SQL Error: " + str(what),
+                          context='REQUEST', severity=logging.ERROR)
+            raise cherrypy.HTTPError(400, 'Bad Request. ')
 
         os.fix_sortorder()
 
