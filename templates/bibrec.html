@@ -58,9 +58,9 @@ Gutenberg metadata much faster than by scraping.
     <link rel="alternate nofollow" type="${mt.rdf}"
 	  href="${os.url ('bibrec', id = os.id, format = 'rdf')}" />
 
-    <style>
-      .qrcode { background: transparent url(${os.qrcode_url}) 0 0 no-repeat; }
-    </style>
+	<style>
+		.qrcode { background: transparent url(${os.qrcode_url}) 0 0 no-repeat; }
+	</style>
     <meta name="google" content="notranslate" />
   </head>
 
@@ -79,7 +79,9 @@ Gutenberg metadata much faster than by scraping.
 	  </py:for>
 	</ul>
       </div>
-	<h1 itemprop="name">${os.title}</h1>
+
+	<!-- book title -->
+	<h1 itemprop="name" id="book_title">${os.title}</h1>
 
 
       <div class="page-body">
@@ -117,7 +119,7 @@ Gutenberg metadata much faster than by scraping.
 	      </li>
 	    </ul>
 	  </div>
-
+	  
 	  <div id="qr">
 	    <span class="qrcode qrcode-desktop" title="Scan QR Code for this page." />
 	  </div>
@@ -154,9 +156,9 @@ Gutenberg metadata much faster than by scraping.
               <py:if test="isinstance(e, bs.DC)">
             <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
 
-              <h2>Read now or download (free!)</h2>
+              <h2 id="download_options_header">Read or download </h2>
 
-              <table class="files">
+              <table class="files" id="download_options_table">
                 <colgroup>
                   <col class="narrow" />
                   <col />
@@ -185,7 +187,7 @@ Gutenberg metadata much faster than by scraping.
                   <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
                   class="unpadded icon_save"
                   ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}" class="link"
-                      title="${'Read online' if file_.filetype and file_.filetype.startswith('html') else 'Download'}">${file_.hr_filetype}</a></td>
+                      title="${'Read online' if file_.filetype and file_.filetype.startswith('html') else 'Download'}" id="${'read_online_link' if file_.filetype and file_.filetype.startswith('html') else ''}">${'Read online now' if 'Read online' in file_.hr_filetype else file_.hr_filetype}</a></td>
                   <td class="noscreen">${file_.url}</td>
                   <td  class="right"
                    property="dcterms:extent" content="${file_.extent}">${file_.hr_extent}</td>
@@ -222,16 +224,18 @@ Gutenberg metadata much faster than by scraping.
             <py:for each="n, e in enumerate (os.entries)">
           <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
             <py:if test="e.header and old_header != e.header">
-              <h2 class="header">${e.header}</h2>
+              <h2 class="header" id="middle_section_header">${e.header}</h2>
             </py:if>
             <?python old_header = e.header ?>
 
             <div class="${e.class_}">
+			  <!-- Similar Books Links -->
               <a rel="nofollow"
                  href="${e.url}"
                  type="${e.type}"
                  charset="${e.charset}"
-                 accesskey="${str (n % 10)}">
+                 accesskey="${str (n % 10)}"
+                 id="similar-books-link">
                 <span class="cell leftcell">
               <span class="icon icon_${e.icon}" />
                 </span>
@@ -250,11 +254,12 @@ Gutenberg metadata much faster than by scraping.
 	    <py:for each="e in os.entries">
 	      <py:if test="isinstance (e, bs.DC)">
 
+		  
 		<div typeof="pgterms:ebook" about="[ebook:$e.project_gutenberg_id]">
 
-		  <h2>About this eBook <span>${help (_('Table: Bibliographic Record'))}</span></h2>
+		  <h2 id="about_book_header">About this eBook <span>${help (_('Table: Bibliographic Record'))}</span></h2>
 
-		  <table class="bibrec" >
+		  <table class="bibrec" id="about_book_table">
 		    <colgroup>
 		      <col class="narrow" />
 		      <col />
