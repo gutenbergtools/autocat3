@@ -209,6 +209,12 @@ class SQLStatement(object):
         sub = cls.sub
 
         # strip most not (letter or digit)
+        # \p{Z} : Separator
+        # \p{P} : Punctuation
+        # \p{S} : Symbol
+        # \p{M} : Mark
+        # \p{C} : Other
+
         query = sub(r'[\p{Z}\p{P}\p{S}\p{M}\p{C}--.!|()#]', ' ', query)
 
         # strip operators adjacent to non-whitespace
@@ -219,6 +225,8 @@ class SQLStatement(object):
         # insert spaces around operators
         query = sub(r'\s*[|!()]\s*', r' \g<0> ', query)
 
+        # remove empty groups
+        query = sub(r'\s*\([.!|()#\s]+\)\s*', ' ', query)
         return ' '.join(query.split())
 
 

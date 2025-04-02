@@ -71,7 +71,9 @@
         </ul>
         <p>${os.total_results} books found. </p>
 </py:if>
-
+<py:if test='not os.search_terms'>
+    <p>No valid search terms found.</p>
+</py:if>
 <py:if test='os.total_results &gt; MAX_RESULTS'>
     <p>More than ${MAX_RESULTS} books matched your search. Please refine your query to see results.</p>
 </py:if>
@@ -147,9 +149,9 @@
       <li>Advanced Search is case insensitive.</li>
       <li>Fill in as many fields you like.</li>
       <li>Enter one or more space separated words in each field.
-	Avoid punctuation characters.</li>
-      <li>The result will match all of the words you entered in all
-	of the fields. Eg. Author: <i>Jules Verne</i>, Title: <i>20</i>,
+	Avoid punctuation characters. Words should be 3 or more characters.</li>
+      <li>The result will match up to 5 of the words you entered in all
+	of the fields. Eg. Author: <i>Jules Verne</i>, Title: <i>20,000</i>,
 	Language: <i>French</i> will get <i>20.000 Leagues Under The Sea</i>
 	in French.</li>
       <li>Select Language: <i>English</i> only if you explicitly want to
