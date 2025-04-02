@@ -81,6 +81,11 @@ class BibrecPage (Page.Page):
         os.twit = os.title
         os.qrcode_url = '/cache/epub/%d/pg%d.qrcode.png' % (os.id, os.id)
 
+        initial_summary, remaining_summary = self.get_book_summary(dc, os.id)
+        os.initial_summary = initial_summary
+        os.remaining_summary = remaining_summary
+
+
         os.entries.append (dc)
 
         s = cherrypy.session
