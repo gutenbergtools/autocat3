@@ -33,7 +33,7 @@ class BibrecPage (Page.Page):
             return None, None
         words = text.split()
         initial = ' '.join(words[:word_count])
-        remaining = ' '.join(words[word_count:]) if len(words) > word_count else None
+        remaining = ' '.join(words[word_count:]) if len(words) > word_count else ''
         return initial, remaining
 
 
