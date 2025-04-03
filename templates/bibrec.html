@@ -55,7 +55,7 @@ Gutenberg metadata much faster than by scraping.
     <style>
 	/* CUSTOM CSS FOR STYLE UPGRADE OF BIBREC.html */
 	/* Styling for the "read online" link */
-	#read_online_link {
+	.read_html {
 	    display: inline-block;
 	    padding: 8px 42px;
 	    background-color: #f0f0f0;
@@ -67,7 +67,7 @@ Gutenberg metadata much faster than by scraping.
 	    font-weight: bold;
 	}
 	
-	#read_online_link:hover {
+	.read_html:hover {
 	    background-color: #e6e6e6;
 	}
 	
@@ -275,7 +275,7 @@ Gutenberg metadata much faster than by scraping.
                   <td property="dcterms:format" content="${file_.mediatypes[-1]}" datatype="dcterms:IMT"
                   class="unpadded icon_save"
                   ><a href="/${file_.filename}" type="${file_.mediatypes[-1]}"
-                      class="link read_online_${file_.filetype}"
+                      class="link ${'read_html' if file_.filetype.startswith('html') else ''}"
                       title="${'Read online' if file_.filetype and file_.filetype.startswith('html') else 'Download'}"
                       id="">${file_.hr_filetype}</a></td>
                   <td class="noscreen">${file_.url}</td>
