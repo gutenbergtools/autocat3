@@ -209,6 +209,12 @@ class SQLStatement(object):
         sub = cls.sub
 
         # strip most not (letter or digit)
+        # \p{Z} : Separator
+        # \p{P} : Punctuation
+        # \p{S} : Symbol
+        # \p{M} : Mark
+        # \p{C} : Other
+
         query = sub(r'[\p{Z}\p{P}\p{S}\p{M}\p{C}--.!|()#]', ' ', query)
 
         # strip operators adjacent to non-whitespace
@@ -219,6 +225,8 @@ class SQLStatement(object):
         # insert spaces around operators
         query = sub(r'\s*[|!()]\s*', r' \g<0> ', query)
 
+        # remove empty groups
+        query = sub(r'\s*\([.!|()#\s]+\)\s*', ' ', query)
         return ' '.join(query.split())
 
 
@@ -442,10 +450,16 @@ class OpenSearch(object):
 
         try:
             self.id = int(k.get('id') or '0')
+        except (ValueError, TypeError) as what:
+            self.id = 0
+        try:
             self.start_index = int(k.get('start_index') or '1')
+        except (ValueError, TypeError) as what:
+            self.start_index = 1
+        try:
             self.items_per_page = min(100, int(k.get('items_per_page') or '25'))
-        except ValueError as what:
-            raise cherrypy.HTTPError(400, 'Bad Request. ' + str(what))
+        except (ValueError, TypeError) as what:
+            self.items_per_page = 25
 
 
         self.file_host = cherrypy.config['file_host']
@@ -595,10 +609,12 @@ class OpenSearch(object):
 
         # Eliminate null and superflous params.
         for k, v in list(params.items()):
-            if v is None or (k == 'start_index' and
+            try:
+                if v is None or (k == 'start_index' and
                              int(v) < 2) or (k == 'format' and v == 'html'):
+                    del params[k]
+            except (ValueError, TypeError) as what:
                 del params[k]
-
         return self.urlgen(route_name, **params)
 
 

@@ -22,6 +22,8 @@ Differences:
 
 
 """
+import re
+
 import cherrypy
 import routes
 
@@ -115,6 +117,8 @@ class AdvSearcher(BaseSearcher.OpenSearch):
         self.nextpage = self.pageno + 1 if self.pageno + 1 <= self.lastpage else 0
         self.prevpage = self.pageno - 1 if self.pageno > 1 <= self.lastpage else 0
 
+RE_SPLIT = re.compile(r'[\W%_\\]+')
+MAX_WORDS = 5
 
 class AdvSearchPage(Page):
     """ search term => list of items """
@@ -175,10 +179,16 @@ class AdvSearchPage(Page):
         searchterms = []
         for key in terms:
             if key in ['author', 'title', 'subject']:
-                for word in params[key].split():
-                    searchterms.append((key, word))
+                word_set = set()
+                for word in RE_SPLIT.split(params[key]):
+                    if len(word) > 1:
+                        word_set.add(word)
+                word_list = sorted(word_set, key=lambda x: -len(x))
+                searchterms.extend([(key, word) for word in word_list][:MAX_WORDS])
             else:
-                searchterms.append((key, params[key]))
+                searchterm = params[key].strip()
+                if len(searchterm) > 0:
+                    searchterms.append((key, searchterm))
 
         pks = []
         for key, val in searchterms:
@@ -216,12 +226,15 @@ class AdvSearchPage(Page):
                 key = 'Author'
 
             elif key == 'title':
-                word = "%{}%".format(val)
-                pks = query.join(Book.attributes).filter(and_(
-                    Attribute.fk_attriblist.in_([240, 245, 246, 505]),
-                    Attribute.text.ilike(word),
-                )).all()
-                key = 'Title'
+                if len(val) > 2:
+                    word = "%{}%".format(val)
+                    pks = query.join(Book.attributes).filter(and_(
+                        Attribute.fk_attriblist.in_([240, 245, 246]),
+                        Attribute.text.ilike(word),
+                    )).all()
+                    key = 'Title'
+                else:
+                    continue
 
             elif key == 'summary':
                 word = "% {} %".format(val)
@@ -244,8 +257,10 @@ class AdvSearchPage(Page):
             resultpks = resultpks.intersection(pks) if resultpks is not None else pks
             num_rows = len(pks)
             selections.append((key, val, num_rows))
+            if len(resultpks) == 0:
+                break
 
-        os.total_results = len(resultpks)
+        os.total_results = len(resultpks) if resultpks is not None else 0
         os.finalize()
         offset = PAGESIZE * (pageno - 1)
         os.start_index = offset + 1
