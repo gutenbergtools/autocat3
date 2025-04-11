@@ -63,7 +63,7 @@ Gutenberg metadata much faster than by scraping.
 	    border-radius: 8px;
 	    text-decoration: none !important;
 	    transition: all 0.3s ease;
-	    font-size: 16px;
+	    font-size: 1rem;
 	    font-weight: bold;
 	}
 	
@@ -72,13 +72,13 @@ Gutenberg metadata much faster than by scraping.
 	}
 	
 	/* Increase font size for similar books links */
-	#similar-books-link {
+	.similar-books-link {
 	    font-size: 1.1em;
 	    font-weight: 500;
 	    transition: font-size 0.2s ease;
 	}
 	
-	#similar-books-link:hover {
+	.similar-books-link:hover {
 	    font-size: 1.15em;
 	}
 	
@@ -112,24 +112,24 @@ Gutenberg metadata much faster than by scraping.
 	#book_title {
 	    color: black;
 	    border-bottom: 1px solid black;
-	    padding-bottom: 12px;
-	    margin: 48px 0 36px;
-	    font-size: 32px;
+	    padding-bottom: 0.75rem;
+	    margin: 3rem 0 2.25rem;
+	    font-size: 2rem;
 	}
 	
 	/* Responsive book title for small screens */
 	@media screen and (max-width: 600px) {
 	    #book_title {
-		font-size: 24px;
+			font-size: 1.5rem;
 	    }
 	}
 	
-	#middle_section_header,
+	.header.middle_section_header,
 	#about_book_header,
 	#download_options_header {
 	    color: black;
-	    margin-top: 52px;
-	    font-size: 24px;
+	    margin-top: 3.25rem;
+	    font-size: 1.5rem;
 	}
 	
 	/* Page layout */
@@ -314,7 +314,7 @@ Gutenberg metadata much faster than by scraping.
             <py:for each="n, e in enumerate (os.entries)">
           <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
             <py:if test="e.header and old_header != e.header">
-              <h2 class="header" id="middle_section_header">${e.header}</h2>
+              <h2 class="header middle_section_header">${e.header}</h2>
             </py:if>
             <?python old_header = e.header ?>
 
