@@ -56,19 +56,22 @@ Gutenberg metadata much faster than by scraping.
 	/* CUSTOM CSS FOR STYLE UPGRADE OF BIBREC.html */
 	/* Styling for the "read online" link */
 	.read_html {
-	    display: inline-block;
-	    padding: 8px 42px;
-	    background-color: #f0f0f0;
-	    color: black !important;
-	    border-radius: 8px;
-	    text-decoration: none !important;
-	    transition: all 0.3s ease;
-	    font-size: 1rem;
-	    font-weight: bold;
+		display: inline-block;
+		padding: 8px 50px;
+		background-color: #C7DDE3;
+		color: black !important;
+		border-radius: 8px;
+		text-decoration: none !important;
+		transition: all 0.3s ease;
+		font-size: 16px;
+		font-weight: bold;
+		border: 1px solid #d6d3d1;
 	}
 	
 	.read_html:hover {
 	    background-color: #e6e6e6;
+		transform: translateY(-1px);
+		box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 	}
 	
 	/* Increase font size for similar books links */
@@ -113,15 +116,24 @@ Gutenberg metadata much faster than by scraping.
 	    color: black;
 	    border-bottom: 1px solid black;
 	    padding-bottom: 0.75rem;
-	    margin: 3rem 0 2.25rem;
+	    margin: 2rem 0 2.25rem;
 	    font-size: 2rem;
+	    line-height: 1.2;
 	}
 	
 	/* Responsive book title for small screens */
-	@media screen and (max-width: 600px) {
+	@media screen and (max-width: 768px) {
 	    #book_title {
 			font-size: 1.5rem;
 	    }
+
+		.breadcrumbs ul{
+			line-height: 1;
+		}
+
+		#qr {
+			display: none;
+		}
 	}
 	
 	.header.middle_section_header,
@@ -153,6 +165,9 @@ Gutenberg metadata much faster than by scraping.
     <link rel="alternate nofollow" type="${mt.rdf}"
 	  href="${os.url ('bibrec', id = os.id, format = 'rdf')}" />
 
+	<style>
+		.qrcode { background: transparent url(${os.qrcode_url}) 0 0 no-repeat; }
+	</style>
     <meta name="google" content="notranslate" />
   </head>
 
@@ -211,6 +226,10 @@ Gutenberg metadata much faster than by scraping.
 	      </li>
 	    </ul>
 	  </div>
+
+	  <div id="qr">
+	    <span class="qrcode qrcode-desktop" title="Scan QR Code for this page." />
+	  </div>
 	</div>
 
 	<div id="tabs-wrapper">
@@ -244,7 +263,7 @@ Gutenberg metadata much faster than by scraping.
               <py:if test="isinstance(e, bs.DC)">
             <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
 
-              <h2 id="download_options_header">Read or download </h2>
+              <h2 id="download_options_header">Read or download for free </h2>
 
               <table class="files" id="download_options_table">
                 <colgroup>
@@ -259,7 +278,7 @@ Gutenberg metadata much faster than by scraping.
 
                 <tr>
                   <th />
-                  <th>Choose how to read this book <span>${help ('format')}</span></th>
+                  <th> How to read <span>${help ('format')}</span></th>
                   <th class="noscreen">Url</th>
                   <th i18n:comment="Size of a file." class="right">Size</th>
                   <th class="noprint"><span>${help ('Dropbox')}</span></th>
@@ -314,7 +333,7 @@ Gutenberg metadata much faster than by scraping.
             <py:for each="n, e in enumerate (os.entries)">
           <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
             <py:if test="e.header and old_header != e.header">
-              <h2 class="header middle_section_header">${e.header}</h2>
+              <h2 class="header middle_section_header">Find ${e.header}</h2>
             </py:if>
             <?python old_header = e.header ?>
 
