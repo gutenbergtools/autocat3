@@ -52,114 +52,7 @@ Gutenberg metadata much faster than by scraping.
   <head xmlns:og="http://opengraphprotocol.org/schema/">
 
     ${site_head()}
-    <style>
-	/* CUSTOM CSS FOR STYLE UPGRADE OF BIBREC.html */
-	/* Styling for the "read online" link */
-	.read_html {
-		display: inline-block;
-		padding: 8px 50px;
-		background-color: #C7DDE3;
-		color: black !important;
-		border-radius: 8px;
-		text-decoration: none !important;
-		transition: all 0.3s ease;
-		font-size: 16px;
-		font-weight: bold;
-		border: 1px solid #d6d3d1;
-	}
-	
-	.read_html:hover {
-	    background-color: #e6e6e6;
-		transform: translateY(-1px);
-		box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-	}
-	
-	/* Increase font size for similar books links */
-	.similar-books-link {
-	    font-size: 1.1em;
-	    font-weight: 500;
-	    transition: font-size 0.2s ease;
-	}
-	
-	.similar-books-link:hover {
-	    font-size: 1.15em;
-	}
-	
-	/* Custom styles for tables and headers */
-	#download_options_table,
-	#about_book_table {
-	    background-color: white;
-	    border-collapse: collapse;
-	    border: none;
-	}
-	
-	#download_options_table th,
-	#download_options_table td,
-	#about_book_table th,
-	#about_book_table td {
-	    border-color: #d6d3d1;
-	    padding: 8px 6px;
-	}
-	
-	#download_options_table th,
-	#about_book_table th {
-	    background-color: #e7e5e4;
-	}
-	
-	#download_options_table td,
-	#about_book_table td {
-	    background-color: #fafafa;
-	}
-	
-	/* Headers styling */
-	#book_title {
-	    color: black;
-	    border-bottom: 1px solid black;
-	    padding-bottom: 0.75rem;
-	    margin: 2rem 0 2.25rem;
-	    font-size: 2rem;
-	    line-height: 1.2;
-	}
-	
-	/* Responsive book title for small screens */
-	@media screen and (max-width: 768px) {
-	    #book_title {
-			font-size: 1.5rem;
-	    }
-
-		.breadcrumbs ul{
-			line-height: 1;
-		}
-
-		#qr {
-			display: none;
-		}
-	}
-	
-	.header.middle_section_header,
-	#about_book_header,
-	#download_options_header {
-	    color: black;
-	    margin-top: 3.25rem;
-	    font-size: 1.5rem;
-	}
-	
-	/* Page layout */
-	.page_content {
-	    margin-top: 36px;
-	    padding-bottom: 24px;
-	}
-	
-	#content .breadcrumbs {
-	    margin-top: 0;
-	}
-	
-	.breadcrumbs li a:link {
-	    color: black;
-	    text-decoration: none;
-	}
-    </style>
-
+	  
     <title>${os.title} | Project Gutenberg</title>
 
     <link rel="alternate nofollow" type="${mt.rdf}"
@@ -333,7 +226,7 @@ Gutenberg metadata much faster than by scraping.
             <py:for each="n, e in enumerate (os.entries)">
           <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
             <py:if test="e.header and old_header != e.header">
-              <h2 class="header middle_section_header">Find ${e.header}</h2>
+              <h2 class="header middle_section_header">${e.header}</h2>
             </py:if>
             <?python old_header = e.header ?>
 
