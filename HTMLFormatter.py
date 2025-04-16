@@ -69,7 +69,7 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
         if do_dedupe:
             for ft in ['epub', 'pdf', 'html']:
                 if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
-                    dc.files.remove(dedupable[ft + '.images'])
+                    dc.files.remove(dedupable[ft + '.noimages'])
                 
         for file_ in dc.files:
             type_ = six.text_type (file_.mediatypes[0])
@@ -169,7 +169,7 @@ class HTMLFormatter (XMLishFormatter):
             if filetype.startswith ('html') and file_.compression == 'none':
                 if htmlcount > 0:
                     file_.hidden = True
-                file_.hr_filetype = 'Read online (web)'
+                file_.hr_filetype = 'Read now!'
                 htmlcount += 1
             if not file_.hidden:
                 showncount += 1
