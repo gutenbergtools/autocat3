@@ -169,7 +169,7 @@ class HTMLFormatter (XMLishFormatter):
             if filetype.startswith ('html') and file_.compression == 'none':
                 if htmlcount > 0:
                     file_.hidden = True
-                file_.hr_filetype = 'Read online now'
+                file_.hr_filetype = 'Read now!'
                 htmlcount += 1
             if not file_.hidden:
                 showncount += 1
