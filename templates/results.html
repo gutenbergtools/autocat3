@@ -60,28 +60,9 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
     <meta name="totalResults" content="${os.total_results}" />
     <meta name="startIndex"   content="${os.start_index}" />
     <meta name="itemsPerPage" content="${os.items_per_page}" />
-
-    <!-- Fixing distance between header and page content -->
-    <style>
-	div .header {
-		padding-top: 5px;
-	}
-
-	@media screen and (max-width: 1025px) {
-		div .header {
-			padding-top: 75px;
-		}
-	}
-	    
-	@media screen and (max-width: 750px) {
-		div .header {
-			padding-top: 140px;
-		}
-	}
-    </style>
   </head>
 
-  <body>
+  <body class="search_results_page">
     <div id="mw-head-dummy" class="noprint" />
 
     <div id="content" class="page_content" i18n:comment="On the page of results of a search.">
