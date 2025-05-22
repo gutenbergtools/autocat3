@@ -306,8 +306,8 @@ class SearchPage(Page):
         cat.icon = 'bibrec'
         cat.order = 10
         cat.header = os.title
-        cat.title = _("Displaying results {from_}–{to}").format(
-            from_ = os.start_index, to=os.end_index)
+        cat.title = _("Displaying results {from_}–{to} of {total}").format(
+            from_ = os.start_index, to=os.end_index, total=os.total_results)
         return cat
 
     @staticmethod
