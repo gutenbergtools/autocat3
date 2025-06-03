@@ -59,9 +59,9 @@ def makelists():
         langnum = session.query(Book).filter(Book.langs.any(id=lang[0])).count()
         _LANGOPTIONS += f'<option value="{lang[0]}">{lang[1]}</option>'
         if langnum > 50:
-            _LANGLOTS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a>&nbsp;'
+            _LANGLOTS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
         elif langnum > 0:
-            _LANGLESS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a>&nbsp;'
+            _LANGLESS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
 
 def langoptions():
     ''' option list for langs dropdown '''
