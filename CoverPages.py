@@ -67,7 +67,7 @@ class CoverPages(object):
             
 
             s += f"""
-                <a href="{href}" title="{title}" authors="{authors}" target="_top">
+                <a href="{href}" title="{title}" data-authors="{authors}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
                             <img src="{url}" alt="{title}, {authors}" title="{title}"

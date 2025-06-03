@@ -27,7 +27,6 @@
 
   <head >
     <!--<base href="https://www.gutenberg.org/" />-->
-    <link rel="stylesheet" href="/gutenberg/collapsible.css?1.1" />
     ${site_head()}
 
     <title>${os.title} - ${os.pg}</title>
@@ -141,44 +140,6 @@
 
 </py:if>
 
-<div id="popup2" class="overlay">
- <div class="popup">
-   <a class="close" href="#">&times;</a>
-    <div class="content">
-     <ul>
-      <li>Advanced Search is case insensitive.</li>
-      <li>Fill in as many fields you like.</li>
-      <li>Enter one or more space separated words in each field.
-	Avoid punctuation characters. Words should be 3 or more characters.</li>
-      <li>The result will match up to 5 of the words you entered in all
-	of the fields. Eg. Author: <i>Jules Verne</i>, Title: <i>20,000</i>,
-	Language: <i>French</i> will get <i>20.000 Leagues Under The Sea</i>
-	in French.</li>
-      <li>Select Language: <i>English</i> only if you explicitly want to
-	exclude works in languages other than English.
-	Eg. Author: <i>Molière</i> Language: <i>English</i>
-	will get all the works of Molière translated into English.</li>
-    </ul>
-   </div>
- </div>
-</div>
-
-<div id="popup4" class="overlay">
- <div class="popup">
-  <a class="close" href="#">&times;</a>
-   <div class="content">
-      <p>These are different ways to browse through the collection.</p>
-   </div>
- </div>
-</div>
-
-<div id="popup5" class="overlay">
- <div class="popup">
-   <a class="close" href="#">&times;</a>
-    <div class="content">
-    </div>
-  </div>
-</div>
   <xi:include href="advsearch.html" />
 
 
