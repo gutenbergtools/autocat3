@@ -145,7 +145,9 @@ class BaseFormatter(object):
         """ Add some info to dc for easier templating. """
 
         # obsolete private marc codes for cover art
-        dc.marcs = [ marc for marc in dc.marcs if not marc.code.startswith('9') ]
+        dc.marcs = [ marc for marc in dc.marcs if (
+            not marc.code.startswith('9') or marc.code == '908')
+        ]
 
         dc.cover_image = None
         dc.cover_thumb = None
