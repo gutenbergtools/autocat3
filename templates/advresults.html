@@ -57,7 +57,7 @@
 
   <body class="advresults_page">
   <div class="container">
-    <div id="mw-head-dummy" class="noprint" />
+    <xi:include href="menu.html" />
 
     <div id="content" class="page_content" i18n:comment="On the page of results of a search.">
         <!-- start content -->
@@ -71,10 +71,10 @@
         <p>${os.total_results} books found. </p>
 </py:if>
 <py:if test='not os.search_terms'>
-    <p>No valid search terms found.</p>
+    <p class="center page">No valid search terms found.</p>
 </py:if>
 <py:if test='os.total_results &gt; MAX_RESULTS'>
-    <p>More than ${MAX_RESULTS} books matched your search. Please refine your query to see results.</p>
+    <p class="center page">More than ${MAX_RESULTS} books matched your search. Please refine your query to see results.</p>
 </py:if>
 
 <py:if test='os.total_results and (os.total_results &lt;= MAX_RESULTS)'>
@@ -148,6 +148,5 @@
       ${site_footer ()}
 
 
-    <xi:include href="menu.html" />
   </body>
 </html>
