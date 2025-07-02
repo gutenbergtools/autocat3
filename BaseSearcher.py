@@ -470,6 +470,7 @@ class OpenSearch(object):
 
         self.base_url = None
         self.canonical_url = None
+        self.read_url = None
         self.entries = []
 
         # NOTE: For page titles etc.
