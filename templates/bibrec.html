@@ -91,11 +91,13 @@ Gutenberg metadata much faster than by scraping.
 	<div id="cover-social-wrapper">
 
 	  <div py:if="os.cover_image_url" id="cover">
+	    <a href="${os.read_url}" title="Read Now!">
 	    <img class="cover-art"
 		 src="${os.cover_image_url}"
 		 title="Book Cover"
-		 alt="Book Cover"
+		 alt=""
 		 itemprop="image" />
+		 </a>
 	  </div>
 
 	  <div py:if="not os.cover_image_url" id="no-cover">

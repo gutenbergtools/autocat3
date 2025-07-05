@@ -193,6 +193,7 @@ class BookshelfSearchPage (SearchPage):
         os.f_format_thumb_url = os.format_none
         os.sort_orders = ('downloads', 'quantity', 'alpha', 'release_date', 'authors')
         os.icon = 'bookshelf'
+        os.title_icon = 'bookshelf'
         os.class_ += 'navlink'
         os.title = _('All Bookshelves')
 
