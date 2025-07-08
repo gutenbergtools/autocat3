@@ -62,11 +62,13 @@ class BibrecPage (Page.Page):
         # add these fields so we won't have to test for their existence later
         dc.extra_info = None
         dc.url = None
-
+        os.read_url = None
         for file_ in dc.files:
             # note that generated zip files don't get the "generated" bit or filetype set
             if not file_.generated and file_.filetype:
                 dc.update_date = max(dc.update_date, file_.modified.date())
+            if os.read_url == None and file_.filetype:
+                os.read_url = f'/{file_.filename}'
 
         dc.translate ()
         dc.header = gg.cut_at_newline (dc.title)
