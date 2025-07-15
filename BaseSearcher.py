@@ -547,17 +547,6 @@ class OpenSearch(object):
 
         """
 
-        # FIXME: android browser crashes on XHR with
-        # meta name=viewport or link rel=apple-touch-icon
-        # see:
-        # http://code.google.com/p/android/issues/detail?id=6593
-        # http://code.google.com/p/android/issues/detail?id=9261
-        #
-        # remove this from all browsers because we are caching responses
-        if self.start_index > 1:
-            self.touch_icon = None
-            self.viewport = None
-
         self.desktop_host = cherrypy.config['host']
 
         last_page = max((self.total_results - 1) // self.items_per_page, 0) # 0-based
