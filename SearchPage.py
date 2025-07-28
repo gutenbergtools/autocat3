@@ -45,24 +45,33 @@ class BookSearchPage (SearchPage):
 
     def fixup (self, os):
         """ strip marc subfields, add social media hints and facet links """
-
+        os.icon = 'book'
         for e in os.entries:
             if '$' in e.title:
                 e.title = DublinCore.strip_marc_subfields (e.title)
 
         if (os.sort_order == 'release_date' and os.total_results > 0 and os.start_index == 1):
             cat = BaseSearcher.Cat ()
-            cat.title = _('Follow new books on Twitter')
-            cat.subtitle = _("Follow our new books on Twitter.")
-            cat.url = 'https://twitter.com/gutenberg_new'
+            cat.title = _('Follow new books on Mastodon')
+            cat.subtitle = _("Like and follow to see our new books in your feed.")
+            cat.url = 'https://mastodon.social/@gutenberg_new'
             cat.class_ += 'navlink grayed'
-            cat.icon = 'twitter'
+            cat.icon = 'mastodon'
+            cat.order = 5
+            os.entries.insert (0, cat)
+
+            cat = BaseSearcher.Cat ()
+            cat.title = _('Follow new books on Bluesky')
+            cat.subtitle = _("Boost and follow to see our new books in your feed.")
+            cat.url = 'https://bsky.app/profile/new.gutenberg.org'
+            cat.class_ += 'navlink grayed'
+            cat.icon = 'bluesky'
             cat.order = 5
             os.entries.insert (0, cat)
 
             cat = BaseSearcher.Cat ()
             cat.title = _('Follow new books on Facebook')
-            cat.subtitle = _("Follow the link and like the page to have us post new books to your wall.")
+            cat.subtitle = _("Like and follow to see our new books in your feed.")
             cat.url = 'https://www.facebook.com/gutenberg.new'
             cat.class_ += 'navlink grayed'
             cat.icon = 'facebook'
