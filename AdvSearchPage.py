@@ -41,7 +41,7 @@ from Formatters import formatters
 
 config = cherrypy.config
 
-BROWSE_KEYS = {'lang': 'languages', 'locc': 'loccs', 'category': 'categories'}
+BROWSE_KEYS = {'lang': 'l', 'locc': 'lcc', 'category': 'cat'}
 PAGESIZE = 100
 MAX_RESULTS = 5000
 
@@ -58,10 +58,11 @@ def makelists():
     for lang in session.execute(select(Lang.id, Lang.language).order_by(Lang.language)).all():
         langnum = session.query(Book).filter(Book.langs.any(id=lang[0])).count()
         _LANGOPTIONS += f'<option value="{lang[0]}">{lang[1]}</option>'
+        lang_link  = f'/ebooks/search/?query=l.{lang[0]}'
         if langnum > 50:
-            _LANGLOTS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
+            _LANGLOTS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
         elif langnum > 0:
-            _LANGLESS += f'<a href="/browse/languages/{lang[0]}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
+            _LANGLESS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
 
 def langoptions():
     ''' option list for langs dropdown '''
@@ -164,12 +165,13 @@ class AdvSearchPage(Page):
             else:
                 return self.formatter.render('searchbrowse', os)
 
-        # single term, redirect if browsable
+        # single term, redirect if quick searchable
+        # (used to redirect to browsable)
         if len(terms) == 1:
             browse_key = BROWSE_KEYS.get(terms[0], None)
             if browse_key:
                 raise cherrypy.HTTPRedirect(
-                    "/browse/%s/%s" % (browse_key, params[terms[0]].lower()))
+                    "/ebooks/search/?query=%s.%s" % (browse_key, params[terms[0]].lower()))
 
         # multiple terms, create a query
         session = cherrypy.engine.pool.Session()
