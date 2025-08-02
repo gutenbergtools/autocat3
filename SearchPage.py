@@ -13,7 +13,7 @@ The various flavors of search page.
 """
 
 from __future__ import unicode_literals
-
+import re
 import cherrypy
 
 from libgutenberg.MediaTypes import mediatypes as mt
@@ -23,6 +23,15 @@ import BaseSearcher
 from Page import SearchPage
 from i18n_tool import ugettext as _
 from i18n_tool import ungettext as __
+from catalog import catname, langname, locname
+
+hr_terms = {
+    'l.': lambda x: f' Language: {langname(x)} ',
+    'lcc.': lambda x: f' Library of Congress Class: {locname(x)} ',
+#    'cat.': lambda x: f' Category: {catname(x)} ',
+}
+
+MATCH_TERM = re.compile(r'(\b\w+\.)(\w+)')
 
 
 class BookSearchPage (SearchPage):
@@ -33,12 +42,19 @@ class BookSearchPage (SearchPage):
         os.icon = 'book'
         os.class_ += 'booklink'
         os.f_format_icon = os.format_icon_titles
+        
+        os.title = os.query
+        for match in MATCH_TERM.finditer(os.query):
+            if match.group(1) in hr_terms:
+                prefixed = match.group(0)
+                repl = f'{hr_terms.get(match.group(1))(match.group(2))}'
+                os.title = os.title.replace(prefixed, repl)
 
         if os.sort_order == 'random':
             sql.where.append ("pk in (select pk from books order by random() limit 20)")
         if len (os.query):
             sql.fulltext ('books.tsvec', os.query)
-            os.title = _("Books: {title}").format (title = os.query)
+            os.title = _("Books: {title}").format (title = os.title)
         else:
             os.title = _('All Books')
 

@@ -38,6 +38,7 @@ from errors import ErrorPage
 from Page import Page
 from Formatters import formatters
 
+from catalog import catname
 
 config = cherrypy.config
 
@@ -45,61 +46,6 @@ BROWSE_KEYS = {'lang': 'l', 'locc': 'lcc'}
 PAGESIZE = 100
 MAX_RESULTS = 5000
 
-_LANGOPTIONS = ''
-_LANGLOTS = ''
-_LANGLESS = ''
-
-# can't make a session until CherryPy is finished starting
-def makelists():
-    global _LANGOPTIONS, _LANGLOTS, _LANGLESS
-    if _LANGOPTIONS or _LANGLOTS or _LANGLESS:
-        return
-    session = cherrypy.engine.pool.Session()
-    for lang in session.execute(select(Lang.id, Lang.language).order_by(Lang.language)).all():
-        langnum = session.query(Book).filter(Book.langs.any(id=lang[0])).count()
-        _LANGOPTIONS += f'<option value="{lang[0]}">{lang[1]}</option>'
-        lang_link  = f'/ebooks/search/?query=l.{lang[0]}'
-        if langnum > 50:
-            _LANGLOTS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
-        elif langnum > 0:
-            _LANGLESS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
-
-def langoptions():
-    ''' option list for langs dropdown '''
-    global _LANGOPTIONS
-    if _LANGOPTIONS:
-        return _LANGOPTIONS
-    else:
-        makelists()
-        return _LANGOPTIONS
-
-def langlots():
-    ''' list of links for langs with more than 50 books '''
-    global _LANGLOTS
-    if _LANGLOTS:
-        return _LANGLOTS
-    else:
-        makelists()
-        return _LANGLOTS
-
-def langless():
-    ''' list of links for langs with up to 50 books '''
-    global _LANGLESS
-    if _LANGLESS:
-        return _LANGLESS
-    else:
-        makelists()
-        return _LANGLESS
-
-
-_cats = {}
-def catname(catpk):
-    """ cache of category names"""
-    if not _cats:
-        session = cherrypy.engine.pool.Session()
-        for cat in session.query(Category).all():
-            _cats[cat.pk] = cat.category
-    return _cats.get(catpk, 'Not a valid Category')
 
 
 class AdvSearcher(BaseSearcher.OpenSearch):
