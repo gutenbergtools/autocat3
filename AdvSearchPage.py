@@ -41,7 +41,7 @@ from Formatters import formatters
 
 config = cherrypy.config
 
-BROWSE_KEYS = {'lang': 'l', 'locc': 'lcc', 'category': 'cat'}
+BROWSE_KEYS = {'lang': 'l', 'locc': 'lcc'}
 PAGESIZE = 100
 MAX_RESULTS = 5000
 
@@ -172,7 +172,10 @@ class AdvSearchPage(Page):
             if browse_key:
                 raise cherrypy.HTTPRedirect(
                     "/ebooks/search/?query=%s.%s" % (browse_key, params[terms[0]].lower()))
-
+            elif terms[0] == "category":
+                # category not in tsvec??
+                raise cherrypy.HTTPRedirect(f"/browse/categories/{params[terms[0]]}")
+            
         # multiple terms, create a query
         session = cherrypy.engine.pool.Session()
         query = session.query(Book.pk)
