@@ -314,7 +314,7 @@ Gutenberg metadata much faster than by scraping.
 		    <tr py:for="language in e.languages"
 			property="dcterms:language" datatype="dcterms:RFC4646" itemprop="inLanguage" content="${language.id}">
 		      <th>Language</th>
-		      <td py:if="language.id != 'en'"><a href="/browse/languages/${language.id}">${language.language}</a></td>
+		      <td py:if="language.id != 'en'"><a href="/ebooks/search/?query=l.${language.id}">${language.language}</a></td>
 		      <td py:if="language.id == 'en'">${language.language}</td>
 		    </tr>
 
@@ -322,7 +322,7 @@ Gutenberg metadata much faster than by scraping.
 			property="dcterms:subject" datatype="dcterms:LCC" content="${locc.id}">
 		      <th>LoC Class</th>
 		      <td>
-			<a href="/browse/loccs/${locc.id.lower ()}">${locc.id}: ${locc.locc}</a>
+			<a href="/ebooks/search/?query=lcc.${locc.id.lower()}">${locc.id}: ${locc.locc}</a>
 		      </td>
 		    </tr>
 
