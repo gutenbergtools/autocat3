@@ -23,9 +23,9 @@ def makelangs():
         _LANGOPTIONS += f'<option value="{lang[0]}">{lang[1]}</option>'
         lang_link  = f'/ebooks/search/?query=l.{lang[0]}'
         if langnum > 50:
-            _LANGLOTS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
+            _LANGLOTS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> | '
         elif langnum > 0:
-            _LANGLESS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> '
+            _LANGLESS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> | '
     return _LANGS
 
 def langoptions():
@@ -40,20 +40,16 @@ def langoptions():
 def langlots():
     ''' list of links for langs with more than 50 books '''
     global _LANGLOTS
-    if _LANGLOTS:
-        return _LANGLOTS
-    else:
+    if not _LANGLOTS:
         makelangs()
-        return _LANGLOTS
+    return _LANGLOTS[0:-2]  # cut trailing |
 
 def langless():
     ''' list of links for langs with up to 50 books '''
     global _LANGLESS
-    if _LANGLESS:
-        return _LANGLESS
-    else:
+    if not _LANGLESS:
         makelangs()
-        return _LANGLESS
+    return _LANGLESS[0:-2]  # cut trailing |
 
 def langname(code):
     return makelangs().get(code.lower(), 'Not a valid language')
