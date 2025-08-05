@@ -3,6 +3,18 @@ test links</h1>
 <form action="http://127.0.0.1:8000/ebooks/results/" method=POST>
 <input type="submit" value="test advanced search POST">
 </form>
+<form action="http://127.0.0.1:8000/ebooks/results/" method=POST>
+<input type="submit" value="test advanced just a lang POST">
+<select id="lang" name="lang" title="Language">
+<option value="fr">French</option> </select>
+</form>
+
+<form action="http://127.0.0.1:8000/ebooks/results/" method=POST>
+<input type="submit" value="test jules verne and french POST">
+<input type="text" name="author" id="author" value="Jules Verne">
+<select id="lang" name="lang" title="Language">
+<option value="fr">French</option> </select>
+</form>
 <br>
 <a href="http://127.0.0.1:8000/ebooks/results/">advanced search (GET)</a>
 <br>
