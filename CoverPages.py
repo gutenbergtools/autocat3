@@ -17,6 +17,7 @@ from __future__ import unicode_literals
 import cherrypy
 import six
 from sqlalchemy import select
+from sqlalchemy.sql import func
 
 from libgutenberg import GutenbergGlobals as gg
 from libgutenberg import DublinCore, DublinCoreMapping, Models
@@ -98,6 +99,8 @@ class CoverPages(object):
 
             if order == 'popular':
                 order_by = Models.Book.downloads.desc()
+            if order == 'random':
+                order_by = func.random()
             else:
                 order_by = Models.Book.release_date.desc()
             rows = session.execute(select(Models.Book.pk).where(

@@ -501,7 +501,7 @@ class OpenSearch(object):
         self.snippet_image_url = self.url('/pics/logo-144x144.png', host=self.file_host)
         self.og_type = 'website'
         self.class_ = ClassAttr()
-        self.title_icon = None
+        self.title_icon = 'search'
         self.icon = None
         self.sort_orders = []
         self.alternate_sort_orders = []
