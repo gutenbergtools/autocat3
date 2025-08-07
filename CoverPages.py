@@ -99,7 +99,7 @@ class CoverPages(object):
 
             if order == 'popular':
                 order_by = Models.Book.downloads.desc()
-            if order == 'random':
+            elif order == 'random':
                 order_by = func.random()
             else:
                 order_by = Models.Book.release_date.desc()
