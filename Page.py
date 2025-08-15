@@ -193,21 +193,6 @@ class SearchPage(Page):
         #if os.total_results < 5:
         #    self.output_suggestions(os)
 
-        # add sort by links
-        if os.start_index == 1 and os.total_results > 1:
-            if 'downloads' in os.alternate_sort_orders:
-                self.sort_by_downloads(os)
-            if 'release_date' in os.alternate_sort_orders:
-                self.sort_by_release_date(os)
-            if 'title' in os.alternate_sort_orders:
-                self.sort_by_title(os)
-            if 'alpha' in os.alternate_sort_orders:
-                self.sort_alphabetically(os)
-            if 'author' in os.alternate_sort_orders:
-                self.sort_by_author(os)
-            if 'quantity' in os.alternate_sort_orders:
-                self.sort_by_quantity(os)
-
         os.finalize()
         self.finalize(os)
 

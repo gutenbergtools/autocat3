@@ -70,8 +70,20 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 	<h1><span class="icon icon_${os.title_icon}" />${os.title}</h1>
 
       <div class="body">
-	<div>
 	  <ul class="results">
+        <p>Sort By:</p>
+        <div class="sort-dropdown">
+        <button class="sort-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+        <span>${os.sorted_msgs[os.sort_order]}</span><span>▼</span>
+        </button>
+        <div class="sort-dropdown-menu" role="menu">
+            <py:for each="order in os.sort_orders">
+                <py:if test="os.sort_order != order">
+                    <a href="${os.url_carry(sort_order=order)}" role="menuitem">${os.sorted_msgs[order]}</a>
+                </py:if>
+            </py:for>
+        </div>
+        </div>
 	    <py:for each="n, e in enumerate (os.entries)">
 
 	      <py:if test="e.header and old_header != e.header">
@@ -125,7 +137,6 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 	    </py:if>
 
 	  </ul>
-	</div>
       </div> <!--! body -->
 	</div>
   </div>
