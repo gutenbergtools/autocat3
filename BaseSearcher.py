@@ -382,7 +382,8 @@ class OpenSearch(object):
     }
 
     def __init__(self):
-        self.staticdir = os.getenv('STATIC_DIR')
+        self.assetdir = os.getenv('ASSET_DIR')
+        self.dev_base_path = os.getenv('DEV_BASE_PATH')
         self.format = None
         self.page = None
         self.template = None

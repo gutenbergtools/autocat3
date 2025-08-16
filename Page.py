@@ -31,7 +31,8 @@ class Page(object):
 
     def __init__(self):
         self.supported_book_mediatypes = [ mt.epub, mt.mobi ]
-        self.staticdir = os.getenv('STATIC_DIR')
+        self.assetdir = os.getenv('ASSET_DIR')
+        self.dev_base_path = os.getenv('DEV_BASE_PATH')
 
 
     @staticmethod

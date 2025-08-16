@@ -46,7 +46,7 @@ load_dotenv()
 
 cherrypy.config.update({
     'pguser': os.getenv('PG_USER'),
-    'staticdir': os.getenv('STATIC_DIR')
+    'assets': os.getenv('ASSET_DIR')
 })
 
 config = cherrypy.config
