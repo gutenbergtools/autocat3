@@ -22,6 +22,7 @@ Differences:
 
 
 """
+import os
 import re
 
 import cherrypy
@@ -40,13 +41,19 @@ from Formatters import formatters
 
 from catalog import catname
 
+from dotenv import load_dotenv
+load_dotenv()
+
+cherrypy.config.update({
+    'pguser': os.getenv('PG_USER'),
+    'staticdir': os.getenv('STATIC_DIR')
+})
+
 config = cherrypy.config
 
 BROWSE_KEYS = {'lang': 'l', 'locc': 'lcc'}
 PAGESIZE = 100
 MAX_RESULTS = 5000
-
-
 
 class AdvSearcher(BaseSearcher.OpenSearch):
     """ this object passes the context for the page renderer """

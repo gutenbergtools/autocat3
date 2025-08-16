@@ -11,9 +11,9 @@ Distributable under the GNU General Public License Version 3 or newer.
 Base class for all pages.
 
 """
-
 from __future__ import unicode_literals
 
+import os
 import logging
 
 import cherrypy
@@ -31,6 +31,7 @@ class Page(object):
 
     def __init__(self):
         self.supported_book_mediatypes = [ mt.epub, mt.mobi ]
+        self.staticdir = os.getenv('STATIC_DIR')
 
 
     @staticmethod
