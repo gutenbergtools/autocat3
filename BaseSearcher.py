@@ -15,6 +15,7 @@ Base class
 from __future__ import unicode_literals
 from __future__ import division
 
+import os
 import datetime
 import logging
 
@@ -381,6 +382,7 @@ class OpenSearch(object):
     }
 
     def __init__(self):
+        self.staticdir = os.getenv('STATIC_DIR')
         self.format = None
         self.page = None
         self.template = None
