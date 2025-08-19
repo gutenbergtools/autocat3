@@ -55,7 +55,7 @@
   <div class="tabs-container">
     <label for="tab-advanced">Advanced Search</label>
     <label for="tab-fulltext">Full Text Search</label>
-    <label for="tab-categories">Catalogs &amp; Languages</label>
+    <label for="tab-categories">Languages &amp; Catalogs</label>
   </div>
 
   <!-- Tab 1 - Advanced Search -->
@@ -514,6 +514,19 @@
       <h2>Catalogs</h2>
       <br />
       
+      <h2>Languages</h2>    
+      <br />
+      <h3>Languages with more than 50 books</h3>
+      <div>
+        ${Markup(langlots())}
+      </div>
+      <br />
+      <h3>Languages with up to 50 books</h3>
+      <div>
+        ${Markup(langless())}
+      </div>
+      <br/>
+
       <h3>Authors Catalog</h3>
       <div>
     <a href="/browse/authors/a">A</a>&nbsp;
@@ -577,18 +590,6 @@
       </div>
       <br />
 
-      <h2>Languages</h2>    
-      <br />
-      <h3>Languages with more than 50 books</h3>
-      <div>
-        ${Markup(langlots())}
-      </div>
-      <br />
-      <h3>Languages with up to 50 books</h3>
-      <div>
-        ${Markup(langless())}
-      </div>
-      <br/>
       <h2>Non-text</h2>
       <br />
 
