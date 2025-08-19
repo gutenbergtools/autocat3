@@ -1,0 +1,3 @@
+[submodule "gutenbergsite"]
+	path = gutenbergsite
+	url = git@github.com:gutenbergtools/gutenbergsite.git
