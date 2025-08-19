@@ -15,7 +15,7 @@ Base class
 from __future__ import unicode_literals
 from __future__ import division
 
-import os
+from os import environ
 import datetime
 import logging
 
@@ -382,8 +382,9 @@ class OpenSearch(object):
     }
 
     def __init__(self):
-        self.assetdir = os.getenv('ASSET_DIR')
-        self.dev_base_path = os.getenv('DEV_BASE_PATH')
+        self.assetdir = environ.get('ASSET_DIR')
+        self.picsdir = environ.get('PICS_DIR')
+        self.dev_base_path = environ.get('DEV_BASE_PATH')
         self.format = None
         self.page = None
         self.template = None

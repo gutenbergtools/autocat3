@@ -13,7 +13,7 @@ Base class for all pages.
 """
 from __future__ import unicode_literals
 
-import os
+from os import environ
 import logging
 
 import cherrypy
@@ -31,8 +31,9 @@ class Page(object):
 
     def __init__(self):
         self.supported_book_mediatypes = [ mt.epub, mt.mobi ]
-        self.assetdir = os.getenv('ASSET_DIR')
-        self.dev_base_path = os.getenv('DEV_BASE_PATH')
+        self.assetdir = environ.get('ASSET_DIR')
+        self.dev_base_path = environ.get('DEV_BASE_PATH')
+        self.picsdir = environ.get('PICS_DIR')
 
 
     @staticmethod
