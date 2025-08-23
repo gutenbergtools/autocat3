@@ -446,7 +446,9 @@ class OpenSearch(object):
         self.sort_order = k.get('sort_order') or s.get('sort_order') or USER_SORT_ORDERS[0]
         if self.sort_order not in USER_SORT_ORDERS:
             raise cherrypy.HTTPError(400, 'Bad Request. Unknown sort order.')
-        s['sort_order'] = self.sort_order
+        # can't combine random with other sorts!
+        if self.sort_order != 'random':
+            s['sort_order'] = self.sort_order
 
         try:
             self.id = int(k.get('id') or '0')
