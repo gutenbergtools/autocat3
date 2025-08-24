@@ -488,14 +488,14 @@ class OpenSearch(object):
         # these need to be here because they have to be localized
         # NOTE: Msg to user indicating the order of the search results.
         self.sorted_msgs = {
-            'downloads': _("sorted by popularity"),
-            'release_date': _("sorted by release date"),
-            'quantity': _("sorted by quantity of books"),
-            'title': _("sorted alphabetically"),
-            'alpha': _("sorted alphabetically by title"),
-            'author': _("sorted alphabetically by author"),
-            'nentry': _("sorted by relevance"),
-            'random': _("in random order"),
+            'downloads': _("Popularity"),
+            'release_date': _("Release Date"),
+            'quantity': _("Quantity"),
+            'title': _("Title"),
+            'alpha': _("Title"),
+            'author': _("Author"),
+            'nentry': _("Relevance"),
+            'random': _("Random"),
             }
 
         self.snippet_image_url = self.url('/pics/logo-144x144.png', host=self.file_host)
@@ -746,7 +746,6 @@ class OpenSearch(object):
                                       if x != self.sort_order]
 
         self.sorted_by = self.sorted_msgs [self.sort_order]
-        self.title += " (%s)" % self.sorted_by
 
         # content of extra field depends on sorting
         self.f_format_extra = {
