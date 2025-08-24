@@ -13,7 +13,7 @@ The various flavors of search page.
 """
 
 from __future__ import unicode_literals
-
+import re
 import cherrypy
 
 from libgutenberg.MediaTypes import mediatypes as mt
@@ -23,6 +23,15 @@ import BaseSearcher
 from Page import SearchPage
 from i18n_tool import ugettext as _
 from i18n_tool import ungettext as __
+from catalog import catname, langname, locname
+
+hr_terms = {
+    'l.': lambda x: f' Language: {langname(x)} ',
+    'lcc.': lambda x: f' Library of Congress Class: {locname(x)} ',
+#    'cat.': lambda x: f' Category: {catname(x)} ',
+}
+
+MATCH_TERM = re.compile(r'(\b\w+\.)(\w+)')
 
 
 class BookSearchPage (SearchPage):
@@ -33,36 +42,52 @@ class BookSearchPage (SearchPage):
         os.icon = 'book'
         os.class_ += 'booklink'
         os.f_format_icon = os.format_icon_titles
+        
+        os.title = os.query
+        for match in MATCH_TERM.finditer(os.query):
+            if match.group(1) in hr_terms:
+                prefixed = match.group(0)
+                repl = f'{hr_terms.get(match.group(1))(match.group(2))}'
+                os.title = os.title.replace(prefixed, repl)
 
         if os.sort_order == 'random':
             sql.where.append ("pk in (select pk from books order by random() limit 20)")
         if len (os.query):
             sql.fulltext ('books.tsvec', os.query)
-            os.title = _("Books: {title}").format (title = os.query)
+            os.title = _("Books: {title}").format (title = os.title)
         else:
             os.title = _('All Books')
 
 
     def fixup (self, os):
         """ strip marc subfields, add social media hints and facet links """
-
+        os.icon = 'book'
         for e in os.entries:
             if '$' in e.title:
                 e.title = DublinCore.strip_marc_subfields (e.title)
 
         if (os.sort_order == 'release_date' and os.total_results > 0 and os.start_index == 1):
             cat = BaseSearcher.Cat ()
-            cat.title = _('Follow new books on Twitter')
-            cat.subtitle = _("Follow our new books on Twitter.")
-            cat.url = 'https://twitter.com/gutenberg_new'
+            cat.title = _('Follow new books on Mastodon')
+            cat.subtitle = _("Like and follow to see our new books in your feed.")
+            cat.url = 'https://mastodon.social/@gutenberg_new'
             cat.class_ += 'navlink grayed'
-            cat.icon = 'twitter'
+            cat.icon = 'mastodon'
+            cat.order = 5
+            os.entries.insert (0, cat)
+
+            cat = BaseSearcher.Cat ()
+            cat.title = _('Follow new books on Bluesky')
+            cat.subtitle = _("Boost and follow to see our new books in your feed.")
+            cat.url = 'https://bsky.app/profile/new.gutenberg.org'
+            cat.class_ += 'navlink grayed'
+            cat.icon = 'bluesky'
             cat.order = 5
             os.entries.insert (0, cat)
 
             cat = BaseSearcher.Cat ()
             cat.title = _('Follow new books on Facebook')
-            cat.subtitle = _("Follow the link and like the page to have us post new books to your wall.")
+            cat.subtitle = _("Like and follow to see our new books in your feed.")
             cat.url = 'https://www.facebook.com/gutenberg.new'
             cat.class_ += 'navlink grayed'
             cat.icon = 'facebook'

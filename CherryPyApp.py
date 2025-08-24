@@ -256,7 +256,7 @@ def main():
     d.connect('bibrec2', r'/ebooks/{id:\d+}.bibrec{.format}',
                controller=BibrecPage(), conditions=dict(function=check_id))
 
-    d.connect('cover', r'/covers/{size:small|medium}/{order:latest|popular}/{count}',
+    d.connect('cover', r'/covers/{size:small|medium}/{order:latest|popular|random}/{count}',
                controller=CoverPages.CoverPages())
 
     d.connect('qrcode', r'/qrcode/',

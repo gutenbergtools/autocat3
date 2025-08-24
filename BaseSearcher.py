@@ -52,9 +52,7 @@ USER_FORMATS = 'html mobile print opds stanza json'.split()
 MAX_RESULTS = 5000
 
 # sort orders available to the user
-USER_SORT_ORDERS = 'downloads author release_date title alpha quantity nentry random'.split()
-# internally used sort orders
-SORT_ORDERS = USER_SORT_ORDERS + 'nentry'.split()
+SORT_ORDERS = 'downloads author release_date title alpha quantity nentry random'.split()
 
 # fk_categories of sound files
 AUDIOBOOK_CATEGORIES = set([1, 2, 3, 6])
@@ -443,10 +441,12 @@ class OpenSearch(object):
 
         self.search_terms = self.query or s.get('search_terms', '')
 
-        self.sort_order = k.get('sort_order') or s.get('sort_order') or USER_SORT_ORDERS[0]
-        if self.sort_order not in USER_SORT_ORDERS:
+        self.sort_order = k.get('sort_order') or s.get('sort_order') or SORT_ORDERS[0]
+        if self.sort_order not in SORT_ORDERS:
             raise cherrypy.HTTPError(400, 'Bad Request. Unknown sort order.')
-        s['sort_order'] = self.sort_order
+        # can't combine random with other sorts!
+        if self.sort_order != 'random':
+            s['sort_order'] = self.sort_order
 
         try:
             self.id = int(k.get('id') or '0')
@@ -501,7 +501,7 @@ class OpenSearch(object):
         self.snippet_image_url = self.url('/pics/logo-144x144.png', host=self.file_host)
         self.og_type = 'website'
         self.class_ = ClassAttr()
-        self.title_icon = None
+        self.title_icon = 'search'
         self.icon = None
         self.sort_orders = []
         self.alternate_sort_orders = []
@@ -546,17 +546,6 @@ class OpenSearch(object):
         start_index, etc. must be set before calling this.
 
         """
-
-        # FIXME: android browser crashes on XHR with
-        # meta name=viewport or link rel=apple-touch-icon
-        # see:
-        # http://code.google.com/p/android/issues/detail?id=6593
-        # http://code.google.com/p/android/issues/detail?id=9261
-        #
-        # remove this from all browsers because we are caching responses
-        if self.start_index > 1:
-            self.touch_icon = None
-            self.viewport = None
 
         self.desktop_host = cherrypy.config['host']
 
