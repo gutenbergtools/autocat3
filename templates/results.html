@@ -59,12 +59,12 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
                     <p>Sort By:</p>
                     <div class="sort-dropdown">
                         <button class="sort-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
-                            <span>${'Title' if os.sort_order == 'alpha' else os.sort_order.replace('_', ' ').title()}</span><span>▼</span>
+                            <span>${os.sorted_msgs[os.sort_order]}</span><span>▼</span>
                         </button>
                         <div class="sort-dropdown-menu" role="menu">
-                            <py:for each="x in os.sort_orders">
-                                <py:if test="os.sort_order != x">
-                                    <a href="?sort_order=${x}" role="menuitem">${'Title' if x == 'alpha' else x.replace('_', ' ').title()}</a>
+                            <py:for each="order in os.sort_orders">
+                                <py:if test="os.sort_order != order">
+                                    <a href="${os.url_carry(sort_order=order)}" role="menuitem">${os.sorted_msgs[order]}</a>
                                 </py:if>
                             </py:for>
                         </div>
