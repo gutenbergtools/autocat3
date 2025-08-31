@@ -15,6 +15,7 @@ Base class
 from __future__ import unicode_literals
 from __future__ import division
 
+from os import environ
 import datetime
 import logging
 
@@ -52,7 +53,9 @@ USER_FORMATS = 'html mobile print opds stanza json'.split()
 MAX_RESULTS = 5000
 
 # sort orders available to the user
-SORT_ORDERS = 'downloads author release_date title alpha quantity nentry random'.split()
+USER_SORT_ORDERS = 'downloads author release_date title alpha quantity nentry random'.split()
+# internally used sort orders
+SORT_ORDERS = USER_SORT_ORDERS + 'nentry'.split()
 
 # fk_categories of sound files
 AUDIOBOOK_CATEGORIES = set([1, 2, 3, 6])
@@ -379,6 +382,9 @@ class OpenSearch(object):
     }
 
     def __init__(self):
+        self.assetdir = environ.get('ASSET_DIR')
+        self.picsdir = environ.get('PICS_DIR')
+        self.dev_base_path = environ.get('DEV_BASE_PATH')
         self.format = None
         self.page = None
         self.template = None
@@ -441,12 +447,10 @@ class OpenSearch(object):
 
         self.search_terms = self.query or s.get('search_terms', '')
 
-        self.sort_order = k.get('sort_order') or s.get('sort_order') or SORT_ORDERS[0]
-        if self.sort_order not in SORT_ORDERS:
+        self.sort_order = k.get('sort_order') or s.get('sort_order') or USER_SORT_ORDERS[0]
+        if self.sort_order not in USER_SORT_ORDERS:
             raise cherrypy.HTTPError(400, 'Bad Request. Unknown sort order.')
-        # can't combine random with other sorts!
-        if self.sort_order != 'random':
-            s['sort_order'] = self.sort_order
+        s['sort_order'] = self.sort_order
 
         try:
             self.id = int(k.get('id') or '0')

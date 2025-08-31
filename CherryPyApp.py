@@ -53,6 +53,9 @@ install_dir = os.path.dirname(os.path.abspath(__file__))
 CHERRYPY_CONFIG = os.path.join(install_dir, 'CherryPy.conf')
 LOCAL_CONFIG = [os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf']
 
+# constants used in templates
+DEV_BASE_PATH = ASSET_DIR = PICS_DIR = ''
+
 def error_page_404(status, message, traceback, version):
     resp = ErrorPage(status, message).index()
     
@@ -89,10 +92,13 @@ def main():
         'pidfile': None,
         'host': 'localhost',
         'file_host': 'localhost',
+        'asset_dir': 'gutenberg',
+        'pics_dir':  'pics',
+        'dev_base_path':  '',
+
         })
 
     cherrypy.config.update(CHERRYPY_CONFIG)
-
     extra_config = ''
     for config_filename in LOCAL_CONFIG:
         try:
@@ -101,6 +107,11 @@ def main():
             break
         except IOError:
             pass
+    print(LOCAL_CONFIG)
+    DEV_BASE_PATH = cherrypy.config.get('dev_base_path')
+    ASSET_DIR = cherrypy.config.get('asset_dir')
+    PICS_DIR = cherrypy.config.get('pics_dir')
+    print(ASSET_DIR)
 
     # Rotating Logs
     # CherryPy will already open log files if present in config

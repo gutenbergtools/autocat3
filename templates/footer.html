@@ -1,4 +1,8 @@
 <footer>
+  <?python
+    from CherryPyApp import ASSET_DIR
+  ?>
+
   <ul>
       <li>
         <a href="/about/" title="About Project Gutenberg">About Project Gutenberg</a>
@@ -19,6 +23,6 @@
   </ul>
 
   <a href="https://www.ibiblio.org/" title="Project Gutenberg is hosted by ibiblio">
-   <img src="/gutenberg/ibiblio-logo.png" alt="ibiblio" width="110" height="32" />
+   <img src="/${ASSET_DIR}/ibiblio-logo.png" alt="ibiblio" width="110" height="32" />
   </a>
 </footer>

@@ -1,4 +1,8 @@
 <header class="noprint">
+    <?python
+    from CherryPyApp import PICS_DIR, ASSET_DIR
+    ?>
+
   <input type="radio" name="toggle" id="search-toggle" style="display: none" />
   <input type="radio" name="toggle" id="search-close" style="display: none" />
   <input type="checkbox" id="about-toggle" style="display: none" />
@@ -8,7 +12,7 @@
     </a>
 
     <a id="main_logo" href="/" class="no-hover">
-      <img src="/gutenberg/pg-logo-129x80.png" alt="Project Gutenberg" draggable="false" />
+      <img src="/${ASSET_DIR}/pg-logo-129x80.png" alt="Project Gutenberg" draggable="false" />
     </a>
   </div>
 
@@ -65,7 +69,7 @@
         <input
           class="donbtn"
           type="image"
-          src="/pics/en_US.gif"
+          src="/${PICS_DIR}/en_US.gif"
           name="submit"
           alt="Donate via PayPal"
         />

@@ -11,9 +11,9 @@ Distributable under the GNU General Public License Version 3 or newer.
 Base class for all pages.
 
 """
-
 from __future__ import unicode_literals
 
+from os import environ
 import logging
 
 import cherrypy
@@ -31,6 +31,9 @@ class Page(object):
 
     def __init__(self):
         self.supported_book_mediatypes = [ mt.epub, mt.mobi ]
+        self.assetdir = environ.get('ASSET_DIR')
+        self.dev_base_path = environ.get('DEV_BASE_PATH')
+        self.picsdir = environ.get('PICS_DIR')
 
 
     @staticmethod
