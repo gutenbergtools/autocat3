@@ -31,9 +31,7 @@ class Page(object):
 
     def __init__(self):
         self.supported_book_mediatypes = [ mt.epub, mt.mobi ]
-        self.assetdir = environ.get('ASSET_DIR')
-        self.dev_base_path = environ.get('DEV_BASE_PATH')
-        self.picsdir = environ.get('PICS_DIR')
+        self.dev_base_path = cherrypy.config.get('DEV_BASE_PATH', '')
 
 
     @staticmethod

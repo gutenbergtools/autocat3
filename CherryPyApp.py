@@ -53,8 +53,6 @@ install_dir = os.path.dirname(os.path.abspath(__file__))
 CHERRYPY_CONFIG = os.path.join(install_dir, 'CherryPy.conf')
 LOCAL_CONFIG = [os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf']
 
-# constants used in templates
-DEV_BASE_PATH = ASSET_DIR = PICS_DIR = ''
 
 def error_page_404(status, message, traceback, version):
     resp = ErrorPage(status, message).index()
