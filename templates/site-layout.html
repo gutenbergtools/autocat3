@@ -9,8 +9,6 @@
       py:strip="">
   <?python
       from i18n_tool import ugettext as _
-      from cherrypy import config
-      ASSET_DIR = config.get('asset_dir')
   ?>
   <py:def function="site_head">
     <style >
@@ -19,10 +17,10 @@
       .page_content a.subtle_link:hover {color:#003366}
     </style>
 
-    <link rel="stylesheet" type="text/css" href="/${ASSET_DIR}/pg-desktop-one.css?v=1.1" />
-    <link rel="stylesheet" type="text/css" href="/${ASSET_DIR}/style2.css?v=1.7"/>
-    <link rel="stylesheet" type="text/css" href="/${ASSET_DIR}/new_nav.css?v=1.6"/>
-    <link rel="stylesheet" type="text/css" href="/${ASSET_DIR}/search_options.css?v=1" />
+    <link rel="stylesheet" type="text/css" href="/gutenberg/pg-desktop-one.css?v=1.1" />
+    <link rel="stylesheet" type="text/css" href="/gutenberg/style2.css?v=1.7"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/new_nav.css?v=1.6"/>
+    <link rel="stylesheet" type="text/css" href="/gutenberg/search_options.css?v=1" />
 
     <!--! IE8 does not recognize application/javascript -->
     <script>//<![CDATA[

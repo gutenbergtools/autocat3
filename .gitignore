@@ -103,5 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# to allow submodule without changing deployment procedure
-gutenbergsite/
+# for devmode
+gutenberg/
+pics/

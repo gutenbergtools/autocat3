@@ -92,10 +92,8 @@ def main():
         'pidfile': None,
         'host': 'localhost',
         'file_host': 'localhost',
-        'asset_dir': 'gutenberg',
-        'pics_dir':  'pics',
-        'dev_base_path':  '',
-
+        'devmode': False,
+        'dev_base_path': '',
         })
 
     cherrypy.config.update(CHERRYPY_CONFIG)
@@ -107,11 +105,6 @@ def main():
             break
         except IOError:
             pass
-    print(LOCAL_CONFIG)
-    DEV_BASE_PATH = cherrypy.config.get('dev_base_path')
-    ASSET_DIR = cherrypy.config.get('asset_dir')
-    PICS_DIR = cherrypy.config.get('pics_dir')
-    print(ASSET_DIR)
 
     # Rotating Logs
     # CherryPy will already open log files if present in config
@@ -334,6 +327,13 @@ def main():
     app = cherrypy.tree.mount(root=None, config=CHERRYPY_CONFIG)
 
     app.merge({'/': {'request.dispatch': d}})
+
+    if cherrypy.config.get('devmode', False):
+        app.merge({'/gutenberg': {'tools.staticdir.on': True,
+                                  'tools.staticdir.dir': install_dir + "/gutenberg"}})
+        app.merge({'/pics': {'tools.staticdir.on': True,
+                             'tools.staticdir.dir': install_dir + "/pics"}})
+
     return app
 
 
