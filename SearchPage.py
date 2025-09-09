@@ -72,7 +72,7 @@ class BookSearchPage (SearchPage):
             cat.subtitle = _("Like and follow to see our new books in your feed.")
             cat.url = 'https://mastodon.social/@gutenberg_new'
             cat.class_ += 'navlink grayed'
-            cat.icon = 'mastodon'
+            cat.icon = 'masto'
             cat.order = 5
             os.entries.insert (0, cat)
 
@@ -81,7 +81,7 @@ class BookSearchPage (SearchPage):
             cat.subtitle = _("Boost and follow to see our new books in your feed.")
             cat.url = 'https://bsky.app/profile/new.gutenberg.org'
             cat.class_ += 'navlink grayed'
-            cat.icon = 'bluesky'
+            cat.icon = 'bsky'
             cat.order = 5
             os.entries.insert (0, cat)
 

@@ -53,6 +53,7 @@ install_dir = os.path.dirname(os.path.abspath(__file__))
 CHERRYPY_CONFIG = os.path.join(install_dir, 'CherryPy.conf')
 LOCAL_CONFIG = [os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf']
 
+
 def error_page_404(status, message, traceback, version):
     resp = ErrorPage(status, message).index()
     
@@ -89,10 +90,10 @@ def main():
         'pidfile': None,
         'host': 'localhost',
         'file_host': 'localhost',
+        'devmode': False,
         })
 
     cherrypy.config.update(CHERRYPY_CONFIG)
-
     extra_config = ''
     for config_filename in LOCAL_CONFIG:
         try:
@@ -323,6 +324,13 @@ def main():
     app = cherrypy.tree.mount(root=None, config=CHERRYPY_CONFIG)
 
     app.merge({'/': {'request.dispatch': d}})
+
+    if cherrypy.config.get('devmode', False):
+        app.merge({'/gutenberg': {'tools.staticdir.on': True,
+                                  'tools.staticdir.dir': install_dir + "/gutenberg"}})
+        app.merge({'/pics': {'tools.staticdir.on': True,
+                             'tools.staticdir.dir': install_dir + "/pics"}})
+
     return app
 
 
