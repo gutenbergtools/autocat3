@@ -35,7 +35,7 @@ from i18n_tool import ugettext as _
 from i18n_tool import ungettext as __
 
 import DublinCoreI18n
-from SupportedLocales import FB_LANGS, TWITTER_LANGS, GOOGLE_LANGS, PAYPAL_LANGS, FLATTR_LANGS
+from SupportedLocales import FB_LANGS, TWITTER_LANGS, GOOGLE_LANGS, PAYPAL_LANGS
 
 VALID_PROTOCOLS = ('http', 'https')
 
@@ -512,7 +512,6 @@ class OpenSearch(object):
         lang2 = self.lang[:2]
 
         self.paypal_lang = lang if lang in PAYPAL_LANGS else 'en_US'
-        self.flattr_lang = lang if lang in FLATTR_LANGS else 'en_US'
 
         lang = lang.replace('_', '-')
 
