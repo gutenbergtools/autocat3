@@ -38,7 +38,7 @@ class BookSearchPage (SearchPage):
     """ search term => list of books """
 
     def setup (self, os, sql):
-        os.sort_orders = ('downloads', 'release_date', 'title', 'random')
+        os.sort_orders = ['downloads', 'release_date', 'title', 'random']
         os.icon = 'book'
         os.class_ += 'booklink'
         os.f_format_icon = os.format_icon_titles
@@ -49,6 +49,8 @@ class BookSearchPage (SearchPage):
                 prefixed = match.group(0)
                 repl = f'{hr_terms.get(match.group(1))(match.group(2))}'
                 os.title = os.title.replace(prefixed, repl)
+                if match.group(1) == 'l.':
+                    os.sort_orders.remove('random')
 
         if os.sort_order == 'random':
             sql.where.append ("pk in (select pk from books order by random() limit 20)")
