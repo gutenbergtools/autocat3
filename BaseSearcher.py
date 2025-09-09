@@ -403,7 +403,6 @@ class OpenSearch(object):
         ]
 
         # default output formatting functions
-        cherrypy.config.get('thumb_base_path', '')
         self.f_format_title = self.format_title
         self.f_format_subtitle = self.format_author
         self.f_format_extra = self.format_none # depends on sort order, set in fix_sortorder ()
