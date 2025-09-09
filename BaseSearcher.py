@@ -403,6 +403,7 @@ class OpenSearch(object):
         ]
 
         # default output formatting functions
+        cherrypy.config.get('thumb_base_path', '')
         self.f_format_title = self.format_title
         self.f_format_subtitle = self.format_author
         self.f_format_extra = self.format_none # depends on sort order, set in fix_sortorder ()
@@ -848,7 +849,7 @@ class OpenSearch(object):
     def format_thumb_url(self, row):
         """ Generate the thumb url in results. """
         if row.coverpages:
-            return '/' + row.coverpages[0]
+            return f"{cherrypy.config.get('thumb_base_path', '')}/{row.coverpages[0]}"
         return None
 
     def format_icon(self, dummy_row):

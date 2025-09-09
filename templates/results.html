@@ -25,7 +25,6 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
       xml:lang="${os.lang}">
 
   <?python
-  from CherryPyApp import DEV_BASE_PATH
   old_header = os.title
   os.status_line = ''
   ?>
@@ -101,7 +100,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 			    <span class="icon icon_${e.icon}" />
 			  </span>
 			  <img py:if="e.thumb_url"
-			       class="cover-thumb" src="${DEV_BASE_PATH}${e.thumb_url}" alt="" />
+			       class="cover-thumb" src="${e.thumb_url}" alt="" />
 			</span>
 			<span class="cell content">
 			  <span py:if="e.title" class="title">${e.title}</span>

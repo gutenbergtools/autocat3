@@ -91,7 +91,6 @@ def main():
         'host': 'localhost',
         'file_host': 'localhost',
         'devmode': False,
-        'dev_base_path': '',
         })
 
     cherrypy.config.update(CHERRYPY_CONFIG)

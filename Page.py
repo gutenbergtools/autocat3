@@ -31,7 +31,6 @@ class Page(object):
 
     def __init__(self):
         self.supported_book_mediatypes = [ mt.epub, mt.mobi ]
-        self.dev_base_path = cherrypy.config.get('DEV_BASE_PATH', '')
 
 
     @staticmethod
