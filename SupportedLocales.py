@@ -1,4 +1,4 @@
-""" Locales supported by 3rd party apps. Generated file. Do not edit! """
+""" Locales supported by 3rd party apps.  """
 
 
 FB_LANGS = set ((
@@ -92,58 +92,6 @@ FB_LANGS = set ((
    'zh_CN',
    'zh_HK',
    'zh_TW',
-))
-
-FLATTR_LANGS = set ((
-   'ar_DZ',
-   'be_BY',
-   'bg_BG',
-   'br_FR',
-   'ca_ES',
-   'cs_CZ',
-   'da_DK',
-   'de_DE',
-   'el_GR',
-   'en_GB',
-   'eo_EO',
-   'es_ES',
-   'es_GL',
-   'et_EE',
-   'fa_FA',
-   'fi_FI',
-   'fr_FR',
-   'ga_IE',
-   'hi_IN',
-   'hr_HR',
-   'hu_HU',
-   'in_ID',
-   'is_IS',
-   'it_IT',
-   'iw_IL',
-   'ja_JP',
-   'ko_KR',
-   'lt_LT',
-   'lv_LV',
-   'mk_MK',
-   'ms_MY',
-   'mt_MT',
-   'nl_NL',
-   'nn_NO',
-   'no_NO',
-   'pl_PL',
-   'pt_PT',
-   'ro_RO',
-   'ru_RU',
-   'sk_SK',
-   'sl_SI',
-   'sq_AL',
-   'sr_RS',
-   'sv_SE',
-   'th_TH',
-   'tr_TR',
-   'uk_UA',
-   'vi_VN',
-   'zh_CN',
 ))
 
 GOOGLE_LANGS = set ((
