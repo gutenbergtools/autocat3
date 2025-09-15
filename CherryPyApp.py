@@ -122,7 +122,7 @@ def main():
 
     if error_file:
         h = logging.handlers.RotatingFileHandler(error_file, 'a', max_bytes, backup_count, 'utf-8')
-        h.setLevel(logging.INFO)
+        h.setLevel(logging.WARNING)
         h.setFormatter(cherrypy._cplogging.logfmt)
         cherrypy.log.error_log.addHandler(h)
 
