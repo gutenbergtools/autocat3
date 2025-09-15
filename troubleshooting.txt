@@ -1,0 +1,21 @@
+configuring an autocat3 instance is covered in the configuring.txt file in the repo.
+
+This document covers what you can do on the server, logged in as autocat.
+
+gutenberg-app1 is the production server - it runs code from the prod branch of the github repo
+gutenberg-appdev1 is the development server - it runs code from the appdev branch of the github repo
+
+these branches differ from master only in their service files; never try to push from these branches.
+
+except for configs, files on these servers should never be edited, always use git for deployment.
+
+autocat owns the server process, so you can kill -9 it, and the server will get restarted by monit.
+It's not recommended to do this on the app1 server, as it causes some downtime; a restart via systemctl restart is preferred but needs sudo.
+
+asking for the prod server to be restarted also serves the purpose of letting ibiblio staff know that something has changed.
+
+using top, you can see if the process is using too much memory, ~2G is typical
+
+The error log (~/log/error.log) occasionally reports a real error, usually it's just cloudstorage errors (not our fault!)
+
+the diagnostics page http://127.0.0.1:8000/diagnostics/ (not accessible outside of ibiblio) is mostly useful to tell you that the server is live and answering queries. Apparent outages are almost always on the front end servers which mostly deliver (huge quantities of) static content.
