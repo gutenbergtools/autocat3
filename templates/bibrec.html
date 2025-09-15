@@ -291,7 +291,7 @@ Gutenberg metadata much faster than by scraping.
 			<td py:when="marc.code[0]=='5'">
 			  <?python
 			    text = gg.xmlspecialchars(marc.text)
-			    text = re.sub(r'(http:|https:)?(//\S+))', r'<a href="\0">\2</a>', text)
+			    text = re.sub(r'(http:|https:)?//(\S+)', r'<a href="https://\2">\2</a>', text)
 			    text = re.sub(r'#(\d+)',  r'<a href="/ebooks/\1">#\1</a>', text)
 			  ?>
 			  ${ Markup (gg.insert_breaks(text, self_closing=False)) }
