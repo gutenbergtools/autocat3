@@ -11,7 +11,6 @@ Distributable under the GNU General Public License Version 3 or newer.
 Base class for all pages.
 
 """
-
 from __future__ import unicode_literals
 
 import logging
