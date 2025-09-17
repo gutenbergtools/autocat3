@@ -49,7 +49,7 @@ class BookSearchPage (SearchPage):
                 prefixed = match.group(0)
                 repl = f'{hr_terms.get(match.group(1))(match.group(2))}'
                 os.title = os.title.replace(prefixed, repl)
-                if match.group(1) == 'l.':
+                if match.group(1) in ('l.', 'lcc.'):
                     os.sort_orders.remove('random')
 
         if os.sort_order == 'random':
