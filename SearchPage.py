@@ -44,13 +44,13 @@ class BookSearchPage (SearchPage):
         os.f_format_icon = os.format_icon_titles
         
         os.title = os.query
+        if bool(os.query):
+            os.sort_orders.remove('random')
         for match in MATCH_TERM.finditer(os.query):
             if match.group(1) in hr_terms:
                 prefixed = match.group(0)
                 repl = f'{hr_terms.get(match.group(1))(match.group(2))}'
                 os.title = os.title.replace(prefixed, repl)
-                if match.group(1) in ('l.', 'lcc.'):
-                    os.sort_orders.remove('random')
 
         if os.sort_order == 'random':
             sql.where.append ("pk in (select pk from books order by random() limit 20)")
