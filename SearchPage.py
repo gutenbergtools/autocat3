@@ -38,12 +38,14 @@ class BookSearchPage (SearchPage):
     """ search term => list of books """
 
     def setup (self, os, sql):
-        os.sort_orders = ('downloads', 'release_date', 'title', 'random')
+        os.sort_orders = ['downloads', 'release_date', 'title', 'random']
         os.icon = 'book'
         os.class_ += 'booklink'
         os.f_format_icon = os.format_icon_titles
         
         os.title = os.query
+        if bool(os.query):
+            os.sort_orders.remove('random')
         for match in MATCH_TERM.finditer(os.query):
             if match.group(1) in hr_terms:
                 prefixed = match.group(0)
