@@ -218,7 +218,7 @@ class BookshelfSearchPage (SearchPage):
     def setup (self, os, sql):
         os.f_format_url = BaseSearcher.SearchUrlFormatter ('bookshelf')
         os.f_format_thumb_url = os.format_none
-        os.sort_orders = ('downloads', 'quantity', 'alpha', 'release_date', 'authors')
+        os.sort_orders = ('downloads', 'quantity', 'alpha', 'release_date', 'author')
         os.icon = 'bookshelf'
         os.title_icon = 'bookshelf'
         os.class_ += 'navlink'
