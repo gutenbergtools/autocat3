@@ -56,7 +56,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
 
             <div class="body">
                 <ul class="results">
-                    <py:if test="len(os.sort_orders) > 1">
+                    <py:if test="len(os.sort_orders) > 1 and len(os.entries) > 2">
                         <p>Sort By:</p>
                         <div class="sort-dropdown">
                             <button class="sort-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
