@@ -38,6 +38,7 @@ from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, Book
     AuthorPage, SubjectPage, BookshelfPage, AlsoDownloadedPage
 from BibrecPage import BibrecPage
 from AdvSearchPage import AdvSearchPage
+from ApiSearch import ApiSearch
 import CoverPages
 import QRCodePage
 import diagnostics
@@ -229,6 +230,9 @@ def main():
 
     d.connect('results', r'/ebooks/results{.format}/',
                controller=AdvSearchPage())
+
+    d.connect('results', r'/api/search/',
+               controller=ApiSearch())
 
     # 'id' pages
 
