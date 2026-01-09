@@ -49,6 +49,33 @@ Gutenberg metadata much faster than by scraping.
        title="${explain (topic)}"><span class="icon icon_help noprint" /></a>
   </py:def>
 
+	<script type="text/javascript">//<![CDATA[
+		var noprint_display_styles = [];
+		var noprint_elements = document.getElementsByClassName("noprint");
+		var noscreen_elements = document.getElementsByClassName("noscreen");
+
+		addEventListener('beforeprint', (e) => {
+			for(let ele of noprint_elements) {
+				noprint_display_styles.push(ele.style.display);
+				ele.style.display = "none";
+			}
+			for(let _ele of noscreen_elements) {
+				_ele.style.display = "block";
+			}
+		});
+
+		addEventListener('afterprint', (e) => {
+			for(let i = 0; i < noprint_elements.length; i++) {
+				noprint_elements[i].style.display = noprint_display_styles[i];
+			}
+
+			for(let j = 0; j < noscreen_elements.length; j++) {
+				noscreen_elements[j].style.display = "none";
+			}
+			noprint_display_styles = [];
+		});
+	//]]></script>
+
   <head xmlns:og="http://opengraphprotocol.org/schema/">
 
     ${site_head()}
@@ -120,7 +147,9 @@ Gutenberg metadata much faster than by scraping.
 		     ${bsky_share(os.canonical_url, "Free book at Project Gutenberg: " + os.title)}
 	      </li>
 	      <li>
-		<a onclick="printpage()" title="Print this page"><span class="icon icon_print" /></a>
+		 	<a onclick="setTimeout(function() {window.print();}, 0)" title="Print this page">
+				<span class="icon icon_print" />
+			</a>
 	      </li>
 	    </ul>
 	  </div>
