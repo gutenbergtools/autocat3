@@ -88,7 +88,7 @@ pipenv install
 #   log.error_file, log.access_file
 
 #!! from local
-# Better to copy conf file from guten2 cause it's up-to-date
+# Better to copy conf file from gutenberg-app1 cause it's up-to-date
 # scp [local:]~/autocat3.conf [autocat@host:]~/.autocat3
 
 mkdir /var/lib/autocat/log/
