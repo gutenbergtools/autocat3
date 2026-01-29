@@ -44,6 +44,7 @@ import diagnostics
 import Sitemap
 import Formatters
 from errors import ErrorPage
+from opds2 import OPDSFeed
 
 import Timer
 
@@ -330,6 +331,14 @@ def main():
                                   'tools.staticdir.dir': install_dir + "/gutenberg"}})
         app.merge({'/pics': {'tools.staticdir.on': True,
                              'tools.staticdir.dir': install_dir + "/pics"}})
+    # Mount OPDS feed at /opds
+    cherrypy.log("Mounting OPDS feed", context='ENGINE', severity=logging.INFO)
+    cherrypy.tree.mount(OPDSFeed(), '/opds', {
+        '/': {
+            'tools.response_headers.on': True,
+            'tools.response_headers.headers': [('Access-Control-Allow-Origin', '*')],
+        }
+    })
 
     return app
 
