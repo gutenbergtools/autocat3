@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple, Union
 
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
@@ -61,18 +59,18 @@ _SUBQUERY = """book_id, title, downloads, CAST(release_date AS text) AS release_
 # =============================================================================
 
 
-@dataclass
 class SearchQuery:
-    _search: list[tuple[str, dict, str]] = field(default_factory=list)
-    _filters: list[tuple[str, dict]] = field(default_factory=list)
-    _order: OrderBy = OrderBy.DOWNLOADS
-    _sort_dir: SortDirection | None = None
-    _page: int = 1
-    _page_size: int = 25
-    _crosswalk: Crosswalk = Crosswalk.PG
-    _param_counter: int = 0
+    def __init__(self):
+        self._search = []  # type: List[Tuple[str, Dict, str]]
+        self._filters = []  # type: List[Tuple[str, Dict]]
+        self._order = OrderBy.DOWNLOADS
+        self._sort_dir = None  # type: Optional[SortDirection]
+        self._page = 1
+        self._page_size = 25
+        self._crosswalk = Crosswalk.PG
+        self._param_counter = 0
 
-    def __getitem__(self, key: int | tuple) -> SearchQuery:
+    def __getitem__(self, key: Union[int, tuple]) -> "SearchQuery":
         """Set pagination: q[3] for page 3, q[2, 50] for page 2 with 50 results."""
         if isinstance(key, tuple):
             self._page = max(1, int(key[0]))
@@ -81,29 +79,29 @@ class SearchQuery:
             self._page = max(1, int(key))
         return self
 
-    def crosswalk(self, cw: Crosswalk) -> SearchQuery:
+    def crosswalk(self, cw: Crosswalk) -> "SearchQuery":
         self._crosswalk = cw
         return self
 
     def order_by(
-        self, order: OrderBy, direction: SortDirection | None = None
-    ) -> SearchQuery:
+        self, order: OrderBy, direction: Optional[SortDirection] = None
+    ) -> "SearchQuery":
         self._order = order
         self._sort_dir = direction
         return self
 
-    def _new_param(self, value: object) -> tuple[str, dict]:
-        pname = f"__p{self._param_counter}"
+    def _new_param(self, value: object) -> Tuple[str, Dict]:
+        pname = "__p{}".format(self._param_counter)
         self._param_counter += 1
         return pname, {pname: value}
 
     def filter(self, sql_template: str, *values: object) -> "SearchQuery":
-        params: dict = {}
-        placeholders: list[str] = []
+        params = {}  # type: Dict
+        placeholders = []  # type: List[str]
         for v in values:
             pname, p = self._new_param(v)
             params.update(p)
-            placeholders.append(f":{pname}")
+            placeholders.append(":{}".format(pname))
         sql = sql_template.format(*placeholders)
         self._filters.append((sql, params))
         return self
@@ -113,7 +111,7 @@ class SearchQuery:
         txt: str,
         field: SearchField = SearchField.BOOK,
         search_type: SearchType = SearchType.FTS,
-    ) -> SearchQuery:
+    ) -> "SearchQuery":
         txt = (txt or "").strip()
         if not txt:
             return self
@@ -122,69 +120,69 @@ class SearchQuery:
 
         if search_type == SearchType.FTS:
             pname, p = self._new_param(txt)
-            sql = f"{fts_col} @@ websearch_to_tsquery('english', :{pname})"
+            sql = "{} @@ websearch_to_tsquery('english', :{})".format(fts_col, pname)
             self._search.append((sql, p, fts_col))
         else:
             pname, p = self._new_param(txt)
-            self._search.append((f":{pname} <% {text_col}", p, text_col))
+            self._search.append((":{} <% {}".format(pname, text_col), p, text_col))
         return self
 
     # Filter Methods
 
-    def etext(self, nr: int) -> SearchQuery:
+    def etext(self, nr: int) -> "SearchQuery":
         return self.filter("book_id = {}", int(nr))
 
-    def etexts(self, nrs: list[int]) -> SearchQuery:
+    def etexts(self, nrs: List[int]) -> "SearchQuery":
         return self.filter("book_id = ANY({})", [int(n) for n in nrs])
 
-    def downloads_gte(self, n: int) -> SearchQuery:
+    def downloads_gte(self, n: int) -> "SearchQuery":
         return self.filter("downloads >= {}", int(n))
 
-    def downloads_lte(self, n: int) -> SearchQuery:
+    def downloads_lte(self, n: int) -> "SearchQuery":
         return self.filter("downloads <= {}", int(n))
 
-    def public_domain(self) -> SearchQuery:
+    def public_domain(self) -> "SearchQuery":
         self._filters.append(("copyrighted = 0", {}))
         return self
 
-    def copyrighted(self) -> SearchQuery:
+    def copyrighted(self) -> "SearchQuery":
         self._filters.append(("copyrighted = 1", {}))
         return self
 
-    def lang(self, code: Language | str) -> SearchQuery:
+    def lang(self, code: Union[Language, str]) -> "SearchQuery":
         if isinstance(code, Language):
             code_val = code.code
         else:
             code_val = code.lower()
         return self.filter("lang_codes @> ARRAY[CAST({} AS text)]", code_val)
 
-    def text_only(self) -> SearchQuery:
+    def text_only(self) -> "SearchQuery":
         self._filters.append(("is_audio = false", {}))
         return self
 
-    def audiobook(self) -> SearchQuery:
+    def audiobook(self) -> "SearchQuery":
         self._filters.append(("is_audio = true", {}))
         return self
 
-    def author_born_after(self, year: int) -> SearchQuery:
+    def author_born_after(self, year: int) -> "SearchQuery":
         return self.filter("max_author_birthyear >= {}", int(year))
 
-    def author_born_before(self, year: int) -> SearchQuery:
+    def author_born_before(self, year: int) -> "SearchQuery":
         return self.filter("min_author_birthyear <= {}", int(year))
 
-    def author_died_after(self, year: int) -> SearchQuery:
+    def author_died_after(self, year: int) -> "SearchQuery":
         return self.filter("max_author_deathyear >= {}", int(year))
 
-    def author_died_before(self, year: int) -> SearchQuery:
+    def author_died_before(self, year: int) -> "SearchQuery":
         return self.filter("min_author_deathyear <= {}", int(year))
 
-    def released_after(self, date: str) -> SearchQuery:
+    def released_after(self, date: str) -> "SearchQuery":
         return self.filter("CAST(release_date AS date) >= CAST({} AS date)", str(date))
 
-    def released_before(self, date: str) -> SearchQuery:
+    def released_before(self, date: str) -> "SearchQuery":
         return self.filter("CAST(release_date AS date) <= CAST({} AS date)", str(date))
 
-    def locc(self, code: LoCCMainClass | str) -> SearchQuery:
+    def locc(self, code: Union[LoCCMainClass, str]) -> "SearchQuery":
         if isinstance(code, LoCCMainClass):
             code = code.code
         else:
@@ -192,10 +190,10 @@ class SearchQuery:
 
         return self.filter(
             "EXISTS (SELECT 1 FROM mn_books_loccs mbl JOIN loccs lc ON lc.pk = mbl.fk_loccs WHERE mbl.fk_books = book_id AND lc.pk LIKE {})",
-            f"{code}%",
+            "{}%".format(code),
         )
 
-    def contributor_role(self, role: str) -> SearchQuery:
+    def contributor_role(self, role: str) -> "SearchQuery":
         return self.filter(
             "EXISTS (SELECT 1 FROM mn_books_authors mba "
             "JOIN roles r ON mba.fk_roles = r.pk "
@@ -203,7 +201,7 @@ class SearchQuery:
             role,
         )
 
-    def file_type(self, ft: FileType | str) -> SearchQuery:
+    def file_type(self, ft: Union[FileType, str]) -> "SearchQuery":
         if isinstance(ft, FileType):
             ft_value = ft.value
         else:
@@ -217,26 +215,26 @@ class SearchQuery:
             ft_value,
         )
 
-    def author_id(self, aid: int) -> SearchQuery:
+    def author_id(self, aid: int) -> "SearchQuery":
         return self.filter(
             "EXISTS (SELECT 1 FROM mn_books_authors mba "
             "WHERE mba.fk_books = book_id AND mba.fk_authors = {})",
             int(aid),
         )
 
-    def subject_id(self, sid: int) -> SearchQuery:
+    def subject_id(self, sid: int) -> "SearchQuery":
         return self.filter(
             "EXISTS (SELECT 1 FROM mn_books_subjects mbs WHERE mbs.fk_books = book_id AND mbs.fk_subjects = {})",
             int(sid),
         )
 
-    def bookshelf_id(self, bid: int) -> SearchQuery:
+    def bookshelf_id(self, bid: int) -> "SearchQuery":
         return self.filter(
             "EXISTS (SELECT 1 FROM mn_books_bookshelves mbb WHERE mbb.fk_books = book_id AND mbb.fk_bookshelves = {})",
             int(bid),
         )
 
-    def encoding(self, enc: Encoding | str) -> SearchQuery:
+    def encoding(self, enc: Union[Encoding, str]) -> "SearchQuery":
         if isinstance(enc, Encoding):
             enc_val = enc.value
         else:
@@ -249,7 +247,7 @@ class SearchQuery:
             enc_val,
         )
 
-    def where(self, sql: str, **params) -> SearchQuery:
+    def where(self, sql: str, **params) -> "SearchQuery":
         """Add raw SQL filter condition. BE CAREFUL WHEN USING!"""
         for k in params.keys():
             if k.startswith("__p"):
@@ -261,7 +259,7 @@ class SearchQuery:
 
     # === SQL Building ===
 
-    def _params(self) -> dict[str, object]:
+    def _params(self) -> Dict[str, object]:
         params = {}
         for _, p, *_ in self._search:
             params.update(p)
@@ -269,14 +267,14 @@ class SearchQuery:
             params.update(p)
         return params
 
-    def _order_sql(self, params: dict) -> str:
+    def _order_sql(self, params: Dict) -> str:
         if self._order == OrderBy.RELEVANCE and self._search:
             sql, p, col = self._search[-1]
             val = next(iter(p.values())) if p else ""
             params["rank_q"] = str(val).replace("%", "")
             if "<%" in sql:
-                return f"word_similarity(:rank_q, {col}) DESC, downloads DESC"
-            return f"ts_rank_cd({col}, websearch_to_tsquery('english', :rank_q)) DESC, downloads DESC"
+                return "word_similarity(:rank_q, {}) DESC, downloads DESC".format(col)
+            return "ts_rank_cd({}, websearch_to_tsquery('english', :rank_q)) DESC, downloads DESC".format(col)
 
         if self._order == OrderBy.RANDOM:
             return "RANDOM()"
@@ -286,12 +284,12 @@ class SearchQuery:
 
         col, default_dir, nulls = _ORDER_COLUMNS[self._order]
         direction = self._sort_dir or default_dir
-        clause = f"{col} {direction.value.upper()}"
+        clause = "{} {}".format(col, direction.value.upper())
         if nulls:
-            clause += f" NULLS {nulls}"
+            clause += " NULLS {}".format(nulls)
         return clause
 
-    def build(self) -> tuple[str, dict]:
+    def build(self) -> Tuple[str, Dict]:
         params = self._params()
         order = self._order_sql(params)
         limit, offset = self._page_size, (self._page - 1) * self._page_size
@@ -300,30 +298,40 @@ class SearchQuery:
         filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
 
         if search_sql and filter_sql:
-            sql = f"SELECT {_SELECT} FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            sql = "SELECT {} FROM (SELECT {} FROM mv_books_dc WHERE {}) t WHERE {} ORDER BY {} LIMIT {} OFFSET {}".format(
+                _SELECT, _SUBQUERY, search_sql, filter_sql, order, limit, offset
+            )
         elif search_sql:
-            sql = f"SELECT {_SELECT} FROM mv_books_dc WHERE {search_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            sql = "SELECT {} FROM mv_books_dc WHERE {} ORDER BY {} LIMIT {} OFFSET {}".format(
+                _SELECT, search_sql, order, limit, offset
+            )
         elif filter_sql:
-            sql = f"SELECT {_SELECT} FROM mv_books_dc WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            sql = "SELECT {} FROM mv_books_dc WHERE {} ORDER BY {} LIMIT {} OFFSET {}".format(
+                _SELECT, filter_sql, order, limit, offset
+            )
         else:
-            sql = f"SELECT {_SELECT} FROM mv_books_dc ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            sql = "SELECT {} FROM mv_books_dc ORDER BY {} LIMIT {} OFFSET {}".format(
+                _SELECT, order, limit, offset
+            )
 
         return sql, params
 
-    def build_count(self) -> tuple[str, dict]:
+    def build_count(self) -> Tuple[str, Dict]:
         params = self._params()
         search_sql = " AND ".join(s[0] for s in self._search) if self._search else None
         filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
 
         if search_sql and filter_sql:
             return (
-                f"SELECT COUNT(*) FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql}",
+                "SELECT COUNT(*) FROM (SELECT {} FROM mv_books_dc WHERE {}) t WHERE {}".format(
+                    _SUBQUERY, search_sql, filter_sql
+                ),
                 params,
             )
         elif search_sql:
-            return f"SELECT COUNT(*) FROM mv_books_dc WHERE {search_sql}", params
+            return "SELECT COUNT(*) FROM mv_books_dc WHERE {}".format(search_sql), params
         elif filter_sql:
-            return f"SELECT COUNT(*) FROM mv_books_dc WHERE {filter_sql}", params
+            return "SELECT COUNT(*) FROM mv_books_dc WHERE {}".format(filter_sql), params
         return "SELECT COUNT(*) FROM mv_books_dc", params
 
 
@@ -339,16 +347,16 @@ class FullTextSearch:
         self.engine = engine
         self.Session = sessionmaker(bind=self.engine)
 
-    def query(self, crosswalk: Crosswalk = Crosswalk.PG) -> SearchQuery:
+    def query(self, crosswalk: Crosswalk = Crosswalk.PG) -> "SearchQuery":
         """Create a new query builder."""
         q = SearchQuery()
         q._crosswalk = crosswalk
         return q
 
-    def _transform(self, row, cw: Crosswalk) -> dict:
+    def _transform(self, row, cw: Crosswalk) -> Dict:
         return CROSSWALK_MAP[cw](row)
 
-    def execute(self, q: SearchQuery) -> dict:
+    def execute(self, q: "SearchQuery") -> Dict:
         """Execute query and return paginated results."""
         with self.Session() as session:
             count_sql, count_params = q.build_count()
@@ -367,13 +375,13 @@ class FullTextSearch:
             "total_pages": total_pages,
         }
 
-    def count(self, q: SearchQuery) -> int:
+    def count(self, q: "SearchQuery") -> int:
         """Count results without fetching."""
         with self.Session() as session:
             sql, params = q.build_count()
             return session.execute(text(sql), params).scalar() or 0
 
-    def list_bookshelves(self) -> list[dict]:
+    def list_bookshelves(self) -> List[Dict]:
         """
         List all bookshelves with book counts.
 
@@ -393,7 +401,7 @@ class FullTextSearch:
                 {"id": r.id, "name": r.name, "book_count": r.book_count} for r in rows
             ]
 
-    def list_subjects(self) -> list[dict]:
+    def list_subjects(self) -> List[Dict]:
         """
         List all subjects with book counts.
 
@@ -413,7 +421,7 @@ class FullTextSearch:
                 {"id": r.id, "name": r.name, "book_count": r.book_count} for r in rows
             ]
 
-    def get_subject_name(self, subject_id: int) -> str | None:
+    def get_subject_name(self, subject_id: int) -> Optional[str]:
         """
         Get a single subject's name by ID (fast lookup).
 
@@ -429,8 +437,8 @@ class FullTextSearch:
             return result
 
     def get_top_subjects_for_query(
-        self, q: SearchQuery, limit: int = 15, max_books: int = 1000
-    ) -> list[dict]:
+        self, q: "SearchQuery", limit: int = 15, max_books: int = 1000
+    ) -> List[Dict]:
         """
         Get top N subjects from a search result set for dynamic facets.
 
@@ -450,14 +458,14 @@ class FullTextSearch:
         search_sql = " AND ".join(s[0] for s in q._search) if q._search else None
         filter_sql = " AND ".join(f[0] for f in q._filters) if q._filters else None
         where_parts = [p for p in (search_sql, filter_sql) if p]
-        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+        where_clause = "WHERE {}".format(" AND ".join(where_parts)) if where_parts else ""
 
-        sql = f"""
+        sql = """
             WITH matched_books AS (
                 SELECT book_id
                 FROM mv_books_dc
-                {where_clause}
-                ORDER BY {order_sql}
+                {}
+                ORDER BY {}
                 LIMIT :max_books
             )
             SELECT
@@ -470,7 +478,7 @@ class FullTextSearch:
             GROUP BY s.pk, s.subject
             ORDER BY count DESC
             LIMIT :limit
-        """
+        """.format(where_clause, order_sql)
         params["limit"] = limit
         params["max_books"] = max_books
 
@@ -478,7 +486,7 @@ class FullTextSearch:
             rows = session.execute(text(sql), params).fetchall()
             return [{"id": r.id, "name": r.name, "count": r.count} for r in rows]
 
-    def get_locc_children(self, parent: LoCCMainClass | str) -> list[dict]:
+    def get_locc_children(self, parent: Union[LoCCMainClass, str]) -> List[Dict]:
         """Get LoCC children for a parent code."""
         if isinstance(parent, LoCCMainClass):
             parent_code = parent.code
@@ -503,7 +511,7 @@ class FullTextSearch:
         """)
 
         with self.Session() as session:
-            rows = session.execute(sql, {"pattern": f"{parent_code}%", "parent": parent_code}).mappings().all()
+            rows = session.execute(sql, {"pattern": "{}%".format(parent_code), "parent": parent_code}).mappings().all()
             return [
                 {"code": r["code"], "label": r["label"], "has_children": bool(r["has_children"])}
                 for r in rows

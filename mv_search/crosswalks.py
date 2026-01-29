@@ -1,6 +1,6 @@
 import html
 import re
-from typing import Any
+from typing import Any, Dict, List, Optional
 from itertools import zip_longest
 
 from .constants import Crosswalk, Language
@@ -20,7 +20,7 @@ def _estimate_mp3_duration(file_size_bytes: int, bitrate_kbps: int = 128) -> int
     return int(file_size_bytes * 8 / (bitrate_kbps * 1000))
 
 
-def _rights_text(copyrighted: int | None) -> str:
+def _rights_text(copyrighted: Optional[int]) -> str:
     return (
         "Copyrighted. Read the copyright notice inside this book for details."
         if copyrighted
@@ -37,7 +37,7 @@ def _gutenberg_url(path: str) -> str:
     return f"https://www.gutenberg.org/{path.lstrip('/')}"
 
 
-def _build_creators(row) -> list[dict[str, Any]]:
+def _build_creators(row) -> List[Dict[str, Any]]:
     names = list(row.creator_names) if row.creator_names else []
     roles = list(row.creator_roles) if row.creator_roles else []
     ids = list(row.creator_ids) if row.creator_ids else []
@@ -63,7 +63,7 @@ def _build_creators(row) -> list[dict[str, Any]]:
     return creators
 
 
-def _build_subjects(row) -> list[dict[str, Any]]:
+def _build_subjects(row) -> List[Dict[str, Any]]:
     names = list(row.subject_names) if row.subject_names else []
     ids = list(row.subject_ids) if row.subject_ids else []
     return [
@@ -73,7 +73,7 @@ def _build_subjects(row) -> list[dict[str, Any]]:
     ]
 
 
-def _build_bookshelves(row) -> list[dict[str, Any]]:
+def _build_bookshelves(row) -> List[Dict[str, Any]]:
     names = list(row.bookshelf_names) if row.bookshelf_names else []
     ids = list(row.bookshelf_ids) if row.bookshelf_ids else []
     return [
@@ -83,7 +83,7 @@ def _build_bookshelves(row) -> list[dict[str, Any]]:
     ]
 
 
-def _build_formats(row) -> list[dict[str, Any]]:
+def _build_formats(row) -> List[Dict[str, Any]]:
     filenames = list(row.format_filenames) if row.format_filenames else []
     filetypes = list(row.format_filetypes) if row.format_filetypes else []
     hr_filetypes = list(row.format_hr_filetypes) if row.format_hr_filetypes else []
@@ -106,7 +106,7 @@ def _build_formats(row) -> list[dict[str, Any]]:
 
 
 @format_dict_result
-def crosswalk_pg(row) -> dict[str, Any]:
+def crosswalk_pg(row) -> Dict[str, Any]:
     creators = _build_creators(row)
     subjects = [s["subject"] for s in _build_subjects(row) if s.get("subject")]
     bookshelves = [b["bookshelf"] for b in _build_bookshelves(row) if b.get("bookshelf")]
@@ -138,7 +138,7 @@ def crosswalk_pg(row) -> dict[str, Any]:
 
 
 @format_dict_result
-def crosswalk_opds(row) -> dict[str, Any]:
+def crosswalk_opds(row) -> Dict[str, Any]:
     """Transform row to OPDS 2.0 / Readium Audiobook Profile format."""
     creators = _build_creators(row)
     subjects = [s["subject"] for s in _build_subjects(row) if s.get("subject")]
@@ -194,13 +194,16 @@ def crosswalk_opds(row) -> dict[str, Any]:
     desc_parts = []
     if creators:
         desc_parts.append(f"Creators: {formatter(all=True, strunk_join=True, pretty=True, dates=True, show_role=True)}")
-    if summary := (list(row.summary) if row.summary else [None])[0]:
+    summary = (list(row.summary) if row.summary else [None])[0]
+    if summary:
         desc_parts.append(summary)
-    if credits := (list(row.credits) if row.credits else [None])[0]:
+    credits = (list(row.credits) if row.credits else [None])[0]
+    if credits:
         desc_parts.append(f"Credits: {credits}")
     if row.reading_level:
         desc_parts.append(f"Reading Level: {row.reading_level}")
-    if dcmitype := [t for t in (list(row.dcmitypes) if row.dcmitypes else []) if t]:
+    dcmitype = [t for t in (list(row.dcmitypes) if row.dcmitypes else []) if t]
+    if dcmitype:
         desc_parts.append(f"Category: {', '.join(dcmitype)}")
     desc_parts.append(f"Rights: {_rights_text(row.copyrighted)}")
     desc_parts.append(f"Downloads: {row.downloads}")

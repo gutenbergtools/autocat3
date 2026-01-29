@@ -5,7 +5,7 @@ https://github.com/gutenbergtools/libgutenberg/blob/master/libgutenberg/DublinCo
 
 import re
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List, Optional, Union
 
 _RE_MARC_SUBFIELD = re.compile(r"\$[a-z]")
 _RE_MARC_SPSEP = re.compile(r"[\n ](,|:)([A-Za-z0-9])")
@@ -99,7 +99,7 @@ def format_list(parent_key: str, lst: list, fields: frozenset = _FIELDS_TO_FORMA
     return result
 
 
-def format_dict_result(fn: Callable | None = None, *, fields_to_format: frozenset = _FIELDS_TO_FORMAT) -> Callable:
+def format_dict_result(fn: Optional[Callable] = None, *, fields_to_format: frozenset = _FIELDS_TO_FORMAT) -> Callable:
     """Decorator that formats dict results."""
     fields_fs = frozenset(fields_to_format)
 
@@ -117,7 +117,7 @@ def format_dict_result(fn: Callable | None = None, *, fields_to_format: frozense
     return decorator(fn)
 
 
-def strunk(items: list[str]) -> str:
+def strunk(items: List[str]) -> str:
     """
     Join list with Oxford comma: ["Tom", "Dick", "Harry"] -> "Tom, Dick, and Harry"
     """
@@ -130,7 +130,7 @@ def strunk(items: list[str]) -> str:
     return f"{', '.join(items[:-1])}, and {items[-1]}"
 
 
-def _format_date_range(floor: int | None, ceil: int | None) -> str:
+def _format_date_range(floor: Optional[int], ceil: Optional[int]) -> str:
     """Format birth/death date with uncertainty."""
     if ceil and not floor:
         if ceil < 0:
@@ -160,11 +160,11 @@ def _reverse_name(name: str) -> str:
 
 def format_contributor(
     name: str,
-    role: str | None = None,
-    born_floor: int | None = None,
-    born_ceil: int | None = None,
-    died_floor: int | None = None,
-    died_ceil: int | None = None,
+    role: Optional[str] = None,
+    born_floor: Optional[int] = None,
+    born_ceil: Optional[int] = None,
+    died_floor: Optional[int] = None,
+    died_ceil: Optional[int] = None,
     *,
     pretty: bool = False,
     dates: bool = True,
@@ -262,7 +262,7 @@ class ContributorFormat:
         fmt(all=True, strunk=True)         # all: "Mark Twain, Jane Doe, and John Smith"
     """
 
-    def __init__(self, contributors: list[dict]):
+    def __init__(self, contributors: List[Dict]):
         self._c = contributors
 
     def __call__(

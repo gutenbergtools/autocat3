@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Callable
+from typing import Callable, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlencode
 
 import cherrypy
@@ -49,7 +47,7 @@ def _url(path: str, params: dict) -> str:
     return f"{path}?{urlencode(clean, doseq=True)}" if clean else path
 
 
-def _paginate(page, limit, default=28) -> tuple[int, int]:
+def _paginate(page, limit, default=28) -> Tuple[int, int]:
     """Parse and clamp pagination params."""
     try:
         return max(1, int(page)), max(1, min(100, int(limit)))
@@ -64,7 +62,7 @@ def _search_type(field: str) -> SearchType:
     return SearchType.FUZZY
 
 
-def _sort_direction(order: str) -> SortDirection | None:
+def _sort_direction(order: str) -> Optional[SortDirection]:
     """Parse sort order string."""
     return {"asc": SortDirection.ASC, "desc": SortDirection.DESC}.get(order)
 
@@ -106,7 +104,7 @@ class OPDSFeed:
             q.order_by(OrderBy.DOWNLOADS)
         return q
 
-    def _top_subjects(self, q) -> list[dict] | None:
+    def _top_subjects(self, q) -> Optional[List[dict]]:
         """Get top subjects for a query."""
         try:
             return self.fts.get_top_subjects_for_query(q, limit=15, max_books=500)
@@ -136,7 +134,7 @@ class OPDSFeed:
         audiobook: str,
         sort: str,
         sort_order: str,
-        subjects: list | None = None,
+        subjects: Optional[List] = None,
     ) -> list:
         """Build common facets for sort, copyright, format, language."""
         facets = [
@@ -218,8 +216,8 @@ class OPDSFeed:
     @cherrypy.tools.json_out()
     def bookshelves(
         self,
-        id: int | None = None,
-        category: str | None = None,
+        id: Optional[int] = None,
+        category: Optional[str] = None,
         page: int = 1,
         limit: int = 28,
         query: str = "",
@@ -422,7 +420,7 @@ class OPDSFeed:
     @cherrypy.tools.json_out()
     def subjects(
         self,
-        id: int | None = None,
+        id: Optional[int] = None,
         page: int = 1,
         limit: int = 28,
         query: str = "",
