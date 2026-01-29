@@ -2,7 +2,6 @@ import time
 
 from .constants import (
     Crosswalk,
-    Encoding,
     FileType,
     Language,
     LoCCMainClass,
@@ -96,8 +95,6 @@ test(
 test("author_id()", s.query().author_id(53)[1, 10])
 test("subject_id()", s.query().subject_id(1)[1, 10])
 test("bookshelf_id()", s.query().bookshelf_id(68)[1, 10])
-test("encoding() UTF8", s.query().encoding(Encoding.UTF8)[1, 10])
-test("encoding() ASCII", s.query().encoding(Encoding.ASCII)[1, 10])
 test("author_died_after()", s.query().author_died_after(1950)[1, 10])
 test("author_died_before()", s.query().author_died_before(1800)[1, 10])
 
@@ -233,28 +230,6 @@ start = time.perf_counter()
 count = s.count(s.query().search("Shakespeare"))
 ms = (time.perf_counter() - start) * 1000
 print(f"{'count()':<50} | {count:>6} | {ms:>7.1f}ms | (count only)")
-
-# === Custom Transformer ===
-print("-" * 130)
-print("Custom Transformer")
-print("-" * 130)
-
-
-def my_transformer(row):
-    author = " | ".join(row.creator_names) if row.creator_names else "Unknown"
-    return {
-        "id": row.book_id,
-        "name": f"{row.title} by {author}",
-        "popularity": row.downloads,
-    }
-
-
-s.set_custom_transformer(my_transformer)
-start = time.perf_counter()
-data = s.execute(s.query(Crosswalk.CUSTOM).search("Shakespeare")[1, 5])
-ms = (time.perf_counter() - start) * 1000
-first = data["results"][0] if data["results"] else {}
-print(f"{'Crosswalk.CUSTOM':<50} | {data['total']:>6} | {ms:>7.1f}ms | {first}")
 
 print("=" * 130)
 print("All tests complete!")

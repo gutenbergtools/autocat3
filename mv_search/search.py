@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker
 
 from .constants import (
     Crosswalk,
-    Encoding,
     FileType,
     Language,
     LoCCMainClass,
@@ -232,19 +231,6 @@ class SearchQuery:
         return self.filter(
             "EXISTS (SELECT 1 FROM mn_books_bookshelves mbb WHERE mbb.fk_books = book_id AND mbb.fk_bookshelves = {})",
             int(bid),
-        )
-
-    def encoding(self, enc: Union[Encoding, str]) -> "SearchQuery":
-        if isinstance(enc, Encoding):
-            enc_val = enc.value
-        else:
-            enc_val = str(enc)
-        return self.filter(
-            "EXISTS (SELECT 1 FROM files f "
-            "WHERE f.fk_books = book_id "
-            "AND f.obsoleted = 0 AND f.diskstatus = 0 "
-            "AND f.fk_encodings = {})",
-            enc_val,
         )
 
     def where(self, sql: str, **params) -> "SearchQuery":

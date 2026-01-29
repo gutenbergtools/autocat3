@@ -3,7 +3,6 @@ from typing import Tuple
 
 __all__ = [
     "FileType",
-    "Encoding",
     "SearchType",
     "SearchField",
     "OrderBy",
@@ -21,13 +20,6 @@ class FileType(str, Enum):
     PDF = "application/pdf"
     TXT = "text/plain"
     HTML = "text/html"
-
-
-class Encoding(str, Enum):
-    ASCII = "us-ascii"
-    UTF8 = "utf-8"
-    LATIN1 = "iso-8859-1"
-    WINDOWS1252 = "windows-1252"
 
 
 class SearchType(str, Enum):
