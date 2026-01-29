@@ -70,7 +70,7 @@ class SearchQuery:
         self._crosswalk = Crosswalk.PG
         self._param_counter = 0
 
-    def __getitem__(self, key: Union[int, tuple]) -> "SearchQuery":
+    def __getitem__(self, key: Union[int, Tuple]) -> "SearchQuery":
         """Set pagination: q[3] for page 3, q[2, 50] for page 2 with 50 results."""
         if isinstance(key, tuple):
             self._page = max(1, int(key[0]))

@@ -69,7 +69,7 @@ def format_field(key: str, value: str, fields: frozenset = _FIELDS_TO_FORMAT) ->
     return value.strip()
 
 
-def format_dict(d: dict, fields: frozenset = _FIELDS_TO_FORMAT) -> dict:
+def format_dict(d: Dict, fields: frozenset = _FIELDS_TO_FORMAT) -> Dict:
     """Recursively format dict values."""
     result = {}
     for key, value in d.items():
@@ -84,7 +84,7 @@ def format_dict(d: dict, fields: frozenset = _FIELDS_TO_FORMAT) -> dict:
     return result
 
 
-def format_list(parent_key: str, lst: list, fields: frozenset = _FIELDS_TO_FORMAT) -> list:
+def format_list(parent_key: str, lst: List, fields: frozenset = _FIELDS_TO_FORMAT) -> List:
     """Recursively format list items."""
     result = []
     for item in lst:
@@ -237,7 +237,7 @@ def format_contributor(
     return result
 
 
-def format_contributor_dict(contributor: dict, **kwargs) -> str:
+def format_contributor_dict(contributor: Dict, **kwargs) -> str:
     return format_contributor(
         name=contributor.get("name", ""),
         role=contributor.get("role"),

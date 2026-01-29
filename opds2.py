@@ -23,17 +23,17 @@ OPDS_TYPE = "application/opds+json"
 # ============ Helpers ============
 
 
-def _link(rel: str, href: str, **extras) -> dict:
+def _link(rel: str, href: str, **extras) -> Dict:
     """Create an OPDS link dict."""
     return {"rel": rel, "href": href, "type": OPDS_TYPE, **extras}
 
 
-def _nav(href: str, title: str) -> dict:
+def _nav(href: str, title: str) -> Dict:
     """Create a navigation item."""
     return {"href": href, "title": title, "type": OPDS_TYPE, "rel": "subsection"}
 
 
-def _facet(href: str, title: str, active: bool) -> dict:
+def _facet(href: str, title: str, active: bool) -> Dict:
     """Create a facet link. Includes 'rel': 'self' only if active."""
     link = {"href": href, "type": OPDS_TYPE, "title": title}
     if active:
@@ -41,7 +41,7 @@ def _facet(href: str, title: str, active: bool) -> dict:
     return link
 
 
-def _url(path: str, params: dict) -> str:
+def _url(path: str, params: Dict) -> str:
     """Build URL with query string, omitting empty values."""
     clean = {k: v for k, v in params.items() if v not in ("", None)}
     return f"{path}?{urlencode(clean, doseq=True)}" if clean else path
@@ -104,7 +104,7 @@ class OPDSFeed:
             q.order_by(OrderBy.DOWNLOADS)
         return q
 
-    def _top_subjects(self, q) -> Optional[List[dict]]:
+    def _top_subjects(self, q) -> Optional[List[Dict]]:
         """Get top subjects for a query."""
         try:
             return self.fts.get_top_subjects_for_query(q, limit=15, max_books=500)
@@ -114,7 +114,7 @@ class OPDSFeed:
 
     # -------- Feed Building --------
 
-    def _pagination_links(self, url_fn: Callable, page: int, total_pages: int) -> list:
+    def _pagination_links(self, url_fn: Callable, page: int, total_pages: int) -> List[Dict]:
         """Build pagination links."""
         links = []
         if page > 1:
@@ -134,8 +134,8 @@ class OPDSFeed:
         audiobook: str,
         sort: str,
         sort_order: str,
-        subjects: Optional[List] = None,
-    ) -> list:
+        subjects: Optional[List[Dict]] = None,
+    ) -> List[Dict]:
         """Build common facets for sort, copyright, format, language."""
         facets = [
             {
@@ -343,7 +343,7 @@ class OPDSFeed:
 
         return self._locc_books(parent, page, limit, query, lang, copyrighted, audiobook, sort, sort_order)
 
-    def _locc_navigation(self, parent: str, children: list):
+    def _locc_navigation(self, parent: str, children: List):
         """Build LoCC category navigation."""
         children.sort(key=lambda x: (len(x.get("code", "")), x.get("code", "")))
 
