@@ -334,14 +334,7 @@ def main():
                              'tools.staticdir.dir': install_dir + "/pics"}})
     # Mount OPDS feed at /opds
     cherrypy.log("Mounting OPDS feed", context='ENGINE', severity=logging.INFO)
-    opds_feed = OPDSFeed()
-
-    # Subscribe OPDS cache warming to the engine and timer.
-    # Run once on start, then every 24 hours.
-    cherrypy.engine.subscribe('start', opds_feed._initial_warm)
-    timer.add(24 * 60 * 60, opds_feed._warm_cache)
-
-    cherrypy.tree.mount(opds_feed, '/opds', {
+    cherrypy.tree.mount(OPDSFeed(), '/opds', {
         '/': {
             'tools.response_headers.on': True,
             'tools.response_headers.headers': [
