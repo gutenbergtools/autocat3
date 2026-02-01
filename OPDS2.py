@@ -1,5 +1,7 @@
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
+import logging
+import time
 
 import cherrypy
 
@@ -18,6 +20,7 @@ SAMPLE_LIMIT = 15
 LANGUAGES = [{"code": lang.code, "label": lang.label} for lang in Language]
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
+CACHE_TTL = 24 * 60 * 60  # 24 hours in seconds
 
 
 # Helpers
@@ -92,6 +95,82 @@ def _sort_direction(order: str) -> Optional[SortDirection]:
 class OPDSFeed:
     def __init__(self):
         self._fts = None
+        self._cache = {}
+        self._cache_timestamp = 0
+
+    def _initial_warm(self):
+        """Run initial cache warm after engine starts."""
+        try:
+            self._warm_cache()
+        except Exception as e:
+            cherrypy.log(f"Initial cache warm failed: {e}", context='OPDS', severity=logging.ERROR)
+
+    def _warm_cache(self):
+        """Pre-warm cache for bookshelves, LoCC, and subjects."""
+        cherrypy.log("Starting OPDS cache warm", context='OPDS', severity=logging.INFO)
+        start = time.time()
+        new_cache = {}
+
+        try:
+            # Warm bookshelf samples for each category
+            for cat in CuratedBookshelves:
+                for shelf_id, shelf_name in cat.shelves:
+                    cache_key = f"bookshelf_sample_{shelf_id}"
+                    try:
+                        result = self.fts.execute(
+                            self.fts.query(crosswalk=Crosswalk.OPDS)
+                            .bookshelf_id(shelf_id)
+                            .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT]
+                        )
+                        new_cache[cache_key] = {
+                            "result": result,
+                            "count": result.get("total", 0)
+                        }
+                    except Exception as e:
+                        cherrypy.log(f"Cache warm bookshelf {shelf_id}: {e}", context='OPDS', severity=logging.WARNING)
+
+            # Warm LoCC navigation counts
+            try:
+                top_loccs = self.fts.get_locc_children("")
+                for locc in top_loccs:
+                    code = locc["code"]
+                    cache_key = f"locc_children_{code}"
+                    try:
+                        children = self.fts.get_locc_children(code)
+                        new_cache[cache_key] = children
+                        # Cache counts for leaf nodes
+                        for child in children:
+                            if not child.get("has_children", False):
+                                count_key = f"locc_count_{child['code']}"
+                                new_cache[count_key] = self.fts.count(
+                                    self.fts.query().locc(child["code"])
+                                )
+                    except Exception as e:
+                        cherrypy.log(f"Cache warm LoCC {code}: {e}", context='OPDS', severity=logging.WARNING)
+            except Exception as e:
+                cherrypy.log(f"Cache warm LoCC top: {e}", context='OPDS', severity=logging.WARNING)
+
+            # Warm subject list
+            try:
+                subjects = self.fts.list_subjects()
+                new_cache["subjects_list"] = sorted(
+                    subjects, key=lambda x: x["book_count"], reverse=True
+                )
+            except Exception as e:
+                cherrypy.log(f"Cache warm subjects: {e}", context='OPDS', severity=logging.WARNING)
+
+            self._cache = new_cache
+            self._cache_timestamp = time.time()
+            elapsed = time.time() - start
+            cherrypy.log(f"OPDS cache warm complete: {len(new_cache)} items in {elapsed:.1f}s",
+                        context='OPDS', severity=logging.INFO)
+
+        except Exception as e:
+            cherrypy.log(f"Cache warm error: {e}", context='OPDS', severity=logging.ERROR)
+
+    def _get_cached(self, key: str, default=None):
+        """Get a cached value if available."""
+        return self._cache.get(key, default)
 
     @property
     def fts(self):
@@ -127,7 +206,7 @@ class OPDSFeed:
         try:
             return self.fts.get_top_subjects_for_query(q, limit=15, max_books=500)
         except Exception as e:
-            cherrypy.log(f"Top subjects error: {e}")
+            cherrypy.log(f"Top subjects error: {e}", context='OPDS', severity=logging.WARNING)
             return None
 
     # Feed Building
@@ -256,21 +335,21 @@ class OPDSFeed:
                             "Any",
                             not lang,
                         )
-                    ]
-                    + [
-                        _facet(
-                            url_fn(
-                                query,
-                                item["code"],
-                                copyrighted,
-                                audiobook,
-                                sort,
-                                sort_order,
-                            ),
-                            item["label"],
-                            lang == item["code"],
-                        )
-                        for item in LANGUAGES
+                        + [
+                            _facet(
+                                url_fn(
+                                    query,
+                                    item["code"],
+                                    copyrighted,
+                                    audiobook,
+                                    sort,
+                                    sort_order,
+                                ),
+                                item["label"],
+                                lang == item["code"],
+                            )
+                            for item in LANGUAGES
+                        ],
                     ],
                 },
             ]
@@ -403,7 +482,7 @@ class OPDSFeed:
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
-            cherrypy.log(f"Bookshelf error: {e}")
+            cherrypy.log(f"Bookshelf error: {e}", context='OPDS', severity=logging.ERROR)
             raise cherrypy.HTTPError(500, "Browse failed")
 
         base = {
@@ -468,14 +547,12 @@ class OPDSFeed:
         groups, counts = [], {}
 
         for s in shelves:
-            try:
-                result = self.fts.execute(
-                    self.fts.query(crosswalk=Crosswalk.OPDS)
-                    .bookshelf_id(s["id"])
-                    .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT]
-                )
-                counts[s["id"]] = result.get("total", 0)
-                if result.get("results"):
+            cache_key = f"bookshelf_sample_{s['id']}"
+            cached = self._get_cached(cache_key)
+
+            if cached:
+                counts[s["id"]] = cached["count"]
+                if cached["result"].get("results"):
                     groups.append(
                         {
                             "metadata": {
@@ -483,12 +560,31 @@ class OPDSFeed:
                                 "numberOfItems": counts[s["id"]],
                             },
                             "links": [_link("self", f"/opds/bookshelves?id={s['id']}")],
-                            "publications": result["results"],
+                            "publications": cached["result"]["results"],
                         }
                     )
-            except Exception as e:
-                cherrypy.log(f"Bookshelf sample error {s['id']}: {e}")
-                counts[s["id"]] = 0
+            else:
+                try:
+                    result = self.fts.execute(
+                        self.fts.query(crosswalk=Crosswalk.OPDS)
+                        .bookshelf_id(s["id"])
+                        .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT]
+                    )
+                    counts[s["id"]] = result.get("total", 0)
+                    if result.get("results"):
+                        groups.append(
+                            {
+                                "metadata": {
+                                    "title": s["name"],
+                                    "numberOfItems": counts[s["id"]],
+                                },
+                                "links": [_link("self", f"/opds/bookshelves?id={s['id']}")],
+                                "publications": result["results"],
+                            }
+                        )
+                except Exception as e:
+                    cherrypy.log(f"Bookshelf sample error {s['id']}: {e}", context='OPDS', severity=logging.WARNING)
+                    counts[s["id"]] = 0
 
         return {
             "metadata": {"title": found.genre, "numberOfItems": len(shelves)},
@@ -529,7 +625,7 @@ class OPDSFeed:
         try:
             children = self.fts.get_locc_children(parent)
         except Exception as e:
-            cherrypy.log(f"LoCC error: {e}")
+            cherrypy.log(f"LoCC error: {e}", context='OPDS', severity=logging.ERROR)
             children = []
 
         if children:
@@ -561,10 +657,18 @@ class OPDSFeed:
             has_children = child.get("has_children", False)
 
             if has_children:
-                count = len(self.fts.get_locc_children(code))
+                cached_children = self._get_cached(f"locc_children_{code}")
+                if cached_children is not None:
+                    count = len(cached_children)
+                else:
+                    count = len(self.fts.get_locc_children(code))
                 nav_title = f"{label} ({count} subcategories)"
             else:
-                count = self.fts.count(self.fts.query().locc(code))
+                cached_count = self._get_cached(f"locc_count_{code}")
+                if cached_count is not None:
+                    count = cached_count
+                else:
+                    count = self.fts.count(self.fts.query().locc(code))
                 nav_title = f"{label} ({count} books)"
 
             nav.append(_nav(f"/opds/loccs?parent={code}", nav_title))
@@ -602,7 +706,7 @@ class OPDSFeed:
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
-            cherrypy.log(f"LoCC browse error: {e}")
+            cherrypy.log(f"LoCC browse error: {e}", context='OPDS', severity=logging.ERROR)
             raise cherrypy.HTTPError(500, "Browse failed")
 
         base = {
@@ -686,9 +790,14 @@ class OPDSFeed:
                 sort_order,
             )
 
-        subjects = sorted(
-            self.fts.list_subjects(), key=lambda x: x["book_count"], reverse=True
-        )
+        cached_subjects = self._get_cached("subjects_list")
+        if cached_subjects is not None:
+            subjects = cached_subjects
+        else:
+            subjects = sorted(
+                self.fts.list_subjects(), key=lambda x: x["book_count"], reverse=True
+            )
+
         return {
             "metadata": {"title": "Subjects", "numberOfItems": len(subjects)},
             "links": [
@@ -728,7 +837,7 @@ class OPDSFeed:
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
-            cherrypy.log(f"Subject error: {e}")
+            cherrypy.log(f"Subject error: {e}", context='OPDS', severity=logging.ERROR)
             raise cherrypy.HTTPError(500, "Browse failed")
 
         base = {
@@ -811,7 +920,7 @@ class OPDSFeed:
                 self._filter(sq, lang, copyrighted, audiobook)
                 subjects = self._top_subjects(sq)
         except Exception as e:
-            cherrypy.log(f"Search error: {e}")
+            cherrypy.log(f"Search error: {e}", context='OPDS', severity=logging.ERROR)
             raise cherrypy.HTTPError(500, "Search failed")
 
         base = {
@@ -889,8 +998,11 @@ if __name__ == "__main__":
             cherrypy.response.body = b""
             cherrypy.request.handler = None
 
+    feed = OPDSFeed()
+    feed.start_background_task()
+
     cherrypy.tree.mount(
-        OPDSFeed(),
+        feed,
         "/opds",
         {
             "/": {

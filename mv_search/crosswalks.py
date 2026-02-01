@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from itertools import zip_longest
 
 from .constants import Crosswalk, Language
-from .formatters import format_dict_result, ContributorFormat, format_contributor_dict
+from .formatters import format_dict_result, ContributorFormat
 
 LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 
