@@ -44,7 +44,7 @@ import diagnostics
 import Sitemap
 import Formatters
 from errors import ErrorPage
-from opds2 import OPDSFeed
+from OPDS2 import OPDSFeed
 
 import Timer
 

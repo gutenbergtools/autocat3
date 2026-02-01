@@ -8,7 +8,7 @@ from .constants import (
     OrderBy,
     SearchType,
 )
-from .search import FullTextSearch
+from .Search import FullTextSearch
 
 s = FullTextSearch()
 
@@ -36,13 +36,13 @@ print("=" * 130)
 print(f"{'Test':<50} | {'Count':>6} | {'Time':>8} | First Result")
 print("=" * 130)
 
-# === Search: FTS ===
+# Search: FTS
 print("-" * 130)
 print("FTS Search (stemming, GIN tsvector)")
 print("-" * 130)
 test("FTS BOOK", s.query().search("Shakespeare")[1, 10])
 
-# === Search: FUZZY ===
+# Search: FUZZY
 print("-" * 130)
 print("FUZZY Search (typo-tolerant, GiST trigram)")
 print("-" * 130)
@@ -51,14 +51,14 @@ test(
     s.query().search("Shakspeare", search_type=SearchType.FUZZY)[1, 10],
 )
 
-# === Filters: PK ===
+# Filters: PK
 print("-" * 130)
 print("Filters: Primary Key")
 print("-" * 130)
 test("etext()", s.query().etext(1342)[1, 10])
 test("etexts()", s.query().etexts([1342, 84, 11])[1, 10])
 
-# === Filters: B-tree ===
+# Filters: B-tree
 print("-" * 130)
 print("Filters: B-tree")
 print("-" * 130)
@@ -71,14 +71,14 @@ test("audiobook()", s.query().audiobook()[1, 10])
 test("author_born_after()", s.query().author_born_after(1900)[1, 10])
 test("author_born_before()", s.query().author_born_before(1700)[1, 10])
 
-# === Filters: Date ===
+# Filters: Date
 print("-" * 130)
 print("Filters: Date")
 print("-" * 130)
 test("released_after()", s.query().released_after("2020-01-01")[1, 10])
 test("released_before()", s.query().released_before("2000-01-01")[1, 10])
 
-# === Filters: GIN Array / JSONB ===
+# Filters: GIN Array / JSONB
 print("-" * 130)
 print("Filters: GIN Array / JSONB")
 print("-" * 130)
@@ -98,21 +98,17 @@ test("bookshelf_id()", s.query().bookshelf_id(68)[1, 10])
 test("author_died_after()", s.query().author_died_after(1950)[1, 10])
 test("author_died_before()", s.query().author_died_before(1800)[1, 10])
 
-# === Chained Searches (AND logic) ===
+# Chained Searches (AND logic)
 print("-" * 130)
 print("Chained Searches (AND logic)")
 print("-" * 130)
 test(
     "FTS AUTHOR + FTS SUBJECT",
-    s.query()
-    .search("Shakespeare")
-    .search("Tragedy")[1, 10],
+    s.query().search("Shakespeare").search("Tragedy")[1, 10],
 )
 test(
     "FTS TITLE + FTS BOOKSHELF",
-    s.query()
-    .search("Adventure")
-    .search("Children")[1, 10],
+    s.query().search("Adventure").search("Children")[1, 10],
 )
 test(
     "FUZZY AUTHOR + FTS TITLE",
@@ -121,7 +117,7 @@ test(
     .search("Hamlet")[1, 10],
 )
 
-# === Custom SQL ===
+# Custom SQL
 print("-" * 130)
 print("Custom SQL")
 print("-" * 130)
@@ -134,7 +130,7 @@ test(
     s.query().where("COALESCE(array_length(credits, 1), 0) > 0")[1, 10],
 )
 
-# === Ordering ===
+# Ordering
 print("-" * 130)
 print("Ordering")
 print("-" * 130)
@@ -152,7 +148,7 @@ test(
 )
 test("order_by(RANDOM)", s.query().search("Novel").order_by(OrderBy.RANDOM)[1, 10])
 
-# === Combined Filters ===
+# Combined Filters
 print("-" * 130)
 print("Combined Filters")
 print("-" * 130)
@@ -174,7 +170,7 @@ test(
 )
 test("locc + public_domain", s.query().locc(LoCCMainClass.P).public_domain()[1, 10])
 
-# === Crosswalk Formats ===
+# Crosswalk Formats
 print("-" * 130)
 print("Crosswalk Formats")
 print("-" * 130)
@@ -190,21 +186,29 @@ if first:
     print(
         f"  -> ebook_no: {first.get('ebook_no')}, files: {len(first.get('files', []))}, contributors: {len(first.get('contributors', []))}"
     )
-    if first.get('contributors'):
-        c = first['contributors'][0]
+    if first.get("contributors"):
+        c = first["contributors"][0]
         print(
             f"  -> first contributor: {c.get('name')}, born: {c.get('born_floor')}-{c.get('born_ceil')}, died: {c.get('died_floor')}-{c.get('died_ceil')}"
         )
     # Test ContributorFormat: fmt() = main author, fmt(all=True) = all authors
-    fmt = first.get('format')
+    fmt = first.get("format")
     if fmt:
         print(f"  -> fmt():                                     {fmt()}")
         print(f"  -> fmt(pretty=True):                          {fmt(pretty=True)}")
-        print(f"  -> fmt(pretty=True, dates=False):             {fmt(pretty=True, dates=False)}")
+        print(
+            f"  -> fmt(pretty=True, dates=False):             {fmt(pretty=True, dates=False)}"
+        )
         print(f"  -> fmt(all=True):                             {fmt(all=True)}")
-        print(f"  -> fmt(all=True, pretty=True):                {fmt(all=True, pretty=True)}")
-        print(f"  -> fmt(all=True, strunk_join=True):           {fmt(all=True, strunk_join=True)}")
-        print(f"  -> fmt(all=True, strunk_join=True, pretty=True): {fmt(all=True, strunk_join=True, pretty=True)}")
+        print(
+            f"  -> fmt(all=True, pretty=True):                {fmt(all=True, pretty=True)}"
+        )
+        print(
+            f"  -> fmt(all=True, strunk_join=True):           {fmt(all=True, strunk_join=True)}"
+        )
+        print(
+            f"  -> fmt(all=True, strunk_join=True, pretty=True): {fmt(all=True, strunk_join=True, pretty=True)}"
+        )
 
 start = time.perf_counter()
 data = s.execute(s.query(Crosswalk.OPDS).search("Shakespeare")[1, 5])
@@ -214,7 +218,7 @@ print(
     f"{'Crosswalk.OPDS':<50} | {data['total']:>6} | {ms:>7.1f}ms | keys: {list(first.get('metadata', {}).keys())}"
 )
 
-# === Pagination ===
+# Pagination
 print("-" * 130)
 print("Pagination")
 print("-" * 130)
@@ -222,7 +226,7 @@ test("page 1", s.query().search("Novel")[1, 5])
 test("page 2", s.query().search("Novel")[2, 5])
 test("page 3", s.query().search("Novel")[3, 5])
 
-# === Count-only ===
+# Count-only
 print("-" * 130)
 print("Count-only")
 print("-" * 130)

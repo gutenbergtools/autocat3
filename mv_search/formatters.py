@@ -5,7 +5,7 @@ https://github.com/gutenbergtools/libgutenberg/blob/master/libgutenberg/DublinCo
 
 import re
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 _RE_MARC_SUBFIELD = re.compile(r"\$[a-z]")
 _RE_MARC_SPSEP = re.compile(r"[\n ](,|:)([A-Za-z0-9])")
@@ -14,20 +14,24 @@ _RE_CURLY_DOUBLE = re.compile("[\u201c\u201d]")  # " "
 _RE_TITLE_SPLITTER = re.compile(r"\s*[;:]\s*")
 _RE_PARENS = re.compile(r"\(.*\)")
 _RE_MULTI_SPACE = re.compile(r"\s+")
-_RE_UPDATED = re.compile(r"\s*[Uu]pdated?:\s*.*$")  # Strip "Updated:" and everything after
+_RE_UPDATED = re.compile(
+    r"\s*[Uu]pdated?:\s*.*$"
+)  # Strip "Updated:" and everything after
 
-_FIELDS_TO_FORMAT = frozenset({
-    "title",        # Book title
-    "name",         # Contributor names (from authors table)
-    "publisher",    # MARC 260/264
-    "summary",      # MARC 520
-    "credits",      # MARC 508
-    "reading_level",# MARC 908
-    "subject",      # Individual subject string
-    "subjects",     # List of subjects (parent key)
-    "bookshelf",    # Individual bookshelf string
-    "bookshelves",  # List of bookshelves (parent key)
-})
+_FIELDS_TO_FORMAT = frozenset(
+    {
+        "title",  # Book title
+        "name",  # Contributor names (from authors table)
+        "publisher",  # MARC 260/264
+        "summary",  # MARC 520
+        "credits",  # MARC 508
+        "reading_level",  # MARC 908
+        "subject",  # Individual subject string
+        "subjects",  # List of subjects (parent key)
+        "bookshelf",  # Individual bookshelf string
+        "bookshelves",  # List of bookshelves (parent key)
+    }
+)
 
 
 def strip_marc_subfields(text: str) -> str:
@@ -84,7 +88,9 @@ def format_dict(d: Dict, fields: frozenset = _FIELDS_TO_FORMAT) -> Dict:
     return result
 
 
-def format_list(parent_key: str, lst: List, fields: frozenset = _FIELDS_TO_FORMAT) -> List:
+def format_list(
+    parent_key: str, lst: List, fields: frozenset = _FIELDS_TO_FORMAT
+) -> List:
     """Recursively format list items."""
     result = []
     for item in lst:
@@ -99,7 +105,9 @@ def format_list(parent_key: str, lst: List, fields: frozenset = _FIELDS_TO_FORMA
     return result
 
 
-def format_dict_result(fn: Optional[Callable] = None, *, fields_to_format: frozenset = _FIELDS_TO_FORMAT) -> Callable:
+def format_dict_result(
+    fn: Optional[Callable] = None, *, fields_to_format: frozenset = _FIELDS_TO_FORMAT
+) -> Callable:
     """Decorator that formats dict results."""
     fields_fs = frozenset(fields_to_format)
 
@@ -110,6 +118,7 @@ def format_dict_result(fn: Optional[Callable] = None, *, fields_to_format: froze
             if isinstance(result, dict):
                 return format_dict(result, fields_fs)
             return result
+
         return wrapper
 
     if fn is None:
@@ -288,13 +297,18 @@ class ContributorFormat:
         """
         if all:
             formatted = [
-                format_contributor_dict(c, pretty=pretty, dates=dates, show_role=show_role)
-                for c in self._c if c.get("name")
+                format_contributor_dict(
+                    c, pretty=pretty, dates=dates, show_role=show_role
+                )
+                for c in self._c
+                if c.get("name")
             ]
             if strunk_join:
                 return strunk(formatted)
             return sep.join(formatted)
         # Main/first author only
         if self._c:
-            return format_contributor_dict(self._c[0], pretty=pretty, dates=dates, show_role=show_role)
+            return format_contributor_dict(
+                self._c[0], pretty=pretty, dates=dates, show_role=show_role
+            )
         return ""

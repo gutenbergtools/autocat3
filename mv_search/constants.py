@@ -33,6 +33,7 @@ class SearchField(str, Enum):
 
 class OrderBy(str, Enum):
     """Sort options."""
+
     RELEVANCE = "relevance"
     DOWNLOADS = "downloads"
     TITLE = "title"
