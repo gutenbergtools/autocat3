@@ -22,6 +22,7 @@ Differences:
 
 
 """
+import logging
 import re
 
 import cherrypy
@@ -90,6 +91,8 @@ class AdvSearchPage(Page):
 
         os = AdvSearcher()
         params = cherrypy.request.params.copy()
+        cherrypy.log(str(params), context = 'PARAMS', severity = logging.ERROR)
+
         fullpage = not bool(params.get("strip", ""))
         try:
             pageno = abs(int(params.pop("pageno", 1)))
