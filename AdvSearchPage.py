@@ -95,9 +95,10 @@ class AdvSearchPage(Page):
 
         fullpage = not bool(params.get("strip", ""))
         try:
-            pageno = abs(int(params.pop("pageno", 1)))
-        except KeyError:
+            pageno = max(1, abs(int(params.pop("pageno", 1))))
+        except (KeyError, ValueError):
             pageno = 1
+
         os.pageno = pageno
         for key in ["submit_search", "route_name", "controller", "action", "strip"]:
             params.pop(key, None)
