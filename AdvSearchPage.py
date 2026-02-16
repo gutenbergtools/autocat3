@@ -22,6 +22,7 @@ Differences:
 
 
 """
+import logging
 import re
 
 import cherrypy
@@ -90,11 +91,14 @@ class AdvSearchPage(Page):
 
         os = AdvSearcher()
         params = cherrypy.request.params.copy()
+        cherrypy.log(str(params), context = 'PARAMS', severity = logging.ERROR)
+
         fullpage = not bool(params.get("strip", ""))
         try:
-            pageno = abs(int(params.pop("pageno", 1)))
-        except KeyError:
+            pageno = max(1, abs(int(params.pop("pageno", 1))))
+        except (KeyError, ValueError):
             pageno = 1
+
         os.pageno = pageno
         for key in ["submit_search", "route_name", "controller", "action", "strip"]:
             params.pop(key, None)
