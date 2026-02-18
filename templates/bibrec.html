@@ -26,7 +26,7 @@ Gutenberg metadata much faster than by scraping.
     from libgutenberg.MediaTypes import mediatypes as mt
     from libgutenberg import GutenbergGlobals as gg
 
-    os.description = "Free kindle book and epub digitized and proofread by volunteers."
+    os.description = "Free eBook digitized and proofread by volunteers."
 
     old_header = os.entries[0].header # suppress first header as already in <h1>
     def help_page (s = ''):
@@ -191,8 +191,6 @@ Gutenberg metadata much faster than by scraping.
             <div about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
 
               <h2 id="download_options_header">Read or download for free </h2>
-			  
-			  <p id="reading_help_hint">Not sure how to start reading? See this <a href="/help/reading_options.html">simple overview</a></p>
 
               <table class="files" id="download_options_table">
                 <colgroup>
@@ -207,7 +205,10 @@ Gutenberg metadata much faster than by scraping.
 
                 <tr>
                   <th />
-                  <th> Reading Options </th>
+                  <th> Reading Options <span>
+                    <a href="/help/reading_options.html" title="Not sure how to start reading? Click here!">
+                        <span class="icon icon_help"></span></a>
+                    </span></th>
                   <th class="noscreen">Url</th>
                   <th i18n:comment="Size of a file." class="right">Size</th>
                   <th class="noprint"><span>${help ('Dropbox')}</span></th>
