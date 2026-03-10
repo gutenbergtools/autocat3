@@ -480,7 +480,7 @@ class OpenSearch(object):
             count = self.books_in_archive)
         # NOTE: The site's description in the html meta tags.
         self.description = _('Project Gutenberg offers {count} free eBooks for '
-                             'Kindle, iPad, Nook, Android, and iPhone.').format(
+                             'iPhone, iPad, Kobo, Android and Kindle.').format(
                                  count = self.books_in_archive)
         # NOTE: The placeholder inside an empty search box.
         self.placeholder = _('Search Project Gutenberg.')
