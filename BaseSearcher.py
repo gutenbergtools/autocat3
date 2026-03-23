@@ -508,7 +508,7 @@ class OpenSearch(object):
 
         lang = self.lang = s.get('_lang_', 'en_US')
         if len(lang) == 2:
-            lang = self.lang_to_default_locale.get(lang, 'en_US')
+            lang = self.lang = self.lang_to_default_locale.get(lang, 'en_US')
         lang2 = self.lang[:2]
 
         self.paypal_lang = lang if lang in PAYPAL_LANGS else 'en_US'
