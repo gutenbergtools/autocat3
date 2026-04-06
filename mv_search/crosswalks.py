@@ -3,8 +3,10 @@ import re
 from typing import Any, Dict, List, Optional
 from itertools import zip_longest
 
-from .constants import Crosswalk, Language
+from .constants import Crosswalk, Language, LoCCMainClass
 from .formatters import format_dict_result, ContributorFormat
+
+_LOCC_LABELS = {item.code: item.label for item in LoCCMainClass}
 
 LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 
@@ -141,7 +143,7 @@ def crosswalk_pg(row) -> Dict[str, Any]:
 def crosswalk_opds(row) -> Dict[str, Any]:
     """Transform row to OPDS 2.0 / Readium Audiobook Profile format."""
     creators = _build_creators(row)
-    subjects = [s["subject"] for s in _build_subjects(row) if s.get("subject")]
+    raw_subjects = _build_subjects(row)
     bookshelves = _build_bookshelves(row)
     formats = _build_formats(row)
     locc_codes = [c for c in (list(row.locc_codes) if row.locc_codes else []) if c]
@@ -179,6 +181,7 @@ def crosswalk_opds(row) -> Dict[str, Any]:
         author = {"name": p["name"], "sortAs": p["name"]}
         if p.get("id"):
             author["identifier"] = f"https://www.gutenberg.org/ebooks/author/{p['id']}"
+            author["links"] = [{"href": f"/opds/search?author_id={p['id']}", "type": "application/opds+json"}]
         metadata["author"] = author
 
     if is_audio:
@@ -211,25 +214,40 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     if desc_parts:
         metadata["description"] = "<p>" + "</p><p>".join(html.escape(p) for p in desc_parts) + "</p>"
 
-    subjects += locc_codes
-    if subjects:
-        metadata["subject"] = subjects
+    # Structured subjects with OPDS browse links
+    subject_objs = []
+    for s in raw_subjects:
+        if s.get("subject"):
+            subj = {"name": s["subject"]}
+            if s.get("id"):
+                subj["links"] = [{"href": f"/opds/subjects?id={s['id']}", "type": "application/opds+json"}]
+            subject_objs.append(subj)
+    # LoCC as labeled subjects instead of raw codes in collections
+    for code in locc_codes:
+        main_class = code[0].upper() if code else ""
+        label = _LOCC_LABELS.get(main_class, "")
+        name = f"{label}: {code}" if label else code
+        subject_objs.append({
+            "name": name,
+            "links": [{"href": f"/opds/loccs?parent={code}", "type": "application/opds+json"}],
+        })
+    if subject_objs:
+        metadata["subject"] = subject_objs
 
     if row.publisher:
         metadata["publisher"] = row.publisher
 
+    # Collections: bookshelves with OPDS browse links (LoCC moved to subjects above)
     collections = []
     for b in bookshelves:
         if b.get("bookshelf"):
-            collections.append({
+            collection = {
                 "name": b["bookshelf"],
                 "identifier": f"https://www.gutenberg.org/ebooks/bookshelf/{b.get('id', '')}",
-            })
-    for code in locc_codes:
-        collections.append({
-            "name": code,
-            "identifier": f"https://www.gutenberg.org/ebooks/locc/{code}",
-        })
+            }
+            if b.get("id"):
+                collection["links"] = [{"href": f"/opds/bookshelves?id={b['id']}", "type": "application/opds+json"}]
+            collections.append(collection)
     if collections:
         metadata["belongsTo"] = {"collection": collections}
 
@@ -346,10 +364,8 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     for f in formats:
         ft = f.get("filetype") or ""
         fn = f.get("filename")
-        if fn and ("cover.medium" in ft or ("cover" in ft and not images)):
+        if fn and "cover" in ft:
             images.append({"href": _gutenberg_url(fn), "type": "image/jpeg"})
-            if "cover.medium" in ft:
-                break
     if images:
         result["images"] = images  # OPDS 2.0
         if is_audio:

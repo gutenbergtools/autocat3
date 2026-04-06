@@ -1,3 +1,4 @@
+import random
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 import logging
@@ -16,7 +17,15 @@ from mv_search.constants import (
 from mv_search.Search import FullTextSearch
 
 SAMPLE_LIMIT = 15
-LANGUAGES = [{"code": lang.code, "label": lang.label} for lang in Language]
+# Most common Gutenberg languages first, remainder alphabetical by label
+_LANG_PRIORITY = [
+    "en", "fr", "de", "fi", "nl", "it", "pt", "es", "zh",
+    "la", "el", "grc", "hu", "sv", "da", "no", "pl", "ru", "cs", "ja",
+]
+LANGUAGES = sorted(
+    [{"code": lang.code, "label": lang.label} for lang in Language],
+    key=lambda x: (_LANG_PRIORITY.index(x["code"]) if x["code"] in _LANG_PRIORITY else 999, x["label"]),
+)
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
 
@@ -200,7 +209,8 @@ class OPDSFeed:
                         {
                             "href": f"/opds/subjects?id={s['id']}",
                             "type": OPDS_TYPE,
-                            "title": f"{s['name']} ({s['count']})",
+                            "title": s["name"],
+                            "properties": {"numberOfItems": s["count"]},
                         }
                         for s in subjects
                     ],
@@ -283,6 +293,73 @@ class OPDSFeed:
     @cherrypy.tools.json_out()
     def index(self):
         """Root catalog."""
+        groups = []
+
+        # Recently Added
+        try:
+            result = self.fts.execute(
+                self.fts.query(crosswalk=Crosswalk.OPDS)
+                .order_by(OrderBy.RELEASE_DATE, SortDirection.DESC)[1, SAMPLE_LIMIT]
+            )
+            if result.get("results"):
+                groups.append({
+                    "metadata": {"title": "Recently Added", "numberOfItems": result["total"]},
+                    "links": [_link("self", "/opds/search?sort=release_date&sort_order=desc")],
+                    "publications": result["results"],
+                })
+        except Exception as e:
+            cherrypy.log(f"Index group error (recently added): {e}")
+
+        # Most Popular
+        try:
+            result = self.fts.execute(
+                self.fts.query(crosswalk=Crosswalk.OPDS)
+                .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT]
+            )
+            if result.get("results"):
+                groups.append({
+                    "metadata": {"title": "Most Popular", "numberOfItems": result["total"]},
+                    "links": [_link("self", "/opds/search?sort=downloads&sort_order=desc")],
+                    "publications": result["results"],
+                })
+        except Exception as e:
+            cherrypy.log(f"Index group error (most popular): {e}")
+
+        # Audiobooks
+        try:
+            result = self.fts.execute(
+                self.fts.query(crosswalk=Crosswalk.OPDS)
+                .audiobook()
+                .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT]
+            )
+            if result.get("results"):
+                groups.append({
+                    "metadata": {"title": "Audiobooks", "numberOfItems": result["total"]},
+                    "links": [_link("self", "/opds/search?audiobook=true&sort=downloads")],
+                    "publications": result["results"],
+                })
+        except Exception as e:
+            cherrypy.log(f"Index group error (audiobooks): {e}")
+
+        # One group per top-level bookshelf category
+        for cat in CuratedBookshelves:
+            for shelf_id, _ in random.sample(list(cat.shelves), len(cat.shelves)):
+                try:
+                    result = self.fts.execute(
+                        self.fts.query(crosswalk=Crosswalk.OPDS)
+                        .bookshelf_id(shelf_id)
+                        .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT]
+                    )
+                    if result.get("results"):
+                        groups.append({
+                            "metadata": {"title": cat.genre},
+                            "links": [_link("self", f"/opds/bookshelves?category={cat.name}")],
+                            "publications": result["results"],
+                        })
+                        break
+                except Exception as e:
+                    cherrypy.log(f"Index group error ({cat.name}/{shelf_id}): {e}", severity=logging.WARNING)
+
         return {
             "metadata": {"title": "Project Gutenberg Catalog"},
             "links": [
@@ -291,34 +368,9 @@ class OPDSFeed:
                 _link("search", "/opds/search{?query}", templated=True),
             ],
             "navigation": [
-                _nav(
-                    "/opds/search?field=fuzzy",
-                    "I'm not sure how to spell what I'm looking for",
-                ),
-                _nav("/opds/search?field=fts", "Advanced Search"),
-                _nav("/opds/bookshelves", "Browse Bookshelves"),
-                _nav("/opds/loccs", "Browse by Library of Congress Code"),
-                _nav("/opds/subjects", "Browse by Subject"),
-                _nav("/opds/search?audiobook=true&sort=downloads", "Browse Audiobooks"),
-                {
-                    "href": "/opds/search?sort=downloads&sort_order=desc",
-                    "title": "Most Popular",
-                    "type": OPDS_TYPE,
-                    "rel": "http://opds-spec.org/sort/popular",
-                },
-                {
-                    "href": "/opds/search?sort=release_date&sort_order=desc",
-                    "title": "Recently Added",
-                    "type": OPDS_TYPE,
-                    "rel": "http://opds-spec.org/sort/new",
-                },
-                {
-                    "href": "/opds/search?sort=random",
-                    "title": "Random",
-                    "type": OPDS_TYPE,
-                    "rel": "http://opds-spec.org/sort/random",
-                },
+                _nav("/opds/loccs", "Browse Subjects"),
             ],
+            "groups": groups,
         }
 
     # Bookshelves
@@ -366,10 +418,10 @@ class OPDSFeed:
                 _link("up", "/opds/"),
             ],
             "navigation": [
-                _nav(
-                    f"/opds/bookshelves?category={cat.name}",
-                    f"{cat.genre} ({len(cat.shelves)} shelves)",
-                )
+                {
+                    **_nav(f"/opds/bookshelves?category={cat.name}", cat.genre),
+                    "properties": {"numberOfItems": len(cat.shelves)},
+                }
                 for cat in CuratedBookshelves
             ],
         }
@@ -498,13 +550,6 @@ class OPDSFeed:
                 _link("start", "/opds/"),
                 _link("up", "/opds/bookshelves"),
             ],
-            "navigation": [
-                _nav(
-                    f"/opds/bookshelves?id={s['id']}",
-                    f"{s['name']} ({counts.get(s['id'], 0)} books)",
-                )
-                for s in shelves
-            ],
             "groups": groups,
         }
 
@@ -545,7 +590,7 @@ class OPDSFeed:
         children.sort(key=lambda x: (len(x.get("code", "")), x.get("code", "")))
 
         # Get parent label from LoCCMainClass if it's a top-level code
-        page_title = "Library of Congress Classification"
+        page_title = "Browse Subjects"
         if parent:
             for item in LoCCMainClass:
                 if item.code == parent:
@@ -563,12 +608,12 @@ class OPDSFeed:
 
             if has_children:
                 count = len(self.fts.get_locc_children(code))
-                nav_title = f"{label} ({count} subcategories)"
             else:
                 count = self.fts.count(self.fts.query().locc(code))
-                nav_title = f"{label} ({count} books)"
 
-            nav.append(_nav(f"/opds/loccs?parent={code}", nav_title))
+            nav_item = _nav(f"/opds/loccs?parent={code}", label)
+            nav_item["properties"] = {"numberOfItems": count}
+            nav.append(nav_item)
 
         return {
             "metadata": {"title": page_title, "numberOfItems": len(children)},
@@ -698,10 +743,10 @@ class OPDSFeed:
                 _link("up", "/opds/"),
             ],
             "navigation": [
-                _nav(
-                    f"/opds/subjects?id={s['id']}",
-                    f"{s['name']} ({s['book_count']} books)",
-                )
+                {
+                    **_nav(f"/opds/subjects?id={s['id']}", s["name"]),
+                    "properties": {"numberOfItems": s["book_count"]},
+                }
                 for s in subjects[:100]
             ],
         }
@@ -787,6 +832,7 @@ class OPDSFeed:
         sort: str = "",
         sort_order: str = "",
         locc: str = "",
+        author_id: Optional[int] = None,
     ):
         """Full-text search."""
         page, limit = _paginate(page, limit)
@@ -798,6 +844,8 @@ class OPDSFeed:
                 q.search(query, search_type=stype)
             if locc:
                 q.locc(locc)
+            if author_id is not None:
+                q.author_id(int(author_id))
             self._filter(q, lang, copyrighted, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -824,6 +872,7 @@ class OPDSFeed:
             "sort": sort,
             "sort_order": sort_order,
             "locc": locc,
+            "author_id": author_id,
         }
         page_url = _make_page_url("/opds/search", base, query)
         facet_url = _make_facet_url("/opds/search", base)
@@ -831,22 +880,6 @@ class OPDSFeed:
         facets = self._facets(
             facet_url, query, lang, copyrighted, audiobook, sort, sort_order, subjects
         )
-
-        # LoCC genre facet - only show when no category selected
-        if not locc:
-            locc_base = {**base, "query": query, "page": 1}
-            locc_facet = {
-                "metadata": {"title": "Main Category"},
-                "links": [
-                    _facet(
-                        _url("/opds/search", {**locc_base, "locc": item.code}),
-                        item.label,
-                        False,
-                    )
-                    for item in LoCCMainClass
-                ],
-            }
-            facets.insert(2 if subjects else 1, locc_facet)
 
         feed = {
             "metadata": {
