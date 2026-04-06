@@ -1,4 +1,5 @@
 import random
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 import logging
@@ -78,7 +79,7 @@ def _make_facet_url(endpoint: str, base: Dict) -> Callable[..., str]:
     return facet_url
 
 
-def _paginate(page, limit, default=28) -> Tuple[int, int]:
+def _paginate(page, limit, default=25) -> Tuple[int, int]:
     """Parse and clamp pagination params."""
     try:
         return max(1, int(page)), max(1, min(100, int(limit)))
@@ -293,56 +294,45 @@ class OPDSFeed:
     @cherrypy.tools.json_out()
     def index(self):
         """Root catalog."""
-        groups = []
 
-        # Recently Added
-        try:
+        def _recently_added():
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS)
                 .order_by(OrderBy.RELEASE_DATE, SortDirection.DESC)[1, SAMPLE_LIMIT]
             )
             if result.get("results"):
-                groups.append({
+                return {
                     "metadata": {"title": "Recently Added", "numberOfItems": result["total"]},
                     "links": [_link("self", "/opds/search?sort=release_date&sort_order=desc")],
                     "publications": result["results"],
-                })
-        except Exception as e:
-            cherrypy.log(f"Index group error (recently added): {e}")
+                }
 
-        # Most Popular
-        try:
+        def _most_popular():
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS)
                 .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT]
             )
             if result.get("results"):
-                groups.append({
+                return {
                     "metadata": {"title": "Most Popular", "numberOfItems": result["total"]},
                     "links": [_link("self", "/opds/search?sort=downloads&sort_order=desc")],
                     "publications": result["results"],
-                })
-        except Exception as e:
-            cherrypy.log(f"Index group error (most popular): {e}")
+                }
 
-        # Audiobooks
-        try:
+        def _audiobooks():
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS)
                 .audiobook()
                 .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT]
             )
             if result.get("results"):
-                groups.append({
+                return {
                     "metadata": {"title": "Audiobooks", "numberOfItems": result["total"]},
                     "links": [_link("self", "/opds/search?audiobook=true&sort=downloads")],
                     "publications": result["results"],
-                })
-        except Exception as e:
-            cherrypy.log(f"Index group error (audiobooks): {e}")
+                }
 
-        # One group per top-level bookshelf category
-        for cat in CuratedBookshelves:
+        def _category_group(cat):
             for shelf_id, _ in random.sample(list(cat.shelves), len(cat.shelves)):
                 try:
                     result = self.fts.execute(
@@ -351,14 +341,28 @@ class OPDSFeed:
                         .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT]
                     )
                     if result.get("results"):
-                        groups.append({
+                        return {
                             "metadata": {"title": cat.genre},
                             "links": [_link("self", f"/opds/bookshelves?category={cat.name}")],
                             "publications": result["results"],
-                        })
-                        break
+                        }
                 except Exception as e:
                     cherrypy.log(f"Index group error ({cat.name}/{shelf_id}): {e}", severity=logging.WARNING)
+
+        tasks = [_recently_added, _most_popular, _audiobooks] + [
+            lambda c=cat: _category_group(c) for cat in CuratedBookshelves
+        ]
+
+        with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
+            futures = [executor.submit(fn) for fn in tasks]
+            groups = []
+            for f in futures:
+                try:
+                    result = f.result()
+                    if result:
+                        groups.append(result)
+                except Exception as e:
+                    cherrypy.log(f"Index group error: {e}")
 
         return {
             "metadata": {"title": "Project Gutenberg Catalog"},
@@ -381,7 +385,7 @@ class OPDSFeed:
         id: Optional[int] = None,
         category: Optional[str] = None,
         page: int = 1,
-        limit: int = 28,
+        limit: int = 25,
         query: str = "",
         lang: str = "",
         copyrighted: str = "",
@@ -560,7 +564,7 @@ class OPDSFeed:
         self,
         parent: str = "",
         page: int = 1,
-        limit: int = 28,
+        limit: int = 25,
         query: str = "",
         lang: str = "",
         copyrighted: str = "",
@@ -708,7 +712,7 @@ class OPDSFeed:
         self,
         id: Optional[int] = None,
         page: int = 1,
-        limit: int = 28,
+        limit: int = 25,
         query: str = "",
         lang: str = "",
         copyrighted: str = "",
@@ -824,7 +828,7 @@ class OPDSFeed:
         self,
         query: str = "",
         page: int = 1,
-        limit: int = 28,
+        limit: int = 25,
         field: str = "fuzzy",
         lang: str = "",
         copyrighted: str = "",
