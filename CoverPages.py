@@ -71,8 +71,7 @@ class CoverPages(object):
                 <a href="{href}" title="{title}" data-authors="{authors}" target="_top">
                     <div class="cover_image">
                         <div class="cover_img">
-                            <img src="{url}" alt="" title="{title}"
-                             authors="{authors}" draggable="false">
+                            <img src="{url}" alt="" title="{title}" draggable="false">
                         </div>
                         <div class="cover_title">
                             <span class="h5">{short_title}</span>

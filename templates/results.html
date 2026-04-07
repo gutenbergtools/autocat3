@@ -16,7 +16,7 @@ which contains *all* Project Gutenberg metadata in one RDF/XML file.
     xmlns:dcterms="http://purl.org/dc/terms/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     xmlns:ebook="http://www.gutenberg.org/ebooks/" xmlns:marcrel="http://www.loc.gov/loc.terms/relators/"
     xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xmlns:og="http://opengraphprotocol.org/schema/"
-    xmlns:fb="http://www.facebook.com/2008/fbml" xml:lang="${os.lang}">
+    xmlns:fb="http://www.facebook.com/2008/fbml" xml:lang="${os.lang.replace('_', '-')}">
 
 <?python
   old_header = os.title
