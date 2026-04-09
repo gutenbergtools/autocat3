@@ -1,4 +1,6 @@
 """
+formatters.py — Zachary Rosario
+
 Formatting helpers based on libgutenberg.DublinCore.
 https://github.com/gutenbergtools/libgutenberg/blob/master/libgutenberg/DublinCore.py
 """

@@ -1,3 +1,9 @@
+"""
+Search.py — Zachary Rosario
+
+Query builder and search interface for the mv_books_dc materialized view.
+"""
+
 from typing import Dict, List, Optional, Tuple, Union
 
 from sqlalchemy import text

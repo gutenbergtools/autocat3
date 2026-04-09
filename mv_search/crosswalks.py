@@ -1,3 +1,9 @@
+"""
+crosswalks.py — Zachary Rosario
+
+Row-to-dict transforms for PG and OPDS 2.0 output formats.
+"""
+
 import html
 import re
 from typing import Any, Dict, List, Optional

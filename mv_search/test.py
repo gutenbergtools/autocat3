@@ -1,3 +1,9 @@
+"""
+test.py — Zachary Rosario
+
+Integration tests for the mv_books_dc search module.
+"""
+
 import time
 
 from .constants import (

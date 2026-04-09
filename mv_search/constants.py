@@ -1,3 +1,9 @@
+"""
+constants.py — Zachary Rosario
+
+Enums and constants for the mv_books_dc search module.
+"""
+
 from enum import Enum
 from typing import Tuple
 

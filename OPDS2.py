@@ -1,3 +1,9 @@
+"""
+OPDS2.py — Zachary Rosario
+
+OPDS 2.0 JSON feed for the Project Gutenberg catalog.
+"""
+
 import random
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, List, Optional, Tuple

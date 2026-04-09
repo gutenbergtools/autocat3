@@ -18,7 +18,13 @@ Usage:
 
 from __future__ import unicode_literals
 
+import datetime
+import logging
+
+import psycopg2
 import cherrypy
+
+from libgutenberg import GutenbergDatabase
 
 import BaseSearcher
 
@@ -32,20 +38,59 @@ class TimerPlugin (cherrypy.process.plugins.Monitor):
     """
 
     def __init__ (self, bus):
-        # interval in seconds
         frequency = 300
         super (TimerPlugin, self).__init__ (bus, self.tick, frequency)
         self.name = 'timer'
+        self._last_refresh_date = None
 
     def start (self):
         super (TimerPlugin, self).start ()
-        self.tick ()
+        self.tick (startup=True)
     start.priority = 80
 
-    def tick (self):
+    def tick (self, startup=False):
         """ Do things here. """
 
         try:
             BaseSearcher.books_in_archive = BaseSearcher.sql_get ('select count (*) from books')
         except:
             pass
+
+        refresh_hour = cherrypy.config.get ('mv_refresh_hour', 17)
+        now = datetime.datetime.now ()
+
+        if startup or (now.hour == refresh_hour and self._last_refresh_date != now.date ()):
+            self._try_refresh_mv ()
+
+    def _try_refresh_mv (self):
+        """ Refresh mv_books_dc, skipping if another instance is already refreshing.
+
+        — Zachary Rosario
+
+        Bypasses the pool to avoid statement timeout errors.
+        pguser needs EXECUTE on refresh_mv_books_dc() and ownership of mv_books_dc.
+        """
+        conn = None
+        try:
+            params = GutenbergDatabase.get_connection_params (cherrypy.config)
+            conn = psycopg2.connect (**params)
+            cur = conn.cursor ()
+
+            # Transaction-level advisory lock keyed on the view's OID.
+            # Auto-releases on commit/rollback — no explicit unlock needed.
+            cur.execute ("""
+                SELECT pg_try_advisory_xact_lock(c.oid::bigint)
+                FROM pg_class c WHERE c.relname = 'mv_books_dc'
+            """)
+            if not cur.fetchone ()[0]:
+                return
+
+            cur.execute ("SELECT refresh_mv_books_dc()")
+            conn.commit ()
+            self._last_refresh_date = datetime.date.today ()
+            cherrypy.log ("MV refresh completed.", context='TIMER', severity=logging.INFO)
+        except Exception as e:
+            cherrypy.log ("MV refresh failed: %s" % e, context='TIMER', severity=logging.ERROR)
+        finally:
+            if conn:
+                conn.close ()
