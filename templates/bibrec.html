@@ -16,7 +16,7 @@ Gutenberg metadata much faster than by scraping.
       xmlns:ebook="http://www.gutenberg.org/ebooks/"
       xmlns:marcrel="http://www.loc.gov/loc.terms/relators/"
       xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
-      xml:lang="${os.lang}"
+      xml:lang="${os.lang.replace('_', '-')}"
 >
 
   <?python
