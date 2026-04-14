@@ -44,7 +44,7 @@ Gutenberg metadata much faster than by scraping.
   <xi:include href="site-layout.html" />
   <xi:include href="social-functions.html" />
 
-  <py:def function="help(topic)">
+  <py:def function="help (topic)">
     <a href="${help_page (topic)}"
        title="${explain (topic)}"><span class="icon icon_help noprint" /></a>
   </py:def>
@@ -206,13 +206,22 @@ Gutenberg metadata much faster than by scraping.
                 </colgroup>
 
                 <tr>
-                  <th />
+                  <td />
                   <th> Reading Options </th>
                   <th class="noscreen">Url</th>
                   <th i18n:comment="Size of a file." class="right">Size</th>
-                  <th class="noprint"><span>${help ('Dropbox')}</span></th>
-                  <th class="noprint"><span>${help ('Google Drive')}</span></th>
-                  <th class="noprint"><span>${help ('OneDrive')}</span></th>
+                  <py:choose test="help('Dropbox')">
+                    <td py:when="" class="noprint" />
+                    <th py:otherwise="" class="noprint"><span>${help('Dropbox')}</span></th>
+                  </py:choose>
+                  <py:choose test="help('Google Drive')">
+                    <td py:when="" class="noprint" />
+                    <th py:otherwise="" class="noprint"><span>${help('Google Drive')}</span></th>
+                  </py:choose>
+                  <py:choose test="help('OneDrive')">
+                    <td py:when="" class="noprint" />
+                    <th py:otherwise="" class="noprint"><span>${help('OneDrive')}</span></th>
+                  </py:choose>
                 </tr>
 
                 <tr py:for="i, file_ in enumerate(e.files)"
