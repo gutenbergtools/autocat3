@@ -169,18 +169,21 @@ Gutenberg metadata much faster than by scraping.
 				<span class="readmore-container">
 					<!-- Always visible content -->
 					${Markup(gg.insert_breaks(os.initial_summary, self_closing=False))}
-					<!-- Hidden checkbox to control the toggle -->
-					<input type="checkbox" id="toggle" class="toggle" style="display:none;" />
-					<!-- Clickable label to show more -->
-					<label for="toggle" class="readmore">
-						... <span id="read_more"> Read More</span>
-					</label>
-					<!-- The extra text that is initially hidden -->
-					<span class="toggle-content">
-					  ${Markup(gg.insert_breaks(os.remaining_summary, self_closing=False))}
+					<span py:if="os.remaining_summary" >
+                        <!-- Hidden checkbox to control the toggle -->
+                        <input type="checkbox" id="toggle" class="toggle" style="display:none;" />
+                        <!-- Clickable label to show more -->
+                        <!-- The extra text that is initially hidden -->
+                        <span class="toggle-content">
+                          ${Markup(gg.insert_breaks(os.remaining_summary, self_closing=False))}
+                        </span>
+                        <!-- Clickable label to show more/less -->
+                        <label for="toggle" >
+                            <span class="readmoredots">...  </span>
+                            <span class="readmore">Read More</span>
+                            <span class="showless">Show Less</span>					 
+                        </label>
 					</span>
-					<!-- Clickable label to show less -->
-					<label for="toggle" class="showless"> Show Less</label>
 				</span>
 				</div>
 			</py:if>
@@ -412,9 +415,7 @@ Gutenberg metadata much faster than by scraping.
 		      <span itemprop="price" content="$0.00">
 		        <em>Project Gutenberg eBooks are always free!</em>
 		      </span>
-		      <span itemprop="availability" content="In Stock" >
-		        <a href="http://schema.org/InStock"></a>
-		      </span>
+		      <link itemprop="availability" href="http://schema.org/InStock" />		      
               </td>
             </tr>
 
