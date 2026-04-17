@@ -169,19 +169,21 @@ Gutenberg metadata much faster than by scraping.
 				<span class="readmore-container">
 					<!-- Always visible content -->
 					${Markup(gg.insert_breaks(os.initial_summary, self_closing=False))}
-					<!-- Hidden checkbox to control the toggle -->
-					<input type="checkbox" id="toggle" class="toggle" style="display:none;" />
-					<!-- Clickable label to show more -->
-					<!-- The extra text that is initially hidden -->
-					<span class="toggle-content">
-					  ${Markup(gg.insert_breaks(os.remaining_summary, self_closing=False))}
+					<span py:if="os.remaining_summary" >
+                        <!-- Hidden checkbox to control the toggle -->
+                        <input type="checkbox" id="toggle" class="toggle" style="display:none;" />
+                        <!-- Clickable label to show more -->
+                        <!-- The extra text that is initially hidden -->
+                        <span class="toggle-content">
+                          ${Markup(gg.insert_breaks(os.remaining_summary, self_closing=False))}
+                        </span>
+                        <!-- Clickable label to show more/less -->
+                        <label for="toggle" >
+                            <span class="readmoredots">...  </span>
+                            <span class="readmore">Read More</span>
+                            <span class="showless">Show Less</span>					 
+                        </label>
 					</span>
-					<!-- Clickable label to show more/less -->
-					<label for="toggle" >
-						<span class="readmoredots">...  </span>
-						<span class="readmore">Read More</span>
-						<span class="showless">Show Less</span>					 
-					</label>
 				</span>
 				</div>
 			</py:if>
