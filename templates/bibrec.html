@@ -16,7 +16,7 @@ Gutenberg metadata much faster than by scraping.
       xmlns:ebook="http://www.gutenberg.org/ebooks/"
       xmlns:marcrel="http://www.loc.gov/loc.terms/relators/"
       xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
-      xml:lang="${os.lang}"
+      xml:lang="${os.lang.replace('_', '-')}"
 >
 
   <?python
@@ -44,7 +44,7 @@ Gutenberg metadata much faster than by scraping.
   <xi:include href="site-layout.html" />
   <xi:include href="social-functions.html" />
 
-  <py:def function="help(topic)">
+  <py:def function="help (topic)">
     <a href="${help_page (topic)}"
        title="${explain (topic)}"><span class="icon icon_help noprint" /></a>
   </py:def>
@@ -169,18 +169,21 @@ Gutenberg metadata much faster than by scraping.
 				<span class="readmore-container">
 					<!-- Always visible content -->
 					${Markup(gg.insert_breaks(os.initial_summary, self_closing=False))}
-					<!-- Hidden checkbox to control the toggle -->
-					<input type="checkbox" id="toggle" class="toggle" style="display:none;" />
-					<!-- Clickable label to show more -->
-					<label for="toggle" class="readmore">
-						... <span id="read_more"> Read More</span>
-					</label>
-					<!-- The extra text that is initially hidden -->
-					<span class="toggle-content">
-					  ${Markup(gg.insert_breaks(os.remaining_summary, self_closing=False))}
+					<span py:if="os.remaining_summary" >
+                        <!-- Hidden checkbox to control the toggle -->
+                        <input type="checkbox" id="toggle" class="toggle" style="display:none;" />
+                        <!-- Clickable label to show more -->
+                        <!-- The extra text that is initially hidden -->
+                        <span class="toggle-content">
+                          ${Markup(gg.insert_breaks(os.remaining_summary, self_closing=False))}
+                        </span>
+                        <!-- Clickable label to show more/less -->
+                        <label for="toggle" >
+                            <span class="readmoredots">...  </span>
+                            <span class="readmore">Read More</span>
+                            <span class="showless">Show Less</span>					 
+                        </label>
 					</span>
-					<!-- Clickable label to show less -->
-					<label for="toggle" class="showless"> Show Less</label>
 				</span>
 				</div>
 			</py:if>
@@ -206,13 +209,22 @@ Gutenberg metadata much faster than by scraping.
                 </colgroup>
 
                 <tr>
-                  <th />
+                  <td />
                   <th> Reading Options </th>
                   <th class="noscreen">Url</th>
                   <th i18n:comment="Size of a file." class="right">Size</th>
-                  <th class="noprint"><span>${help ('Dropbox')}</span></th>
-                  <th class="noprint"><span>${help ('Google Drive')}</span></th>
-                  <th class="noprint"><span>${help ('OneDrive')}</span></th>
+                  <py:choose test="help('Dropbox')">
+                    <td py:when="" class="noprint" />
+                    <th py:otherwise="" class="noprint"><span>${help('Dropbox')}</span></th>
+                  </py:choose>
+                  <py:choose test="help('Google Drive')">
+                    <td py:when="" class="noprint" />
+                    <th py:otherwise="" class="noprint"><span>${help('Google Drive')}</span></th>
+                  </py:choose>
+                  <py:choose test="help('OneDrive')">
+                    <td py:when="" class="noprint" />
+                    <th py:otherwise="" class="noprint"><span>${help('OneDrive')}</span></th>
+                  </py:choose>
                 </tr>
 
                 <tr py:for="i, file_ in enumerate(e.files)"
@@ -403,9 +415,7 @@ Gutenberg metadata much faster than by scraping.
 		      <span itemprop="price" content="$0.00">
 		        <em>Project Gutenberg eBooks are always free!</em>
 		      </span>
-		      <span itemprop="availability" content="In Stock" >
-		        <a href="http://schema.org/InStock"></a>
-		      </span>
+		      <link itemprop="availability" href="http://schema.org/InStock" />		      
               </td>
             </tr>
 

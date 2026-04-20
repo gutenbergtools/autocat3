@@ -23,6 +23,17 @@ from i18n_tool import ungettext as __
 import BaseSearcher
 import Page
 
+SUMMARY_MARKERS = {
+    "This is an automatically generated summary",
+    "This summary is from Wikipedia",
+    "Summary by Project Gutenberg staff",
+    }
+
+def is_a_summary(text):
+    for summary_marker in SUMMARY_MARKERS:
+        if summary_marker in text:
+            return True
+    return False
 
 class BibrecPage (Page.Page):
     """ Implements the bibrec page. """
@@ -39,7 +50,7 @@ class BibrecPage (Page.Page):
 
     def get_book_summary(self, dc, book_id):
         for marc in dc.marcs:
-            if marc.code == '520' and "This is an automatically generated summary" in marc.text:
+            if marc.code == '520' and is_a_summary(marc.text):
                 return self.split_summary(marc.text)
         return None, None
 
