@@ -61,13 +61,13 @@
   <!-- Tab 1 - Advanced Search -->
   <div id="advanced-search" class="tabcontent">
     <!-- Modal Trigger and Modal -->
-    <input type="checkbox" id="info-toggle" aria-label="toggle infobox" class="info-checkbox" />
+    <input type="checkbox" id="info-toggle" aria-labelledby="more-info-button close-info-button" class="info-checkbox" />
     <label id="more-info-button" for="info-toggle" class="info-icon-label" title="More Information" aria-label="More Information">i</label>
 
     <div class="info-modal-overlay">
       
       <div class="info-modal">
-        <label for="info-toggle" class="info-modal-close" title="Close" aria-label="Close Information">&times;</label>
+        <label id="close-info-button" for="info-toggle" class="info-modal-close" title="Close" aria-label="Close Information">&times;</label>
         <div class="modal-content">
           <h2>Information</h2>
           <p> - Advanced Search is case insensitive. </p>
@@ -491,20 +491,20 @@
       <h2>Full Text Search</h2>
       <p> Use search engines to search through all Gutenberg pages. </p>
       <form method="get" id="duck" action="https://duckduckgo.com/">
-        <img src="/pics/duck.png" style="vertical-align:middle;" alt="DuckDuckGo logo"/>
-        <input type="hidden" name="sites" value="http://www.gutenberg.org" />
+        <img src="/pics/duck.png" style="vertical-align:middle;" alt="DuckDuckGo logo" />
+        <input type="hidden" name="sites" value="https://www.gutenberg.org" />
         <input type="hidden" name="k8" value="#444444" />
         <input type="hidden" name="k9" value="#D51920" />
         <input type="hidden" name="kt" value="h" />
-        <input type="text" name="q" maxlength="255" placeholder="Use DuckDuckGo" />
-        <input type="submit" value="Duckduckgo Search" />
+        <input type="text" name="q" maxlength="255" placeholder="Use DuckDuckGo" title="Enter search text" />
+        <input type="submit" value="Duckduckgo Search" title="Duckduckgo Search"/>
       </form>
       <form method="get" action="https://www.google.com/search">
         <img src="/pics/google_logo.png" class="google-logo-img" alt="Google logo" />
-        <input type="text" name="q" size="31" maxlength="255" value="" placeholder="Use Google" />
+        <input type="text" name="q" size="31" maxlength="255" value="" placeholder="Use Google" title="Enter search text" />
         <input type="hidden" name="domains" value="gutenberg.org" />
         <input type="hidden" name="sitesearch" value="gutenberg.org" />
-        <input type="submit" name="btnG" value="Google Search" />
+        <input type="submit" name="btnG" value="Google Search" title="Google Search" />
       </form>
     </div>
   </div>
