@@ -237,9 +237,9 @@ Gutenberg metadata much faster than by scraping.
               <py:if test="os.epub3_file or other_files or e.base_dir">
             <div class="download-section" about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
 
-              <h2 id="download_options_header">Download for free</h2>
+              <h2 id="download_options_header">Download</h2>
 
-			  <p py:if="os.epub3_file" id="reading_help_hint">For e-readers and reading apps<span class="reading-help-extra"> — Kindle, Kobo, Apple Books, Calibre &amp; more</span></p>
+			  <p py:if="os.epub3_file" id="reading_help_hint">For e-readers and reading apps<span class="reading-help-extra"> — Kindle, Kobo, Apple Books, Calibre etc.</span></p>
 
               <!-- ============ SECTION: Featured EPUB3 (recommended) ============ -->
               <py:if test="os.epub3_file">
@@ -252,10 +252,10 @@ Gutenberg metadata much faster than by scraping.
                     <div class="featured-format-actions noprint">${cloud_actions(os.epub3_file)}</div>
                   </div>
                   <div class="featured-format-tips">
-                    <div><strong>Kindle</strong> → Use <a href="/help/reading_options.html#kindle">Send-to-Kindle</a> after downloading</div>
-                    <div><strong>Kobo, Nook etc</strong> → Transfer via USB after downloading</div>
-                    <div><strong>Phone, tablet or computer</strong> → Open in reading app</div>
-                    <div><strong>More Help</strong> → see our <a class="full-reading-guide-link" href="/help/reading_options.html">Reading Guide</a></div>
+                    <div><strong>Kindle</strong> → Use <a href="/help/reading_options.html#kindle">Send-to-Kindle</a></div>
+                    <div><strong>Kobo, Nook etc</strong> → <a href="/help/reading_options.html#kobo-nook-etc">Transfer via USB</a></div>
+                    <div><strong>Phone, tablet or computer</strong> → Open in a reading app</div>
+                    <div><strong>Overview</strong> → see our <a class="full-reading-guide-link" href="/help/reading_options.html">Reading Guide</a></div>
                   </div>
                 </div>
               </py:if>
