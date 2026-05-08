@@ -74,12 +74,20 @@ class BibrecPage (Page.Page):
         dc.extra_info = None
         dc.url = None
         os.read_url = None
+        os.html_read_url = None
+        os.epub3_file = None
         for file_ in dc.files:
             # note that generated zip files don't get the "generated" bit or filetype set
             if not file_.generated and file_.filetype:
                 dc.update_date = max(dc.update_date, file_.modified.date())
             if os.read_url == None and file_.filetype:
                 os.read_url = f'/{file_.filename}'
+            if os.html_read_url is None and file_.filetype in ('html', 'html.images', 'html.noimages'):
+                os.html_read_url = f'/{file_.filename}'
+            if file_.filetype and file_.filetype.startswith('epub3'):
+                # prefer the .images version when both are present
+                if os.epub3_file is None or file_.filetype == 'epub3.images':
+                    os.epub3_file = file_
 
         dc.translate ()
         dc.header = gg.cut_at_newline (dc.title)
@@ -122,8 +130,8 @@ class BibrecPage (Page.Page):
 
         if os.format == 'html':
             cat = BaseSearcher.Cat ()
-            cat.header = _('Similar Books')
-            cat.title = _('Readers also downloaded…')
+            cat.header = _('Find Similar Books')
+            cat.title = _('Readers also downloaded')
             cat.rel = 'related'
             cat.url = os.url ('also', id = os.id)
             cat.class_ += 'navlink grayed noprint'
@@ -133,7 +141,10 @@ class BibrecPage (Page.Page):
 
             for bookshelf in dc.bookshelves:
                 cat = BaseSearcher.Cat ()
-                cat.title = _('In {bookshelf}').format (bookshelf = bookshelf.bookshelf)
+                shelf_name = bookshelf.bookshelf
+                if shelf_name.startswith('Browsing: '):
+                    shelf_name = shelf_name[len('Browsing: '):]
+                cat.title = shelf_name
                 cat.rel = 'related'
                 cat.url = os.url ('bookshelf', id = bookshelf.id)
                 cat.class_ += 'navlink grayed'
