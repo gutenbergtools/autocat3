@@ -300,22 +300,13 @@ Gutenberg metadata much faster than by scraping.
             </py:if>
             <?python old_header = e.header ?>
 
-            <div class="${e.class_}">
-			  <!-- Similar Books Links -->
-              <a rel="nofollow"
-                 href="${e.url}"
-                 type="${e.type}"
-                 charset="${e.charset}"
-                 accesskey="${str (n % 10)}"
-                 class="similar-books-link">
-                <span class="cell content">
+            <a rel="nofollow"
+               href="${e.url}"
+               accesskey="${str (n % 10)}"
+               class="${'similar-books-lead' if e.icon == 'suggestion' else 'similar-books-tag'}">
               <span class="title">${e.title}</span>
               <span py:if="e.subtitle" class="subtitle">${e.subtitle}</span>
-              <span py:if="e.extra" class="extra">${e.extra}</span>
-                </span>
-                <span class="hstrut" />
-              </a>
-            </div>
+            </a>
           </py:if>
             </py:for>
           </div> <!-- more stuff -->
