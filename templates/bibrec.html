@@ -28,7 +28,6 @@ Gutenberg metadata much faster than by scraping.
 
     os.description = "Free eBook digitized and proofread by volunteers."
 
-    old_header = os.entries[0].header # suppress first header as already in <h1>
     def help_page (s = ''):
         s = s.replace (' ', '_')
         return '%s#%s' % ('/help/bibliographic_record.html', s)
@@ -49,6 +48,7 @@ Gutenberg metadata much faster than by scraping.
        title="${explain (topic)}"><span class="icon icon_help noprint" /></a>
   </py:def>
 
+  <!-- Shared by the featured EPUB3 card and each row in the other-formats list. -->
   <py:def function="cloud_actions(file_)">
     <a py:if="file_.dropbox_url" href="${file_.dropbox_url}"
        title="Send to Dropbox." rel="nofollow"><span class="icon icon_dropbox" /></a>
@@ -58,6 +58,7 @@ Gutenberg metadata much faster than by scraping.
        title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
   </py:def>
 
+  <!-- One row per non-featured download format. Reused by the EPUB3-present and no-EPUB3 layouts below. -->
   <py:def function="format_row(file_)">
     <div class="other-format-row" about="${file_.url}" typeof="pgterms:file">
       <div class="other-format-info">
@@ -69,7 +70,8 @@ Gutenberg metadata much faster than by scraping.
            content="${file_.mediatypes[-1]}"
            datatype="dcterms:IMT">${file_.hr_filetype}</a>
       </div>
-      <div class="other-format-actions noprint">${cloud_actions(file_)}</div>
+      <div py:if="file_.dropbox_url or file_.gdrive_url or file_.msdrive_url"
+           class="other-format-actions noprint">${cloud_actions(file_)}</div>
     </div>
   </py:def>
 
@@ -120,7 +122,6 @@ Gutenberg metadata much faster than by scraping.
     <xi:include href="menu.html" />
     <div class="page_content" id="content" itemscope="itemscope" itemtype="http://schema.org/Book" i18n:comment="On the 'bibrec' page.">
 
-      <!-- ============ SECTION: Breadcrumbs ============ -->
       <div class="breadcrumbs noprint">
 	<ul itemscope="itemscope" itemtype="https://schema.org/BreadcrumbList">
 	  <py:for each="n, bc in enumerate (os.breadcrumbs)">
@@ -132,7 +133,6 @@ Gutenberg metadata much faster than by scraping.
 	</ul>
       </div>
 
-	<!-- ============ SECTION: Book title ============ -->
 	<h1 itemprop="name" id="book_title">${os.title}</h1>
 
 
@@ -140,7 +140,6 @@ Gutenberg metadata much faster than by scraping.
         <div property="dcterms:publisher" itemprop="publisher" content="Project Gutenberg" />
         <div itemprop="bookFormat" content="EBook" />
 
-	<!-- ============ SECTION: Cover / social / QR sidebar ============ -->
 	<div id="cover-social-wrapper">
 
 	  <div py:if="os.cover_image_url" id="cover">
@@ -185,12 +184,11 @@ Gutenberg metadata much faster than by scraping.
 	  </div>
 	</div>
 
-	<!-- ============ SECTION: Tabs wrapper / tabs ============ -->
 	<div id="tabs-wrapper">
 	<div id="tabs">
         <div id="download" i18n:comment="On the 'Download' tab of the 'bibrec' page.">
 
-			<!-- ============ SECTION: Summary (isolated from bottom about-table by skip rule below at line ~326) ============ -->
+			<!-- Top-of-page summary. The about-table below filters out the auto-generated summary marc to avoid showing it twice. -->
 			<py:if test="os.initial_summary">
 				<div class="summary-text-container">
 				<span class="readmore-container">
@@ -216,7 +214,7 @@ Gutenberg metadata much faster than by scraping.
 			</py:if>
 
 
-            <!-- ============ SECTION: Read Online Now button (isolated from download table) ============ -->
+            <!-- Lifted out of the download table so it reads as a primary CTA, not a file format. -->
             <py:if test="os.html_read_url">
               <div class="read-online-wrapper">
                 <a class="read-online-button" href="${os.html_read_url}" title="Read this book online now">
@@ -225,73 +223,72 @@ Gutenberg metadata much faster than by scraping.
               </div>
             </py:if>
 
-            <!-- ============ SECTION: Download section (card wrapper) ============ -->
             <py:for each="e in os.entries">
               <py:if test="isinstance(e, bs.DC)">
-              <?python
-                other_files = [f for f in e.files
-                               if not f.hidden
-                               and f.filetype not in ('html', 'html.images', 'html.noimages')
-                               and not (f.filetype and f.filetype.startswith('epub3'))]
-              ?>
-              <py:if test="os.epub3_file or other_files or e.base_dir">
-            <div class="download-section" about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
+                <?python
+                  # Files surfaced under "Other formats". Excludes html (Read Online button) and epub3 (featured card).
+                  other_files = [f for f in e.files
+                                 if not f.hidden
+                                 and f.filetype not in ('html', 'html.images', 'html.noimages')
+                                 and not (f.filetype and f.filetype.startswith('epub3'))]
+                ?>
+                <py:if test="os.epub3_file or other_files or e.base_dir">
+                  <div class="download-section" about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat">
 
-              <h2 id="download_options_header">Download for free</h2>
+                    <h2 id="download_options_header">Download for free</h2>
 
-			  <p py:if="os.epub3_file" id="reading_help_hint">For e-readers and reading apps<span class="reading-help-extra"> — Kindle, Kobo, Apple Books, Calibre etc.</span></p>
+                    <!-- The .reading-help-extra span hides at narrower viewports (≤960px) via CSS. -->
+                    <p py:if="os.epub3_file" id="reading_help_hint">For e-readers and reading apps<span class="reading-help-extra"> — Kindle, Kobo, Apple Books, Calibre etc.</span></p>
 
-              <!-- ============ SECTION: Featured EPUB3 (recommended) ============ -->
-              <py:if test="os.epub3_file">
-                <div class="featured-format">
-                  <div class="featured-format-row">
-                    <a class="featured-format-link" href="/${os.epub3_file.filename}" title="Download EPUB3">
-                      <span class="featured-format-name">EPUB3</span>
-                      <span class="featured-format-recommended">★ Recommended<span class="recommended-extra"> for most devices</span><span class="recommended-bang">!</span></span>
-                    </a>
-                    <div class="featured-format-actions noprint">${cloud_actions(os.epub3_file)}</div>
+                    <py:if test="os.epub3_file">
+                      <div class="featured-format">
+                        <div class="featured-format-row">
+                          <a class="featured-format-link" href="/${os.epub3_file.filename}" title="Download EPUB3">
+                            <span class="featured-format-name">EPUB3</span>
+                            <span class="featured-format-recommended">★ Recommended<span class="recommended-extra"> for most devices</span><span class="recommended-bang">!</span></span>
+                          </a>
+                          <div class="featured-format-actions noprint">${cloud_actions(os.epub3_file)}</div>
+                        </div>
+                        <div class="featured-format-tips">
+                          <div><strong>Kindle</strong> → Use <a href="/help/reading_options.html#kindle">Send-to-Kindle</a></div>
+                          <div><strong>Kobo, Nook etc</strong> → <a href="/help/reading_options.html#kobo-nook-etc">Transfer via USB</a></div>
+                          <div><strong>Phone, tablet or computer</strong> → Open in a reading app</div>
+                          <div><a class="full-reading-guide-link" href="/help/reading_options.html">Reading Guide</a></div>
+                        </div>
+                      </div>
+                    </py:if>
+
+                    <py:if test="other_files or e.base_dir">
+                      <!-- When EPUB3 is featured above, the rest collapses behind a disclosure. Otherwise we render a flat list (no featured card to demote them under). -->
+                      <details py:if="os.epub3_file" class="other-formats">
+                        <summary class="other-formats-summary">Other formats &amp; older devices</summary>
+                        <div class="other-formats-list">
+                          <py:for each="file_ in other_files">${format_row(file_)}</py:for>
+                          <p py:if="e.base_dir" class="other-formats-more">
+                            <span class="small">There may be
+                              <a class="subtle_link" rel="nofollow" href="${e.base_dir}">more files</a>
+                              related to this item.</span>
+                          </p>
+                        </div>
+                      </details>
+
+                      <div py:if="not os.epub3_file" class="other-formats-list other-formats-list--flat">
+                        <py:for each="file_ in other_files">${format_row(file_)}</py:for>
+                        <p py:if="e.base_dir" class="other-formats-more">
+                          <span class="small">There may be
+                            <a class="subtle_link" rel="nofollow" href="${e.base_dir}">more files</a>
+                            related to this item.</span>
+                        </p>
+                      </div>
+                    </py:if>
                   </div>
-                  <div class="featured-format-tips">
-                    <div><strong>Kindle</strong> → Use <a href="/help/reading_options.html#kindle">Send-to-Kindle</a></div>
-                    <div><strong>Kobo, Nook etc</strong> → <a href="/help/reading_options.html#kobo-nook-etc">Transfer via USB</a></div>
-                    <div><strong>Phone, tablet or computer</strong> → Open in a reading app</div>
-                    <div><strong>Overview</strong> → see our <a class="full-reading-guide-link" href="/help/reading_options.html">Reading Guide</a></div>
-                  </div>
-                </div>
-              </py:if>
-				
-              <py:if test="other_files or e.base_dir">
-                <!-- ============ SECTION: Other formats — collapsed disclosure (EPUB3 case) ============ -->
-                <details py:if="os.epub3_file" class="other-formats">
-                  <summary class="other-formats-summary">Other formats &amp; older devices</summary>
-                  <div class="other-formats-list">
-                    <py:for each="file_ in other_files">${format_row(file_)}</py:for>
-                    <p py:if="e.base_dir" class="other-formats-more">
-                      <span class="small">There may be
-                        <a class="subtle_link" rel="nofollow" href="${e.base_dir}">more files</a>
-                        related to this item.</span>
-                    </p>
-                  </div>
-                </details>
-
-                <!-- ============ SECTION: Available formats — flat list (no-EPUB3 case) ============ -->
-                <div py:if="not os.epub3_file" class="other-formats-list other-formats-list--flat">
-                  <py:for each="file_ in other_files">${format_row(file_)}</py:for>
-                  <p py:if="e.base_dir" class="other-formats-more">
-                    <span class="small">There may be
-                      <a class="subtle_link" rel="nofollow" href="${e.base_dir}">more files</a>
-                      related to this item.</span>
-                  </p>
-                </div>
-              </py:if>
-            </div>
-              </py:if>
+                </py:if>
               </py:if>
             </py:for>
 
           </div> <!-- download -->
 
-          <!-- ============ SECTION: Similar books / more_stuff ============ -->
+          <!-- Similar-books row. Two passes so "Readers also downloaded" (suggestion) always sorts first, regardless of os.entries order. -->
           <div id="more_stuff">
             <div class="similar-books-tags">
               <py:for each="n, e in enumerate (os.entries)">
@@ -305,8 +302,7 @@ Gutenberg metadata much faster than by scraping.
                 </py:if>
               </py:for>
             </div>
-          </div> <!-- more stuff -->
-	  <!-- ============ SECTION: About this eBook (bibrec table) ============ -->
+          </div>
 	  <div id="bibrec" i18n:comment="On the 'bibrec' tab of the 'bibrec' page.">
 	    <py:for each="e in os.entries">
 	      <py:if test="isinstance (e, bs.DC)">
@@ -417,6 +413,13 @@ Gutenberg metadata much faster than by scraping.
 		    </tr>
 
 		  </table>
+
+		  <!-- schema.org Offer microdata — meta/link tags are non-rendering, so this surfaces free / in-stock signals to crawlers without visible UI. -->
+		  <div itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">
+		    <meta itemprop="priceCurrency" content="USD" />
+		    <meta itemprop="price" content="0.00" />
+		    <link itemprop="availability" href="http://schema.org/InStock" />
+		  </div>
 
 		</div>
 	      </py:if>
