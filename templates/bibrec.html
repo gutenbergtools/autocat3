@@ -220,7 +220,7 @@ Gutenberg metadata much faster than by scraping.
             <py:if test="os.html_read_url">
               <div class="read-online-wrapper">
                 <a class="read-online-button" href="${os.html_read_url}" title="Read this book online now">
-                  Read Online Now!
+                  Read Online Now
                 </a>
               </div>
             </py:if>
@@ -237,7 +237,7 @@ Gutenberg metadata much faster than by scraping.
               <py:if test="os.epub3_file or other_files or e.base_dir">
             <div class="download-section" about="[ebook:$e.project_gutenberg_id]" rel="dcterms:hasFormat" >
 
-              <h2 id="download_options_header">Download</h2>
+              <h2 id="download_options_header">Download for free</h2>
 
 			  <p py:if="os.epub3_file" id="reading_help_hint">For e-readers and reading apps<span class="reading-help-extra"> — Kindle, Kobo, Apple Books, Calibre etc.</span></p>
 
@@ -293,22 +293,18 @@ Gutenberg metadata much faster than by scraping.
 
           <!-- ============ SECTION: Similar books / more_stuff ============ -->
           <div id="more_stuff">
-            <py:for each="n, e in enumerate (os.entries)">
-          <py:if test="isinstance (e, bs.Cat) and e.rel not in ('start', )">
-            <py:if test="e.header and old_header != e.header">
-              <h2 class="header middle_section_header">${e.header}</h2>
-            </py:if>
-            <?python old_header = e.header ?>
-
-            <a rel="nofollow"
-               href="${e.url}"
-               accesskey="${str (n % 10)}"
-               class="${'similar-books-lead' if e.icon == 'suggestion' else 'similar-books-tag'}">
-              <span class="title">${e.title}</span>
-              <span py:if="e.subtitle" class="subtitle">${e.subtitle}</span>
-            </a>
-          </py:if>
-            </py:for>
+            <div class="similar-books-tags">
+              <py:for each="n, e in enumerate (os.entries)">
+                <py:if test="isinstance (e, bs.Cat) and e.icon == 'suggestion'">
+                  <a rel="nofollow" href="${e.url}" accesskey="${str (n % 10)}" class="similar-books-tag">${e.title}</a>
+                </py:if>
+              </py:for>
+              <py:for each="n, e in enumerate (os.entries)">
+                <py:if test="isinstance (e, bs.Cat) and e.icon == 'bookshelf'">
+                  <a rel="nofollow" href="${e.url}" accesskey="${str (n % 10)}" class="similar-books-tag">${e.title}</a>
+                </py:if>
+              </py:for>
+            </div>
           </div> <!-- more stuff -->
 	  <!-- ============ SECTION: About this eBook (bibrec table) ============ -->
 	  <div id="bibrec" i18n:comment="On the 'bibrec' tab of the 'bibrec' page.">
