@@ -130,7 +130,6 @@ class BibrecPage (Page.Page):
 
         if os.format == 'html':
             cat = BaseSearcher.Cat ()
-            cat.header = _('Find Similar Books')
             cat.title = _('Readers also downloaded')
             cat.rel = 'related'
             cat.url = os.url ('also', id = os.id)
