@@ -65,7 +65,7 @@ Gutenberg metadata much faster than by scraping.
         <a class="other-format-link"
            href="/${file_.filename}"
            type="${file_.mediatypes[-1]}"
-           title="Download"
+           title="Download (${file_.hr_extent})"
            property="dcterms:format"
            content="${file_.mediatypes[-1]}"
            datatype="dcterms:IMT">${file_.hr_filetype}</a>
@@ -243,7 +243,7 @@ Gutenberg metadata much faster than by scraping.
                     <py:if test="os.epub3_file">
                       <div class="featured-format">
                         <div class="featured-format-row">
-                          <a class="featured-format-link" href="/${os.epub3_file.filename}" title="Download EPUB3">
+                          <a class="featured-format-link" href="/${os.epub3_file.filename}" title="Download EPUB3 (${os.epub3_file.hr_extent})">
                             <span class="featured-format-name">EPUB3</span>
                             <span class="featured-format-recommended">★ Recommended<span class="recommended-extra"> for most devices</span><span class="recommended-bang">!</span></span>
                           </a>
@@ -414,11 +414,11 @@ Gutenberg metadata much faster than by scraping.
 
 		  </table>
 
-		  <!-- schema.org Offer microdata — meta/link tags are non-rendering, so this surfaces free / in-stock signals to crawlers without visible UI. -->
-		  <div itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">
+		  <div class="offer-note" itemprop="offers" itemscope="itemscope" itemtype="http://schema.org/Offer">
 		    <meta itemprop="priceCurrency" content="USD" />
 		    <meta itemprop="price" content="0.00" />
 		    <link itemprop="availability" href="http://schema.org/InStock" />
+		    <em>Project Gutenberg eBooks are always free!</em>
 		  </div>
 
 		</div>
