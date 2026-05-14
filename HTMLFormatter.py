@@ -166,6 +166,8 @@ class HTMLFormatter (XMLishFormatter):
                 file_.encoding = None
             if file_.encoding:
                 file_.hr_filetype += ' ' + file_.encoding.upper ()
+            if filetype.startswith ('txt'):
+                file_.hr_filetype = 'Plain Text (accessible)'
             if filetype.startswith ('html') and file_.compression == 'none':
                 if htmlcount > 0:
                     file_.hidden = True
