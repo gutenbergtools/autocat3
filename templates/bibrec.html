@@ -143,7 +143,7 @@ Gutenberg metadata much faster than by scraping.
 	<div id="cover-social-wrapper">
 
 	  <div py:if="os.cover_image_url" id="cover">
-	    <a href="${os.read_url}" title="Read Now!">
+	    <a href="${os.read_url}" title="Read now!">
 	    <img class="cover-art"
 		 src="${os.cover_image_url}"
 		 title="Book Cover"
@@ -182,7 +182,7 @@ Gutenberg metadata much faster than by scraping.
 	  <div id="qr">
 	    <details class="qr-details">
 	      <summary>QR code</summary>
-	      <span class="qrcode qrcode-desktop" title="Scan QR Code for this page." />
+	      <span class="qrcode qrcode-desktop" title="Scan QR code for this page." />
 	    </details>
 	  </div>
 	</div>
@@ -208,8 +208,8 @@ Gutenberg metadata much faster than by scraping.
                         <!-- Clickable label to show more/less -->
                         <label for="toggle" >
                             <span class="readmoredots">...  </span>
-                            <span class="readmore">Read More</span>
-                            <span class="showless">Show Less</span>					 
+                            <span class="readmore">Read more</span>
+                            <span class="showless">Show less</span>					 
                         </label>
 					</span>
 				</span>
@@ -221,7 +221,7 @@ Gutenberg metadata much faster than by scraping.
             <py:if test="os.html_read_url">
               <div class="read-online-wrapper">
                 <a class="read-online-button" href="${os.html_read_url}" title="Read this book online now">
-                  Read Online Now
+                  Read online now
                 </a>
               </div>
             </py:if>
@@ -243,7 +243,7 @@ Gutenberg metadata much faster than by scraping.
                     <h2 id="download_options_header">Download for free</h2>
 
                     <!-- The .reading-help-extra span hides at narrower viewports (≤960px) via CSS. -->
-                    <p py:if="os.epub3_file" id="reading_help_hint">For e-readers and reading apps<span class="reading-help-extra"> — Kindle, Kobo, Apple Books, Calibre etc.</span></p>
+                    <p py:if="os.epub3_file" id="reading_help_hint">For your e-reader or reading app<span class="reading-help-extra"> — Kindle, Kobo, Apple Books, Calibre etc.</span></p>
 
                     <py:if test="os.epub3_file">
                       <div class="featured-format">
@@ -258,7 +258,7 @@ Gutenberg metadata much faster than by scraping.
                           <div><strong>Kindle</strong> → Use <a href="/help/reading_options.html#kindle">Send-to-Kindle</a></div>
                           <div><strong>Kobo, Nook etc</strong> → <a href="/help/reading_options.html#kobo-nook-etc">Transfer via USB</a></div>
                           <div><strong>Phone, tablet or computer</strong> → Open in a reading app</div>
-                          <div><a class="full-reading-guide-link" href="/help/reading_options.html">Reading Guide</a></div>
+                          <div><a class="full-reading-guide-link" href="/help/reading_options.html">Reading guide</a></div>
                         </div>
                       </div>
                     </py:if>
@@ -392,7 +392,7 @@ Gutenberg metadata much faster than by scraping.
 		    </tr>
 
 		    <tr>
-		      <th>EBook-No.</th>
+		      <th>eBook-No.</th>
 		      <td>${e.project_gutenberg_id}</td>
 		    </tr>
 
