@@ -141,10 +141,10 @@ class BibrecPage (Page.Page):
             for bookshelf in dc.bookshelves:
                 cat = BaseSearcher.Cat ()
                 shelf_name = bookshelf.bookshelf
-                # "Browsing: " is an internal DB marker for Main Category bookshelves, not part of the display name.
+                # "Category: " is an internal DB marker for Main Category bookshelves, not part of the display name.
                 # We strip it here until gutenbergtools/pgdb#12 fixes this at the data layer.
-                if shelf_name.startswith('Browsing: '):
-                    shelf_name = shelf_name[len('Browsing: '):]
+                if shelf_name.startswith('Category: '):
+                    shelf_name = shelf_name[len('Category: '):]
                 cat.title = shelf_name
                 cat.rel = 'related'
                 cat.url = os.url ('bookshelf', id = bookshelf.id)
