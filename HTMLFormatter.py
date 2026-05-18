@@ -145,40 +145,48 @@ class HTMLFormatter (XMLishFormatter):
         dc.magnetlink = None
 
         # hide all txt files but the first one
-        txtcount = showncount = htmlcount = 0
-
+        showncount = htmlcount = 0
+        txt_file = None
+        # this is the logic for whether or not to display a file
         for file_ in dc.files:
             filetype = file_.filetype or ''
             file_.hidden = False
-
-            if filetype in NO_DESKTOP_FILETYPES:
-                file_.hidden = True
-            if file_.compression == 'zip' and file_.archive_path.startswith('cache/epub'):
-                file_.hr_filetype = 'Download HTML (zip)'
-                file_.mediatypes.append('application/zip')
-            elif file_.compression != 'none':
-                file_.hidden = True
-            if filetype.startswith ('txt'):
-                if txtcount > 0:
-                    file_.hidden = True
-                txtcount += 1
-            if filetype != 'txt':
-                file_.encoding = None
-            if file_.encoding:
-                file_.hr_filetype += ' ' + file_.encoding.upper ()
-            if filetype.startswith ('txt'):
+            if filetype == 'txt.utf-8': # should be there for all books
+                if txt_file != None:
+                    # must be a filetype = 'txt', hide it
+                    txt_file.hidden = True
+                    showncount -= 1
+                txt_file = file_
                 file_.hr_filetype = 'Plain Text (accessible)'
-            if filetype == 'kindle.images':
-                file_.hr_filetype = 'Older Kindles'
-            if filetype == 'epub.images':
-                file_.hr_filetype = 'EPUB (older e-readers)'
-            if filetype == 'epub.noimages':
-                file_.hr_filetype = 'EPUB (older e-readers, no images)'
-            if filetype.startswith ('html') and file_.compression == 'none':
-                if htmlcount > 0:
+            elif file_.compression == 'zip':
+                if file_.archive_path.startswith('cache/epub'):
+                    file_.hr_filetype = 'Download HTML (zip)'
+                    file_.mediatypes.append('application/zip')
+                else:
                     file_.hidden = True
-                file_.hr_filetype = 'Read now!'
-                htmlcount += 1
+            elif filetype == 'html.images':
+                if file_.compression == 'none':
+                    if htmlcount > 0:
+                        file_.hidden = True
+                    else:
+                        file_.hr_filetype = 'Read now!'
+                        htmlcount += 1
+            elif filetype == 'epub.images':
+                file_.hr_filetype = 'EPUB (older e-readers)'
+            elif filetype == 'kindle.images':
+                file_.hr_filetype = 'Older Kindles'
+            elif filetype == 'epub.noimages':
+                file_.hr_filetype = 'EPUB (older e-readers, no images)'
+            elif filetype in NO_DESKTOP_FILETYPES or filetype == '':
+                # if no filetype is available, we shouldn't show it
+                file_.hidden = True
+            elif filetype == "txt": # rare
+                # only show if no "txt.utf-8"
+                if txt_file:
+                    file_.hidden = True
+                else:
+                    txt_file = file_
+                    file_.hr_filetype = 'Plain Text (accessible)'
             if not file_.hidden:
                 showncount += 1
 
