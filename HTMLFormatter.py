@@ -168,6 +168,12 @@ class HTMLFormatter (XMLishFormatter):
                 file_.hr_filetype += ' ' + file_.encoding.upper ()
             if filetype.startswith ('txt'):
                 file_.hr_filetype = 'Plain Text (accessible)'
+            if filetype == 'kindle.images':
+                file_.hr_filetype = 'Older Kindles'
+            if filetype == 'epub.images':
+                file_.hr_filetype = 'EPUB (older e-readers)'
+            if filetype == 'epub.noimages':
+                file_.hr_filetype = 'EPUB (older e-readers, no images)'
             if filetype.startswith ('html') and file_.compression == 'none':
                 if htmlcount > 0:
                     file_.hidden = True
