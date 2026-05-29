@@ -70,13 +70,9 @@ Gutenberg metadata much faster than by scraping.
            content="${file_.mediatypes[-1]}"
            datatype="dcterms:IMT">${file_.hr_filetype}</a>
       </div>
-      <div py:choose="" class="other-format-actions noprint">
-        <span py:when="file_.dropbox_url or file_.gdrive_url or file_.msdrive_url" >
-           (${file_.hr_extent}) ${cloud_actions(file_)}
-        </span>
-        <span py:otherwise="" >
-           (${file_.hr_extent})
-        </span>
+      <div class="other-format-actions noprint">
+        <py:if test="file_.dropbox_url or file_.gdrive_url or file_.msdrive_url">${cloud_actions(file_)}</py:if>
+        <span class="other-format-size">${file_.hr_extent}</span>
       </div>
     </div>
   </py:def>
@@ -258,12 +254,12 @@ Gutenberg metadata much faster than by scraping.
                             <span class="featured-format-name">EPUB3</span>
                             <span class="featured-format-recommended">★ Recommended<span class="recommended-extra"> for most devices</span><span class="recommended-bang">!</span></span>
                           </a>
-                          <div class="featured-format-actions noprint">(${os.epub3_file.hr_extent})  ${cloud_actions(os.epub3_file)}</div>
+                          <div class="featured-format-actions noprint">${cloud_actions(os.epub3_file)}<span class="featured-format-size">${os.epub3_file.hr_extent}</span></div>
                         </div>
                         <div class="featured-format-tips">
-                          <div>for <strong>Kindle</strong> → Use <a href="/help/reading_options.html#kindle">Send-to-Kindle</a></div>
-                          <div>for <strong>Kobo, Nook etc</strong> → <a href="/help/reading_options.html#kobo-nook-etc">Transfer via USB</a></div>
-                          <div>for <strong>Phone, tablet or computer</strong> → Open in a reading app</div>
+                          <div><strong>Kindle</strong> → Use <a href="/help/reading_options.html#kindle">Send-to-Kindle</a></div>
+                          <div><strong>Kobo, Nook etc</strong> → <a href="/help/reading_options.html#kobo-nook-etc">Transfer via USB</a></div>
+                          <div><strong>Phone, tablet or computer</strong> → Open in a reading app</div>
                           <div><a class="full-reading-guide-link" href="/help/reading_options.html">Reading guide</a></div>
                         </div>
                       </div>
