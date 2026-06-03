@@ -41,6 +41,7 @@ from AdvSearchPage import AdvSearchPage
 import CoverPages
 import QRCodePage
 import diagnostics
+import MetricsPage
 import Sitemap
 import Formatters
 from errors import ErrorPage
@@ -268,6 +269,9 @@ def main():
 
     d.connect('diagnostics', r'/diagnostics/',
                controller=diagnostics.DiagnosticsPage())
+
+    d.connect('metrics', r'/metrics/',
+               controller=MetricsPage.MetricsPage())
 
     d.connect('stats', r'/stats/',
                controller=Page.NullPage(), _static=True)
