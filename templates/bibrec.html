@@ -68,7 +68,7 @@ Gutenberg metadata much faster than by scraping.
            title="Download (${file_.hr_filetype})"
            property="dcterms:format"
            content="${file_.mediatypes[-1]}"
-           datatype="dcterms:IMT"><strong>${file_.hr_filetype}</strong></a>
+           datatype="dcterms:IMT">${file_.hr_filetype}</a>
       </div>
       <div class="other-format-actions noprint">
         <py:if test="file_.dropbox_url or file_.gdrive_url or file_.msdrive_url">${cloud_actions(file_)}</py:if>
