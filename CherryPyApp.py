@@ -40,7 +40,6 @@ from BibrecPage import BibrecPage
 from AdvSearchPage import AdvSearchPage
 import CoverPages
 import QRCodePage
-import diagnostics
 import MetricsPage
 import Sitemap
 import Formatters
@@ -266,9 +265,6 @@ def main():
 
     d.connect('iplimit', r'/iplimit/',
                controller=Page.NullPage())
-
-    d.connect('diagnostics', r'/diagnostics/',
-               controller=diagnostics.DiagnosticsPage())
 
     d.connect('metrics', r'/metrics/',
                controller=MetricsPage.MetricsPage())
