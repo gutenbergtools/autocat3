@@ -12,6 +12,7 @@ import resource
 import threading
 
 import cherrypy
+from cherrypy.lib.sessions import RamSession
 from Page import Page
 
 class MetricsPage (Page):
@@ -25,6 +26,11 @@ class MetricsPage (Page):
             "autocat3_memory_kb_self": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
             "autocat3_memory_kb_children": resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss,
         }
+
+        if isinstance(cherrypy.serving.session, RamSession):
+            core_metrics = core_metrics | {
+                "autocat3_sessions": len(RamSession.cache),
+            }
 
         http_server = cherrypy.server
         http_server_metrics = {
