@@ -1,36 +1,22 @@
-# autocat3
+# autocat3_original
 
-**autocat3** is a Python/CherryPy application that serves dynamic content for [Project Gutenberg](https://www.gutenberg.org). It handles search, catalog browsing, and OPDS feed generation.
+**autocat3** is a Python/CherryPy application that serves dynamic content for [Project Gutenberg](https://www.gutenberg.org). 
 
-This fork adds a materialized-view-based search engine (`mv_search/`) and an OPDS 2.0 JSON feed server (`OPDS2.py`).
+CherryPy is used as the web framwork which is easy to develop.
 
----
+It mainly implements the search functionality and rate limiter. Also return results pages based on templates.
 
-## What's New
+## How it works.
+The production version of autocat3 is on **app1**.  
+This application in this repository is on **appdev1**.
 
-### Materialized View (`mv_books_dc`)
+Previously, the old version of autocat3 relies on dependencies installed directly on the system. To make it more flexible and easy to deploy, we tend to use virtual env rather than the previous method. To use virtual env, we use pipenv instead of using pip and virtual env separately. 
 
-The OPDS feed need all of a book's metadata at once: title, authors, subjects, bookshelves, formats, etc. Fetching this across the many-to-many tables adds up in time. The materialized view `mv_books_dc` pre-computes all those joins into a single cached table so queries return in under 0.5s most times.
+The virtual env directory is on the default directory while we run ```pipenv --three```. So it's not in this directory. (We strictly use python3 for this project because CherryPy will discard the python2 in the future.)
 
-**You must create this view before running the updated autocat.** The SQL is here:
+To start the service/application, we use **systemd** to do that. the ```autocat3.service``` file is written under ```/etc/systemd/system```directory. 
 
-https://github.com/zachjesus/pg-db-mv/blob/main/15_materialized_view.sql
-
-### Search Engine (`mv_search/`)
-
-The `mv_search/` directory contains a new search module that queries `mv_books_dc` directly. It supports full-text search (GIN/tsvector), fuzzy search (GiST/trigram), filtering, sorting, and pagination. Results can be output in PG or OPDS 2.0 format via crosswalk transforms.
-
-### OPDS 2.0 Feed (`OPDS2.py`)
-
-A full OPDS 2.0 JSON feed mounted at `/opds`. Supports search, faceted browsing by bookshelf/subject/LoCC classification, audiobook metadata with Readium profile, and pagination.
-
-### Automatic View Refresh (`Timer.py`)
-
-The materialized view refreshes automatically on startup and once daily at a configurable hour (default 5 PM, set via `mv_refresh_hour` in config). An advisory lock prevents concurrent refreshes when multiple instances share the same database behind a load balancer.
-
----
-
-## Setup
+## How to Install
 
 ### Prerequisites
 
@@ -88,19 +74,9 @@ curl -L -O https://raw.githubusercontent.com/zachjesus/pg-db-mv/main/15_material
 sudo -u postgres psql -d gutenberg -f 15_materialized_view.sql
 ```
 
-### 6. Grant database permissions (only if not using `postgres` user)
+To avoid permission errors create the materialized view as the same user you will be using for `pguser` in the next step.
 
-The default config (`CherryPy.conf`) connects as `pguser: 'postgres'`, which already has full privileges. If you change `pguser` to a different database user, that user needs refresh permissions:
-
-```sql
--- Run as postgres, replacing 'myuser' with your pguser:
-GRANT USAGE ON SCHEMA public TO myuser;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO myuser;
-GRANT EXECUTE ON FUNCTION refresh_mv_books_dc() TO myuser;
-ALTER MATERIALIZED VIEW mv_books_dc OWNER TO myuser;
-```
-
-### 7. Configure
+### 6. Configure
 
 Edit `/etc/autocat3.conf` (or `~/.autocat3` under the autocat user) to override defaults from `CherryPy.conf`. At minimum, set your database credentials and hosts:
 
@@ -112,13 +88,17 @@ pgdatabase: 'gutenberg'
 pguser:     'postgres'
 ```
 
+The user must have sufficient permissions to access all public tables and refresh the materialized view.
+
 To change when the materialized view refreshes (default 5 PM server time):
 
 ```ini
 mv_refresh_hour: 17
 ```
 
-### 8. Install the systemd service
+Other information on configuring Autocat3 can be found in configuring.txt
+
+### 7. Install the systemd service
 
 The service runs the app using the venv's Python directly:
 
@@ -128,7 +108,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable autocat3.service
 ```
 
-### 9. Start the service
+### 8. Start the service
 
 ```bash
 sudo systemctl start autocat3.service
@@ -142,9 +122,7 @@ sudo systemctl status autocat3.service
 
 Logs are written to `/var/lib/autocat/log/error.log` and `/var/lib/autocat/log/access.log`.
 
----
-
-## Service Management
+Some common service commands are:
 
 ```bash
 sudo systemctl start autocat3.service    # Start
@@ -154,8 +132,4 @@ sudo systemctl status autocat3.service   # Check status
 sudo systemctl daemon-reload             # Reload after editing the unit file
 ```
 
----
-
-## Original autocat3
-
-Copyright 2009-2010 by Marcello Perathoner.
+Copyright 2009-2010 by Marcello Perathoner Copyright 2019-present by Project Gutenberg
