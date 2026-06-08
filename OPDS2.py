@@ -61,10 +61,10 @@ OPDS_TYPE = "application/opds+json"
 
 # Helpers
 def _json_error_page(status, message, traceback, version):
-    cherrypy.response.headers["Content-Type"] = "application/json"
+    cherrypy.response.status = status
+    cherrypy.response.headers["Content-Type"] = OPDS_TYPE
     return json.dumps(
         {
-            "status": int(str(status).split(" ", 1)[0]),
             "metadata": {
                 "title": status,
                 "description": message,
