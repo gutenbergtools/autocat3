@@ -29,10 +29,13 @@ _LANG_PRIORITY = [
     "en", "fr", "de", "fi", "nl", "it", "pt", "es", "zh",
     "la", "el", "grc", "hu", "sv", "da", "no", "pl", "ru", "cs", "ja",
 ]
-LANGUAGES = sorted(
-    [{"code": lang.code, "label": lang.label} for lang in Language],
-    key=lambda x: (_LANG_PRIORITY.index(x["code"]) if x["code"] in _LANG_PRIORITY else 999, x["label"]),
-)
+LANGUAGES = [
+    {"code": lang.code, "label": lang.label}
+    for lang in Language
+    if lang.code in _LANG_PRIORITY
+]
+LANGUAGES.sort(key=lambda x: _LANG_PRIORITY.index(x["code"]))
+
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
 
@@ -71,13 +74,12 @@ def _make_page_url(endpoint: str, base: Dict, query: str) -> Callable[[int], str
 
 def _make_facet_url(endpoint: str, base: Dict) -> Callable[..., str]:
     """Create a facet URL builder for filter facets."""
-    def facet_url(q: str, lng: str, cr: str, ab: str, srt: str, so: str) -> str:
+    def facet_url(q: str, lng: str, ab: str, srt: str, so: str) -> str:
         return _url(endpoint, {
             **base,
             "query": q,
             "page": 1,
             "lang": lng,
-            "copyrighted": cr,
             "audiobook": ab,
             "sort": srt,
             "sort_order": so,
@@ -117,14 +119,10 @@ class OPDSFeed:
         return self._fts
 
     # Query Helpers
-    def _filter(self, q, lang: str, copyrighted: str, audiobook: str):
+    def _filter(self, q, lang: str, audiobook: str):
         """Apply common filters to query."""
         if lang:
             q.lang(lang)
-        if copyrighted == "true":
-            q.copyrighted()
-        elif copyrighted == "false":
-            q.public_domain()
         if audiobook == "true":
             q.audiobook()
         elif audiobook == "false":
@@ -160,13 +158,33 @@ class OPDSFeed:
             links.append(_link("next", url_fn(page + 1)))
             links.append(_link("last", url_fn(total_pages)))
         return links
-
+    
+    def _error_feed(
+        self,
+        title: str,
+        detail: str,
+        self_href: str,
+        up_href: str = "/opds/",
+    ) -> Dict:
+        return {
+            "metadata": {
+                "title": title,
+                "numberOfItems": 0,
+                "description": detail,
+            },
+            "links": [
+                _link("self", self_href),
+                _link("start", "/opds/"),
+                _link("up", up_href),
+            ],
+            "publications": [],
+        }
+    
     def _facets(
         self,
         url_fn: Callable,
         query: str,
         lang: str,
-        copyrighted: str,
         audiobook: str,
         sort: str,
         sort_order: str,
@@ -179,28 +197,28 @@ class OPDSFeed:
                 "links": [
                     _facet(
                         url_fn(
-                            query, lang, copyrighted, audiobook, "downloads", "desc"
+                            query, lang, audiobook, "downloads", "desc"
                         ),
                         "Most Popular",
                         sort in ("downloads", ""),
                     ),
                     _facet(
-                        url_fn(query, lang, copyrighted, audiobook, "relevance", ""),
+                        url_fn(query, lang, audiobook, "relevance", ""),
                         "Relevance",
                         sort == "relevance",
                     ),
                     _facet(
-                        url_fn(query, lang, copyrighted, audiobook, "title", "asc"),
+                        url_fn(query, lang, audiobook, "title", "asc"),
                         "Title (A-Z)",
                         sort == "title",
                     ),
                     _facet(
-                        url_fn(query, lang, copyrighted, audiobook, "author", "asc"),
+                        url_fn(query, lang, audiobook, "author", "asc"),
                         "Author (A-Z)",
                         sort == "author",
                     ),
                     _facet(
-                        url_fn(query, lang, copyrighted, audiobook, "random", ""),
+                        url_fn(query, lang, audiobook, "random", ""),
                         "Random",
                         sort == "random",
                     ),
@@ -227,40 +245,20 @@ class OPDSFeed:
         facets.extend(
             [
                 {
-                    "metadata": {"title": "Copyright Status"},
-                    "links": [
-                        _facet(
-                            url_fn(query, lang, "", audiobook, sort, sort_order),
-                            "Any",
-                            not copyrighted,
-                        ),
-                        _facet(
-                            url_fn(query, lang, "false", audiobook, sort, sort_order),
-                            "Public Domain",
-                            copyrighted == "false",
-                        ),
-                        _facet(
-                            url_fn(query, lang, "true", audiobook, sort, sort_order),
-                            "Copyrighted",
-                            copyrighted == "true",
-                        ),
-                    ],
-                },
-                {
                     "metadata": {"title": "Format"},
                     "links": [
                         _facet(
-                            url_fn(query, lang, copyrighted, "", sort, sort_order),
+                            url_fn(query, lang, "", sort, sort_order),
                             "Any",
                             not audiobook,
                         ),
                         _facet(
-                            url_fn(query, lang, copyrighted, "false", sort, sort_order),
+                            url_fn(query, lang, "false", sort, sort_order),
                             "Text",
                             audiobook == "false",
                         ),
                         _facet(
-                            url_fn(query, lang, copyrighted, "true", sort, sort_order),
+                            url_fn(query, lang, "true", sort, sort_order),
                             "Audiobook",
                             audiobook == "true",
                         ),
@@ -270,7 +268,7 @@ class OPDSFeed:
                     "metadata": {"title": "Language"},
                     "links": [
                         _facet(
-                            url_fn(query, "", copyrighted, audiobook, sort, sort_order),
+                            url_fn(query, "", audiobook, sort, sort_order),
                             "Any",
                             not lang,
                         )
@@ -280,7 +278,6 @@ class OPDSFeed:
                             url_fn(
                                 query,
                                 item["code"],
-                                copyrighted,
                                 audiobook,
                                 sort,
                                 sort_order,
@@ -394,7 +391,6 @@ class OPDSFeed:
         limit: int = 25,
         query: str = "",
         lang: str = "",
-        copyrighted: str = "",
         audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
@@ -409,7 +405,6 @@ class OPDSFeed:
                 limit,
                 query,
                 lang,
-                copyrighted,
                 audiobook,
                 sort,
                 sort_order,
@@ -443,7 +438,6 @@ class OPDSFeed:
         limit: int,
         query: str,
         lang: str,
-        copyrighted: str,
         audiobook: str,
         sort: str,
         sort_order: str,
@@ -462,18 +456,21 @@ class OPDSFeed:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).bookshelf_id(shelf_id)
             if query.strip():
                 q.search(query, search_type=_search_type("keyword"))
-            self._filter(q, lang, copyrighted, audiobook)
+            self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
             cherrypy.log(f"Bookshelf error: {e}")
-            raise cherrypy.HTTPError(500, "Browse failed")
+            return self._error_feed(
+                "Browse failed",
+                "Unable to load bookshelf.",
+                f"/opds/bookshelves?id={shelf_id}",
+            )
 
         base = {
             "id": shelf_id,
             "limit": limit,
             "lang": lang,
-            "copyrighted": copyrighted,
             "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
@@ -484,7 +481,7 @@ class OPDSFeed:
         subjects_q = self.fts.query().bookshelf_id(shelf_id)
         if query.strip():
             subjects_q.search(query, search_type=_search_type("keyword"))
-        self._filter(subjects_q, lang, copyrighted, audiobook)
+        self._filter(subjects_q, lang, audiobook)
 
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
         feed = {
@@ -509,7 +506,6 @@ class OPDSFeed:
                 facet_url,
                 query,
                 lang,
-                copyrighted,
                 audiobook,
                 sort,
                 sort_order,
@@ -525,7 +521,12 @@ class OPDSFeed:
         """List shelves in a category with samples."""
         found = next((cat for cat in CuratedBookshelves if cat.name == category), None)
         if not found:
-            raise cherrypy.HTTPError(404, "Category not found")
+            return self._error_feed(
+                "Category not found",
+                f"Bookshelf category {category} was not found.",
+                f"/opds/bookshelves?category={category}",
+                "/opds/bookshelves",
+            )
 
         shelves = [{"id": s[0], "name": s[1]} for s in found.shelves]
         groups, counts = [], {}
@@ -573,7 +574,6 @@ class OPDSFeed:
         limit: int = 25,
         query: str = "",
         lang: str = "",
-        copyrighted: str = "",
         audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
@@ -592,7 +592,7 @@ class OPDSFeed:
             return self._locc_navigation(parent, children)
 
         return self._locc_books(
-            parent, page, limit, query, lang, copyrighted, audiobook, sort, sort_order
+            parent, page, limit, query, lang, audiobook, sort, sort_order
         )
 
     def _locc_navigation(self, parent: str, children: List):
@@ -644,7 +644,6 @@ class OPDSFeed:
         limit: int,
         query: str,
         lang: str,
-        copyrighted: str,
         audiobook: str,
         sort: str,
         sort_order: str,
@@ -654,18 +653,22 @@ class OPDSFeed:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).locc(parent)
             if query.strip():
                 q.search(query, search_type=_search_type("keyword"))
-            self._filter(q, lang, copyrighted, audiobook)
+            self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
             cherrypy.log(f"LoCC browse error: {e}")
-            raise cherrypy.HTTPError(500, "Browse failed")
+            return self._error_feed(
+                "Browse failed",
+                "Unable to load LoCC leaf.",
+                f"/opds/loccs?parent={parent}",
+                "/opds/loccs",
+            )
 
         base = {
             "parent": parent,
             "limit": limit,
             "lang": lang,
-            "copyrighted": copyrighted,
             "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
@@ -676,7 +679,7 @@ class OPDSFeed:
         subjects_q = self.fts.query().locc(parent)
         if query.strip():
             subjects_q.search(query, search_type=_search_type("keyword"))
-        self._filter(subjects_q, lang, copyrighted, audiobook)
+        self._filter(subjects_q, lang, audiobook)
 
         feed = {
             "metadata": {
@@ -698,7 +701,6 @@ class OPDSFeed:
                 facet_url,
                 query,
                 lang,
-                copyrighted,
                 audiobook,
                 sort,
                 sort_order,
@@ -721,7 +723,6 @@ class OPDSFeed:
         limit: int = 25,
         query: str = "",
         lang: str = "",
-        copyrighted: str = "",
         audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
@@ -736,7 +737,6 @@ class OPDSFeed:
                 limit,
                 query,
                 lang,
-                copyrighted,
                 audiobook,
                 sort,
                 sort_order,
@@ -768,7 +768,6 @@ class OPDSFeed:
         limit: int,
         query: str,
         lang: str,
-        copyrighted: str,
         audiobook: str,
         sort: str,
         sort_order: str,
@@ -780,18 +779,22 @@ class OPDSFeed:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).subject_id(subject_id)
             if query.strip():
                 q.search(query, search_type=_search_type("keyword"))
-            self._filter(q, lang, copyrighted, audiobook)
+            self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
             cherrypy.log(f"Subject error: {e}")
-            raise cherrypy.HTTPError(500, "Browse failed")
+            return self._error_feed(
+                "Browse failed",
+                "Unable to load subject.",
+                f"/opds/subjects?id={subject_id}",
+                "/opds/subjects",
+            )
 
         base = {
             "id": subject_id,
             "limit": limit,
             "lang": lang,
-            "copyrighted": copyrighted,
             "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
@@ -818,7 +821,7 @@ class OPDSFeed:
             ],
             "publications": result["results"],
             "facets": self._facets(
-                facet_url, query, lang, copyrighted, audiobook, sort, sort_order
+                facet_url, query, lang, audiobook, sort, sort_order
             ),
         }
         feed["links"].extend(
@@ -837,7 +840,6 @@ class OPDSFeed:
         limit: int = 25,
         field: str = "fuzzy",
         lang: str = "",
-        copyrighted: str = "",
         audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
@@ -856,7 +858,7 @@ class OPDSFeed:
                 q.locc(locc)
             if author_id is not None:
                 q.author_id(int(author_id))
-            self._filter(q, lang, copyrighted, audiobook)
+            self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
 
@@ -867,17 +869,21 @@ class OPDSFeed:
                     sq.search(query, search_type=stype)
                 if locc:
                     sq.locc(locc)
-                self._filter(sq, lang, copyrighted, audiobook)
+                self._filter(sq, lang, audiobook)
                 subjects = self._top_subjects(sq)
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
-            raise cherrypy.HTTPError(500, "Search failed")
+            return self._error_feed(
+                "Search failed",
+                "Unable to complete search.",
+                "/opds/search",
+                "/opds/",
+            )
 
         base = {
             "limit": limit,
             "field": field,
             "lang": lang,
-            "copyrighted": copyrighted,
             "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
@@ -888,7 +894,7 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/search", base)
 
         facets = self._facets(
-            facet_url, query, lang, copyrighted, audiobook, sort, sort_order, subjects
+            facet_url, query, lang, audiobook, sort, sort_order, subjects
         )
 
         feed = {

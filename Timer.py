@@ -77,7 +77,7 @@ class TimerPlugin (cherrypy.process.plugins.Monitor):
             cur = conn.cursor ()
 
             # Transaction-level advisory lock keyed on the view's OID.
-            # Auto-releases on commit/rollback — no explicit unlock needed.
+            # Auto-releases on commit/rollback no explicit unlock needed.
             cur.execute ("""
                 SELECT pg_try_advisory_xact_lock(c.oid::bigint)
                 FROM pg_class c WHERE c.relname = 'mv_books_dc'

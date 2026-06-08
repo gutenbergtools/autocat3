@@ -29,6 +29,7 @@ __all__ = [
 _FIELD_COLS = {
     SearchField.BOOK: ("tsvec", "book_text"),
 }
+
 _ORDER_COLUMNS = {
     OrderBy.DOWNLOADS: ("downloads", SortDirection.DESC, None),
     OrderBy.TITLE: ("title", SortDirection.ASC, None),
@@ -36,15 +37,15 @@ _ORDER_COLUMNS = {
     OrderBy.RELEASE_DATE: ("CAST(release_date AS date)", SortDirection.DESC, "LAST"),
     OrderBy.RANDOM: ("RANDOM()", None, None),
 }
-_SELECT = (
-    "book_id, title, downloads, CAST(release_date AS text) AS release_date, copyrighted, lang_codes, "
-    "creator_ids, creator_names, creator_roles, "
-    "creator_born_floor, creator_born_ceil, creator_died_floor, creator_died_ceil, "
-    "subject_ids, subject_names, bookshelf_ids, bookshelf_names, "
-    "locc_codes, is_audio, dcmitypes, publisher, summary, credits, "
-    "reading_level, coverpage, format_filenames, format_filetypes, "
-    "format_hr_filetypes, format_mediatypes, format_extents"
-)
+
+_SELECT = """book_id, title, downloads, CAST(release_date AS text) AS release_date, copyrighted, lang_codes,
+    creator_ids, creator_names, creator_roles,
+    creator_born_floor, creator_born_ceil, creator_died_floor, creator_died_ceil,
+    subject_ids, subject_names, bookshelf_ids, bookshelf_names,
+    locc_codes, is_audio, dcmitypes, publisher, summary, credits,
+    reading_level, coverpage, format_filenames, format_filetypes,
+    format_hr_filetypes, format_mediatypes, format_extents"""
+
 _SUBQUERY = """book_id, title, downloads, CAST(release_date AS text) AS release_date,
     copyrighted, lang_codes, is_audio,
     creator_ids, creator_names, creator_roles,
@@ -135,16 +136,36 @@ class SearchQuery:
     # Filter Methods
 
     def etext(self, nr: int) -> "SearchQuery":
-        return self.filter("book_id = {}", int(nr))
+        return self.filter(
+            """
+            book_id = {}
+            """,
+            int(nr),
+        )
 
     def etexts(self, nrs: List[int]) -> "SearchQuery":
-        return self.filter("book_id = ANY({})", [int(n) for n in nrs])
+        return self.filter(
+            """
+            book_id = ANY({})
+            """,
+            [int(n) for n in nrs],
+        )
 
     def downloads_gte(self, n: int) -> "SearchQuery":
-        return self.filter("downloads >= {}", int(n))
+        return self.filter(
+            """
+            downloads >= {}
+            """,
+            int(n),
+        )
 
     def downloads_lte(self, n: int) -> "SearchQuery":
-        return self.filter("downloads <= {}", int(n))
+        return self.filter(
+            """
+            downloads <= {}
+            """,
+            int(n),
+        )
 
     def public_domain(self) -> "SearchQuery":
         self._filters.append(("copyrighted = 0", {}))
@@ -159,7 +180,12 @@ class SearchQuery:
             code_val = code.code
         else:
             code_val = code.lower()
-        return self.filter("lang_codes @> ARRAY[CAST({} AS text)]", code_val)
+        return self.filter(
+            """
+            lang_codes @> ARRAY[CAST({} AS text)]
+            """,
+            code_val,
+        )
 
     def text_only(self) -> "SearchQuery":
         self._filters.append(("is_audio = false", {}))
@@ -170,23 +196,53 @@ class SearchQuery:
         return self
 
     def author_born_after(self, year: int) -> "SearchQuery":
-        return self.filter("max_author_birthyear >= {}", int(year))
+        return self.filter(
+            """
+            max_author_birthyear >= {}
+            """,
+            int(year),
+        )
 
     def author_born_before(self, year: int) -> "SearchQuery":
-        return self.filter("min_author_birthyear <= {}", int(year))
+        return self.filter(
+            """
+            min_author_birthyear <= {}
+            """,
+            int(year),
+        )
 
     def author_died_after(self, year: int) -> "SearchQuery":
-        return self.filter("max_author_deathyear >= {}", int(year))
+        return self.filter(
+            """
+            max_author_deathyear >= {}
+            """,
+            int(year),
+        )
 
     def author_died_before(self, year: int) -> "SearchQuery":
-        return self.filter("min_author_deathyear <= {}", int(year))
+        return self.filter(
+            """
+            min_author_deathyear <= {}
+            """,
+            int(year),
+        )
 
     def released_after(self, date: str) -> "SearchQuery":
-        return self.filter("CAST(release_date AS date) >= CAST({} AS date)", str(date))
+        return self.filter(
+            """
+            CAST(release_date AS date) >= CAST({} AS date)
+            """,
+            str(date),
+        )
 
     def released_before(self, date: str) -> "SearchQuery":
-        return self.filter("CAST(release_date AS date) <= CAST({} AS date)", str(date))
-
+        return self.filter(
+            """
+            CAST(release_date AS date) <= CAST({} AS date)
+            """,
+            str(date),
+        )
+        
     def locc(self, code: Union[LoCCMainClass, str]) -> "SearchQuery":
         if isinstance(code, LoCCMainClass):
             code = code.code
@@ -194,15 +250,29 @@ class SearchQuery:
             code = str(code).upper()
 
         return self.filter(
-            "EXISTS (SELECT 1 FROM mn_books_loccs mbl JOIN loccs lc ON lc.pk = mbl.fk_loccs WHERE mbl.fk_books = book_id AND lc.pk LIKE {})",
-            "{}%".format(code),
+            """
+            EXISTS (
+                SELECT 1
+                FROM mn_books_loccs mbl
+                JOIN loccs lc ON lc.pk = mbl.fk_loccs
+                WHERE mbl.fk_books = book_id
+                  AND lc.pk LIKE {}
+            )
+            """,
+            f"{code}%",
         )
 
     def contributor_role(self, role: str) -> "SearchQuery":
         return self.filter(
-            "EXISTS (SELECT 1 FROM mn_books_authors mba "
-            "JOIN roles r ON mba.fk_roles = r.pk "
-            "WHERE mba.fk_books = book_id AND r.role = {})",
+            """
+            EXISTS (
+                SELECT 1
+                FROM mn_books_authors mba
+                JOIN roles r ON mba.fk_roles = r.pk
+                WHERE mba.fk_books = book_id
+                  AND r.role = {}
+            )
+            """,
             role,
         )
 
@@ -211,31 +281,58 @@ class SearchQuery:
             ft_value = ft.value
         else:
             ft_value = str(ft)
+
         return self.filter(
-            "EXISTS (SELECT 1 FROM files f "
-            "JOIN filetypes ft ON f.fk_filetypes = ft.pk "
-            "WHERE f.fk_books = book_id "
-            "AND f.obsoleted = 0 AND f.diskstatus = 0 "
-            "AND ft.mediatype = {})",
+            """
+            EXISTS (
+                SELECT 1
+                FROM files f
+                JOIN filetypes ft ON f.fk_filetypes = ft.pk
+                WHERE f.fk_books = book_id
+                  AND f.obsoleted = 0
+                  AND f.diskstatus = 0
+                  AND ft.mediatype = {}
+            )
+            """,
             ft_value,
         )
 
     def author_id(self, aid: int) -> "SearchQuery":
         return self.filter(
-            "EXISTS (SELECT 1 FROM mn_books_authors mba "
-            "WHERE mba.fk_books = book_id AND mba.fk_authors = {})",
+            """
+            EXISTS (
+                SELECT 1
+                FROM mn_books_authors mba
+                WHERE mba.fk_books = book_id
+                  AND mba.fk_authors = {}
+            )
+            """,
             int(aid),
         )
 
     def subject_id(self, sid: int) -> "SearchQuery":
         return self.filter(
-            "EXISTS (SELECT 1 FROM mn_books_subjects mbs WHERE mbs.fk_books = book_id AND mbs.fk_subjects = {})",
+            """
+            EXISTS (
+                SELECT 1
+                FROM mn_books_subjects mbs
+                WHERE mbs.fk_books = book_id
+                  AND mbs.fk_subjects = {}
+            )
+            """,
             int(sid),
         )
 
     def bookshelf_id(self, bid: int) -> "SearchQuery":
         return self.filter(
-            "EXISTS (SELECT 1 FROM mn_books_bookshelves mbb WHERE mbb.fk_books = book_id AND mbb.fk_bookshelves = {})",
+            """
+            EXISTS (
+                SELECT 1
+                FROM mn_books_bookshelves mbb
+                WHERE mbb.fk_books = book_id
+                  AND mbb.fk_bookshelves = {}
+            )
+            """,
             int(bid),
         )
 
@@ -381,11 +478,18 @@ class FullTextSearch:
             List of dicts with 'id', 'name', and 'book_count' keys
         """
         sql = """
-            SELECT bs.pk AS id, bs.bookshelf AS name, COUNT(mbbs.fk_books) AS book_count
+            SELECT
+                bs.pk AS id,
+                bs.bookshelf AS name,
+                COUNT(mbbs.fk_books) AS book_count
             FROM bookshelves bs
-            LEFT JOIN mn_books_bookshelves mbbs ON bs.pk = mbbs.fk_bookshelves
-            GROUP BY bs.pk, bs.bookshelf
-            ORDER BY bs.bookshelf
+            LEFT JOIN mn_books_bookshelves mbbs
+                ON bs.pk = mbbs.fk_bookshelves
+            GROUP BY
+                bs.pk,
+                bs.bookshelf
+            ORDER BY
+                bs.bookshelf
         """
         with self.Session() as session:
             rows = session.execute(text(sql)).fetchall()
@@ -401,11 +505,19 @@ class FullTextSearch:
             List of dicts with 'id', 'name', and 'book_count' keys
         """
         sql = """
-            SELECT s.pk AS id, s.subject AS name, COUNT(mbs.fk_books) AS book_count
+            SELECT
+                s.pk AS id,
+                s.subject AS name,
+                COUNT(mbs.fk_books) AS book_count
             FROM subjects s
-            LEFT JOIN mn_books_subjects mbs ON s.pk = mbs.fk_subjects
-            GROUP BY s.pk, s.subject
-            ORDER BY book_count DESC, s.subject
+            LEFT JOIN mn_books_subjects mbs
+                ON s.pk = mbs.fk_subjects
+            GROUP BY
+                s.pk,
+                s.subject
+            ORDER BY
+                book_count DESC,
+                s.subject
         """
         with self.Session() as session:
             rows = session.execute(text(sql)).fetchall()
@@ -423,7 +535,12 @@ class FullTextSearch:
         Returns:
             Subject name or None if not found
         """
-        sql = "SELECT subject FROM subjects WHERE pk = :id"
+        sql = """
+            SELECT
+                subject
+            FROM subjects
+            WHERE pk = :id
+        """
         with self.Session() as session:
             result = session.execute(text(sql), {"id": subject_id}).scalar()
             return result
@@ -454,10 +571,12 @@ class FullTextSearch:
 
         sql = """
             WITH matched_books AS (
-                SELECT book_id
+                SELECT
+                    book_id
                 FROM mv_books_dc
                 {}
-                ORDER BY {}
+                ORDER BY
+                    {}
                 LIMIT :max_books
             )
             SELECT
@@ -465,10 +584,15 @@ class FullTextSearch:
                 s.subject AS name,
                 COUNT(*) AS count
             FROM matched_books mb
-            JOIN mn_books_subjects mbs ON mbs.fk_books = mb.book_id
-            JOIN subjects s ON s.pk = mbs.fk_subjects
-            GROUP BY s.pk, s.subject
-            ORDER BY count DESC
+            JOIN mn_books_subjects mbs
+                ON mbs.fk_books = mb.book_id
+            JOIN subjects s
+                ON s.pk = mbs.fk_subjects
+            GROUP BY
+                s.pk,
+                s.subject
+            ORDER BY
+                count DESC
             LIMIT :limit
         """.format(where_clause, order_sql)
         params["limit"] = limit
@@ -492,15 +616,25 @@ class FullTextSearch:
                 for item in sorted_classes
             ]
 
-        sql = text("""
-            SELECT lc.pk AS code, lc.locc AS label,
+        sql = text(
+            """
+            SELECT
+                lc.pk AS code,
+                lc.locc AS label,
                 EXISTS (
-                    SELECT 1 FROM loccs lc2 WHERE lc2.pk LIKE lc.pk || '%' AND lc2.pk != lc.pk
+                    SELECT 1
+                    FROM loccs lc2
+                    WHERE lc2.pk LIKE lc.pk || '%'
+                      AND lc2.pk != lc.pk
                 ) AS has_children
             FROM loccs lc
-            WHERE lc.pk LIKE :pattern AND lc.pk != :parent
-            ORDER BY char_length(lc.pk), lc.pk
-        """)
+            WHERE lc.pk LIKE :pattern
+              AND lc.pk != :parent
+            ORDER BY
+                char_length(lc.pk),
+                lc.pk
+            """
+        )
 
         with self.Session() as session:
             rows = session.execute(sql, {"pattern": "{}%".format(parent_code), "parent": parent_code}).mappings().all()
