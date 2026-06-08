@@ -105,6 +105,7 @@ ALTER MATERIALIZED VIEW mv_books_dc OWNER TO myuser;
 Edit `/etc/autocat3.conf` (or `~/.autocat3` under the autocat user) to override defaults from `CherryPy.conf`. At minimum, set your database credentials and hosts:
 
 ```ini
+[global]
 pghost:     'localhost'
 pgport:     5432
 pgdatabase: 'gutenberg'
