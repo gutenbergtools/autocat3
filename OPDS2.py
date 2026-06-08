@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 import logging
+import json
 
 import cherrypy
 
@@ -26,8 +27,26 @@ from mv_search.Search import FullTextSearch
 SAMPLE_LIMIT = 15
 # Most common Gutenberg languages first, remainder alphabetical by label
 _LANG_PRIORITY = [
-    "en", "fr", "de", "fi", "nl", "it", "pt", "es", "zh",
-    "la", "el", "grc", "hu", "sv", "da", "no", "pl", "ru", "cs", "ja",
+    "en",
+    "fr",
+    "de",
+    "fi",
+    "nl",
+    "it",
+    "pt",
+    "es",
+    "zh",
+    "la",
+    "el",
+    "grc",
+    "hu",
+    "sv",
+    "da",
+    "no",
+    "pl",
+    "ru",
+    "cs",
+    "ja",
 ]
 LANGUAGES = [
     {"code": lang.code, "label": lang.label}
@@ -41,6 +60,24 @@ OPDS_TYPE = "application/opds+json"
 
 
 # Helpers
+def _json_error_page(status, message, traceback, version):
+    cherrypy.response.headers["Content-Type"] = "application/json"
+    return json.dumps(
+        {
+            "status": int(str(status).split(" ", 1)[0]),
+            "metadata": {
+                "title": status,
+                "description": message,
+            },
+            "links": [
+                _link("self", cherrypy.request.path_info),
+                _link("start", "/opds/"),
+            ],
+            "publications": [],
+        }
+    )
+
+
 def _link(rel: str, href: str, **extras) -> Dict:
     """Create an OPDS link dict."""
     return {"rel": rel, "href": href, "type": OPDS_TYPE, **extras}
@@ -67,23 +104,30 @@ def _url(path: str, params: Dict) -> str:
 
 def _make_page_url(endpoint: str, base: Dict, query: str) -> Callable[[int], str]:
     """Create a page URL builder for pagination links."""
+
     def page_url(p: int) -> str:
         return _url(endpoint, {**base, "query": query, "page": p})
+
     return page_url
 
 
 def _make_facet_url(endpoint: str, base: Dict) -> Callable[..., str]:
     """Create a facet URL builder for filter facets."""
+
     def facet_url(q: str, lng: str, ab: str, srt: str, so: str) -> str:
-        return _url(endpoint, {
-            **base,
-            "query": q,
-            "page": 1,
-            "lang": lng,
-            "audiobook": ab,
-            "sort": srt,
-            "sort_order": so,
-        })
+        return _url(
+            endpoint,
+            {
+                **base,
+                "query": q,
+                "page": 1,
+                "lang": lng,
+                "audiobook": ab,
+                "sort": srt,
+                "sort_order": so,
+            },
+        )
+
     return facet_url
 
 
@@ -93,13 +137,6 @@ def _paginate(page, limit, default=25) -> Tuple[int, int]:
         return max(1, int(page)), max(1, min(100, int(limit)))
     except (ValueError, TypeError):
         return 1, default
-
-
-def _search_type(field: str) -> SearchType:
-    """Parse field param to SearchType."""
-    if field.startswith("fts"):
-        return SearchType.FTS
-    return SearchType.FUZZY
 
 
 def _sort_direction(order: str) -> Optional[SortDirection]:
@@ -158,14 +195,18 @@ class OPDSFeed:
             links.append(_link("next", url_fn(page + 1)))
             links.append(_link("last", url_fn(total_pages)))
         return links
-    
+
+    # Error handling
+
     def _error_feed(
         self,
         title: str,
         detail: str,
         self_href: str,
         up_href: str = "/opds/",
+        status: int = 500,
     ) -> Dict:
+        cherrypy.response.status = status
         return {
             "metadata": {
                 "title": title,
@@ -179,7 +220,7 @@ class OPDSFeed:
             ],
             "publications": [],
         }
-    
+
     def _facets(
         self,
         url_fn: Callable,
@@ -196,9 +237,7 @@ class OPDSFeed:
                 "metadata": {"title": "Sort By"},
                 "links": [
                     _facet(
-                        url_fn(
-                            query, lang, audiobook, "downloads", "desc"
-                        ),
+                        url_fn(query, lang, audiobook, "downloads", "desc"),
                         "Most Popular",
                         sort in ("downloads", ""),
                     ),
@@ -294,31 +333,42 @@ class OPDSFeed:
 
     # Index
     @cherrypy.expose
-    @cherrypy.tools.json_out()
     def index(self):
         """Root catalog."""
 
         def _recently_added():
             result = self.fts.execute(
-                self.fts.query(crosswalk=Crosswalk.OPDS)
-                .order_by(OrderBy.RELEASE_DATE, SortDirection.DESC)[1, SAMPLE_LIMIT]
+                self.fts.query(crosswalk=Crosswalk.OPDS).order_by(
+                    OrderBy.RELEASE_DATE, SortDirection.DESC
+                )[1, SAMPLE_LIMIT]
             )
             if result.get("results"):
                 return {
-                    "metadata": {"title": "Recently Added", "numberOfItems": result["total"]},
-                    "links": [_link("self", "/opds/search?sort=release_date&sort_order=desc")],
+                    "metadata": {
+                        "title": "Recently Added",
+                        "numberOfItems": result["total"],
+                    },
+                    "links": [
+                        _link("self", "/opds/search?sort=release_date&sort_order=desc")
+                    ],
                     "publications": result["results"],
                 }
 
         def _most_popular():
             result = self.fts.execute(
-                self.fts.query(crosswalk=Crosswalk.OPDS)
-                .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT]
+                self.fts.query(crosswalk=Crosswalk.OPDS).order_by(OrderBy.DOWNLOADS)[
+                    1, SAMPLE_LIMIT
+                ]
             )
             if result.get("results"):
                 return {
-                    "metadata": {"title": "Most Popular", "numberOfItems": result["total"]},
-                    "links": [_link("self", "/opds/search?sort=downloads&sort_order=desc")],
+                    "metadata": {
+                        "title": "Most Popular",
+                        "numberOfItems": result["total"],
+                    },
+                    "links": [
+                        _link("self", "/opds/search?sort=downloads&sort_order=desc")
+                    ],
                     "publications": result["results"],
                 }
 
@@ -330,8 +380,13 @@ class OPDSFeed:
             )
             if result.get("results"):
                 return {
-                    "metadata": {"title": "Audiobooks", "numberOfItems": result["total"]},
-                    "links": [_link("self", "/opds/search?audiobook=true&sort=downloads")],
+                    "metadata": {
+                        "title": "Audiobooks",
+                        "numberOfItems": result["total"],
+                    },
+                    "links": [
+                        _link("self", "/opds/search?audiobook=true&sort=downloads")
+                    ],
                     "publications": result["results"],
                 }
 
@@ -346,11 +401,16 @@ class OPDSFeed:
                     if result.get("results"):
                         return {
                             "metadata": {"title": cat.genre},
-                            "links": [_link("self", f"/opds/bookshelves?category={cat.name}")],
+                            "links": [
+                                _link("self", f"/opds/bookshelves?category={cat.name}")
+                            ],
                             "publications": result["results"],
                         }
                 except Exception as e:
-                    cherrypy.log(f"Index group error ({cat.name}/{shelf_id}): {e}", severity=logging.WARNING)
+                    cherrypy.log(
+                        f"Index group error ({cat.name}/{shelf_id}): {e}",
+                        severity=logging.WARNING,
+                    )
 
         tasks = [_recently_added, _most_popular, _audiobooks] + [
             lambda c=cat: _category_group(c) for cat in CuratedBookshelves
@@ -382,7 +442,6 @@ class OPDSFeed:
 
     # Bookshelves
     @cherrypy.expose
-    @cherrypy.tools.json_out()
     def bookshelves(
         self,
         id: Optional[int] = None,
@@ -454,8 +513,6 @@ class OPDSFeed:
 
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).bookshelf_id(shelf_id)
-            if query.strip():
-                q.search(query, search_type=_search_type("keyword"))
             self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -465,6 +522,7 @@ class OPDSFeed:
                 "Browse failed",
                 "Unable to load bookshelf.",
                 f"/opds/bookshelves?id={shelf_id}",
+                status=500,
             )
 
         base = {
@@ -479,8 +537,6 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/bookshelves", base)
 
         subjects_q = self.fts.query().bookshelf_id(shelf_id)
-        if query.strip():
-            subjects_q.search(query, search_type=_search_type("keyword"))
         self._filter(subjects_q, lang, audiobook)
 
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
@@ -526,6 +582,7 @@ class OPDSFeed:
                 f"Bookshelf category {category} was not found.",
                 f"/opds/bookshelves?category={category}",
                 "/opds/bookshelves",
+                status=404,
             )
 
         shelves = [{"id": s[0], "name": s[1]} for s in found.shelves]
@@ -551,7 +608,11 @@ class OPDSFeed:
                         }
                     )
             except Exception as e:
-                cherrypy.log(f"Bookshelf sample error {s['id']}: {e}", context='OPDS', severity=logging.WARNING)
+                cherrypy.log(
+                    f"Bookshelf sample error {s['id']}: {e}",
+                    context="OPDS",
+                    severity=logging.WARNING,
+                )
                 counts[s["id"]] = 0
 
         return {
@@ -566,7 +627,6 @@ class OPDSFeed:
 
     # LoCC
     @cherrypy.expose
-    @cherrypy.tools.json_out()
     def loccs(
         self,
         parent: str = "",
@@ -651,8 +711,6 @@ class OPDSFeed:
         """Browse books in a LoCC leaf."""
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).locc(parent)
-            if query.strip():
-                q.search(query, search_type=_search_type("keyword"))
             self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -663,6 +721,7 @@ class OPDSFeed:
                 "Unable to load LoCC leaf.",
                 f"/opds/loccs?parent={parent}",
                 "/opds/loccs",
+                status=500,
             )
 
         base = {
@@ -677,8 +736,6 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/loccs", base)
 
         subjects_q = self.fts.query().locc(parent)
-        if query.strip():
-            subjects_q.search(query, search_type=_search_type("keyword"))
         self._filter(subjects_q, lang, audiobook)
 
         feed = {
@@ -715,7 +772,6 @@ class OPDSFeed:
     # Subjects
 
     @cherrypy.expose
-    @cherrypy.tools.json_out()
     def subjects(
         self,
         id: Optional[int] = None,
@@ -777,8 +833,6 @@ class OPDSFeed:
 
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).subject_id(subject_id)
-            if query.strip():
-                q.search(query, search_type=_search_type("keyword"))
             self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -789,6 +843,7 @@ class OPDSFeed:
                 "Unable to load subject.",
                 f"/opds/subjects?id={subject_id}",
                 "/opds/subjects",
+                status=500,
             )
 
         base = {
@@ -820,9 +875,7 @@ class OPDSFeed:
                 ),
             ],
             "publications": result["results"],
-            "facets": self._facets(
-                facet_url, query, lang, audiobook, sort, sort_order
-            ),
+            "facets": self._facets(facet_url, query, lang, audiobook, sort, sort_order),
         }
         feed["links"].extend(
             self._pagination_links(page_url, result["page"], result["total_pages"])
@@ -832,13 +885,11 @@ class OPDSFeed:
     # Search
 
     @cherrypy.expose
-    @cherrypy.tools.json_out()
     def search(
         self,
         query: str = "",
         page: int = 1,
         limit: int = 25,
-        field: str = "fuzzy",
         lang: str = "",
         audiobook: str = "",
         sort: str = "",
@@ -848,27 +899,32 @@ class OPDSFeed:
     ):
         """Full-text search."""
         page, limit = _paginate(page, limit)
-        stype = _search_type(field)
 
         try:
+            has_query = bool(query.strip())
+
             q = self.fts.query(crosswalk=Crosswalk.OPDS)
-            if query.strip():
-                q.search(query, search_type=stype)
+            if has_query:
+                q.search(query, search_type=SearchType.FUZZY)
+
             if locc:
                 q.locc(locc)
             if author_id is not None:
                 q.author_id(int(author_id))
+
             self._filter(q, lang, audiobook)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
 
             subjects = None
-            if query.strip() or locc or lang:
+            if has_query or locc or lang or author_id is not None:
                 sq = self.fts.query()
-                if query.strip():
-                    sq.search(query, search_type=stype)
+                if has_query:
+                    sq.search(query, search_type=SearchType.FUZZY)
                 if locc:
                     sq.locc(locc)
+                if author_id is not None:
+                    sq.author_id(int(author_id))
                 self._filter(sq, lang, audiobook)
                 subjects = self._top_subjects(sq)
         except Exception as e:
@@ -878,11 +934,11 @@ class OPDSFeed:
                 "Unable to complete search.",
                 "/opds/search",
                 "/opds/",
+                status=500,
             )
 
         base = {
             "limit": limit,
-            "field": field,
             "lang": lang,
             "audiobook": audiobook,
             "sort": sort,
@@ -908,9 +964,7 @@ class OPDSFeed:
                 _link("self", page_url(result["page"])),
                 _link("start", "/opds/"),
                 _link("up", "/opds/"),
-                _link(
-                    "search", f"/opds/search?field={field}{{&query}}", templated=True
-                ),
+                _link("search", "/opds/search{?query}", templated=True),
             ],
             "publications": result["results"],
             "facets": facets,
@@ -945,6 +999,7 @@ if __name__ == "__main__":
         {
             "/": {
                 "tools.cors.on": True,
+                "tools.json_out.on": True,
                 "request.methods_with_bodies": ("POST", "PUT", "PATCH"),
             }
         },
