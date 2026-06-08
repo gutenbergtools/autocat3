@@ -158,4 +158,4 @@ sudo systemctl daemon-reload             # Reload after editing the unit file
 
 ## Original autocat3
 
-Copyright 2009-2010 by Marcello Perathoner. Fork maintained by Zachary Rosario.
+Copyright 2009-2010 by Marcello Perathoner.
