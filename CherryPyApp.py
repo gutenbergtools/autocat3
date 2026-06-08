@@ -339,6 +339,8 @@ def main():
             'tools.response_headers.on': True,
             'tools.json_in.on': True,
             'tools.json_out.on': True,
+            'error_page.404': _json_error_page,
+            'error_page.500': _json_error_page,
             'error_page.default': _json_error_page,
             'tools.response_headers.headers': [
                 ('Content-Type', 'application/opds+json'),
