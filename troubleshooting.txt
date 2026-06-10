@@ -18,4 +18,4 @@ using top, you can see if the process is using too much memory, ~2G is typical
 
 The error log (~/log/error.log) occasionally reports a real error, usually it's just cloudstorage errors (not our fault!)
 
-the diagnostics page http://127.0.0.1:8000/diagnostics/ (not accessible outside of ibiblio) is mostly useful to tell you that the server is live and answering queries. Apparent outages are almost always on the front end servers which mostly deliver (huge quantities of) static content.
+The metrics page http://127.0.0.1:8000/metrics/ (not accessible outside of ibiblio) is useful to tell you that the server is live and answering queries. It provides some high-level metrics of how the thread and SQL pools are configured and being used.

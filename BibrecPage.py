@@ -55,6 +55,7 @@ class BibrecPage (Page.Page):
         return None, None
 
 
+    @cherrypy.config(**{'tools.expires.secs': 3600})
     def index (self, **dummy_kwargs):
         """ A bibrec page. """
 
