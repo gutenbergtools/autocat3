@@ -173,6 +173,8 @@ class HTMLFormatter (XMLishFormatter):
                         htmlcount += 1
             elif filetype == 'epub.images':
                 file_.hr_filetype = 'EPUB (older e-readers)'
+            elif filetype == 'kf8.images':
+                file_.hr_filetype = 'Kindles (kf8)'
             elif filetype == 'kindle.images':
                 file_.hr_filetype = 'Older Kindles'
             elif filetype == 'epub.noimages':
