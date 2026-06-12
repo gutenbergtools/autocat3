@@ -445,13 +445,21 @@ class FullTextSearch:
     def _transform(self, row, cw: Crosswalk) -> Dict:
         return CROSSWALK_MAP[cw](row)
 
-    def execute(self, q: "SearchQuery") -> Dict:
-        """Execute query and return paginated results."""
+    def execute(self, q: "SearchQuery", with_count: bool = True) -> Dict:
+        """Execute query and return paginated results.
+
+        with_count=False skips the COUNT(*) round-trip ('total' comes back
+        None); use it for preview feeds that don't paginate.
+        """
         with self.Session() as session:
-            count_sql, count_params = q.build_count()
-            total = session.execute(text(count_sql), count_params).scalar() or 0
-            total_pages = max(1, (total + q._page_size - 1) // q._page_size)
-            q._page = max(1, min(q._page, total_pages))
+            if with_count:
+                count_sql, count_params = q.build_count()
+                total = session.execute(text(count_sql), count_params).scalar() or 0
+                total_pages = max(1, (total + q._page_size - 1) // q._page_size)
+                q._page = max(1, min(q._page, total_pages))
+            else:
+                total = None
+                total_pages = 1
 
             sql, params = q.build()
             rows = session.execute(text(sql), params).fetchall()
@@ -642,3 +650,55 @@ class FullTextSearch:
                 {"code": r["code"], "label": r["label"], "has_children": bool(r["has_children"])}
                 for r in rows
             ]
+
+    def get_locc_nav_counts(self, children: List[Dict]) -> Dict[str, int]:
+        """
+        Counts for LoCC nav items in at most 2 queries: descendant codes for
+        branches, distinct books (via mv_books_dc) for leaves.
+
+        Takes get_locc_children() output, returns {code: count}.
+        """
+        branches = [c["code"] for c in children if c.get("has_children")]
+        leaves = [c["code"] for c in children if not c.get("has_children")]
+        counts = {c["code"]: 0 for c in children}
+
+        branch_sql = text(
+            """
+            SELECT
+                p.code AS code,
+                COUNT(*) AS cnt
+            FROM unnest(CAST(:codes AS text[])) AS p(code)
+            JOIN loccs lc
+                ON lc.pk LIKE p.code || '%'
+               AND lc.pk != p.code
+            GROUP BY
+                p.code
+            """
+        )
+
+        leaf_sql = text(
+            """
+            SELECT
+                p.code AS code,
+                COUNT(DISTINCT mbl.fk_books) AS cnt
+            FROM unnest(CAST(:codes AS text[])) AS p(code)
+            JOIN loccs lc
+                ON lc.pk LIKE p.code || '%'
+            JOIN mn_books_loccs mbl
+                ON mbl.fk_loccs = lc.pk
+            JOIN mv_books_dc b
+                ON b.book_id = mbl.fk_books
+            GROUP BY
+                p.code
+            """
+        )
+
+        with self.Session() as session:
+            if branches:
+                for r in session.execute(branch_sql, {"codes": branches}):
+                    counts[r.code] = r.cnt
+            if leaves:
+                for r in session.execute(leaf_sql, {"codes": leaves}):
+                    counts[r.code] = r.cnt
+
+        return counts

@@ -4,7 +4,8 @@ OPDS2.py — Zachary Rosario
 OPDS 2.0 JSON feed for the Project Gutenberg catalog.
 """
 
-import random
+import datetime
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
@@ -25,6 +26,10 @@ from mv_search.constants import (
 from mv_search.Search import FullTextSearch
 
 SAMPLE_LIMIT = 15
+# keep random spotlight picks to reasonably popular books
+SPOTLIGHT_MIN_DOWNLOADS = 1000
+# locc counts only change on the daily MV refresh, so a long TTL is safe
+LOCC_COUNTS_TTL = 6 * 3600
 # Most common Gutenberg languages first, remainder alphabetical by label
 _LANG_PRIORITY = [
     "en",
@@ -148,6 +153,7 @@ def _sort_direction(order: str) -> Optional[SortDirection]:
 class OPDSFeed:
     def __init__(self):
         self._fts = None
+        self._locc_counts_cache = {}  # parent -> (timestamp, counts)
 
     @property
     def fts(self):
@@ -181,6 +187,19 @@ class OPDSFeed:
         except Exception as e:
             cherrypy.log(f"Top subjects error: {e}")
             return None
+
+    def _locc_counts(self, parent: str, children: List[Dict]) -> Dict[str, int]:
+        """Nav counts for a LoCC page, cached per parent."""
+        cached = self._locc_counts_cache.get(parent)
+        if cached and time.time() - cached[0] < LOCC_COUNTS_TTL:
+            return cached[1]
+        try:
+            counts = self.fts.get_locc_nav_counts(children)
+        except Exception as e:
+            cherrypy.log(f"LoCC nav counts error: {e}", severity=logging.WARNING)
+            return {}
+        self._locc_counts_cache[parent] = (time.time(), counts)
+        return counts
 
     # Feed Building
     def _pagination_links(
@@ -340,13 +359,14 @@ class OPDSFeed:
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS).order_by(
                     OrderBy.RELEASE_DATE, SortDirection.DESC
-                )[1, SAMPLE_LIMIT]
+                )[1, SAMPLE_LIMIT],
+                with_count=False,
             )
             if result.get("results"):
                 return {
                     "metadata": {
                         "title": "Recently Added",
-                        "numberOfItems": result["total"],
+                        "numberOfItems": len(result["results"]),
                     },
                     "links": [
                         _link("self", "/opds/search?sort=release_date&sort_order=desc")
@@ -358,13 +378,14 @@ class OPDSFeed:
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS).order_by(OrderBy.DOWNLOADS)[
                     1, SAMPLE_LIMIT
-                ]
+                ],
+                with_count=False,
             )
             if result.get("results"):
                 return {
                     "metadata": {
                         "title": "Most Popular",
-                        "numberOfItems": result["total"],
+                        "numberOfItems": len(result["results"]),
                     },
                     "links": [
                         _link("self", "/opds/search?sort=downloads&sort_order=desc")
@@ -376,13 +397,14 @@ class OPDSFeed:
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS)
                 .audiobook()
-                .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT]
+                .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
+                with_count=False,
             )
             if result.get("results"):
                 return {
                     "metadata": {
                         "title": "Audiobooks",
-                        "numberOfItems": result["total"],
+                        "numberOfItems": len(result["results"]),
                     },
                     "links": [
                         _link("self", "/opds/search?audiobook=true&sort=downloads")
@@ -391,18 +413,28 @@ class OPDSFeed:
                 }
 
         def _category_group(cat):
-            for shelf_id, _ in random.sample(list(cat.shelves), len(cat.shelves)):
+            """Daily spotlight shelf, random picks above the downloads floor."""
+            shelves = list(cat.shelves)
+            day = datetime.date.today().toordinal()
+
+            for offset in range(len(shelves)):
+                shelf_id, shelf_name = shelves[(day + offset) % len(shelves)]
                 try:
                     result = self.fts.execute(
                         self.fts.query(crosswalk=Crosswalk.OPDS)
                         .bookshelf_id(shelf_id)
-                        .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT]
+                        .downloads_gte(SPOTLIGHT_MIN_DOWNLOADS)
+                        .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT],
+                        with_count=False,
                     )
                     if result.get("results"):
                         return {
-                            "metadata": {"title": cat.genre},
+                            "metadata": {
+                                "title": f"{cat.genre}: {shelf_name}",
+                                "numberOfItems": len(result["results"]),
+                            },
                             "links": [
-                                _link("self", f"/opds/bookshelves?category={cat.name}")
+                                _link("self", f"/opds/bookshelves?id={shelf_id}")
                             ],
                             "publications": result["results"],
                         }
@@ -586,22 +618,22 @@ class OPDSFeed:
             )
 
         shelves = [{"id": s[0], "name": s[1]} for s in found.shelves]
-        groups, counts = [], {}
+        groups = []
 
         for s in shelves:
             try:
                 result = self.fts.execute(
                     self.fts.query(crosswalk=Crosswalk.OPDS)
                     .bookshelf_id(s["id"])
-                    .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT]
+                    .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT],
+                    with_count=False,
                 )
-                counts[s["id"]] = result.get("total", 0)
                 if result.get("results"):
                     groups.append(
                         {
                             "metadata": {
                                 "title": s["name"],
-                                "numberOfItems": counts[s["id"]],
+                                "numberOfItems": len(result["results"]),
                             },
                             "links": [_link("self", f"/opds/bookshelves?id={s['id']}")],
                             "publications": result["results"],
@@ -613,7 +645,6 @@ class OPDSFeed:
                     context="OPDS",
                     severity=logging.WARNING,
                 )
-                counts[s["id"]] = 0
 
         return {
             "metadata": {"title": found.genre, "numberOfItems": len(shelves)},
@@ -669,20 +700,16 @@ class OPDSFeed:
             else:
                 page_title = f"Classification: {parent}"
 
+        counts = self._locc_counts(parent, children)
+
         nav = []
         for child in children:
             code = child["code"]
             label = child.get("label", code)
             label = label.split(":", 1)[1].strip() if ":" in label else label
-            has_children = child.get("has_children", False)
-
-            if has_children:
-                count = len(self.fts.get_locc_children(code))
-            else:
-                count = self.fts.count(self.fts.query().locc(code))
 
             nav_item = _nav(f"/opds/loccs?parent={code}", label)
-            nav_item["properties"] = {"numberOfItems": count}
+            nav_item["properties"] = {"numberOfItems": counts.get(code, 0)}
             nav.append(nav_item)
 
         return {
@@ -976,9 +1003,26 @@ class OPDSFeed:
 
 
 if __name__ == "__main__":
+    import os
+
+    from cherrypy.process import plugins
+    from libgutenberg import GutenbergDatabase
+
+    import ConnectionPool  # noqa: F401  registers plugins.ConnectionPool
+
+    _local_conf = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test.conf")
+    if os.path.exists(_local_conf):
+        cherrypy.config.update(_local_conf)
     cherrypy.config.update(
         {"server.socket_host": "0.0.0.0", "server.socket_port": 8080}
     )
+
+    GutenbergDatabase.options.update(cherrypy.config)
+    cherrypy.engine.pool = plugins.ConnectionPool(
+        cherrypy.engine,
+        params=GutenbergDatabase.get_connection_params(cherrypy.config),
+    )
+    cherrypy.engine.pool.subscribe()
 
     @cherrypy.tools.register("before_finalize")
     def cors():
