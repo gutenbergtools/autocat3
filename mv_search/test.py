@@ -6,17 +6,27 @@ Integration tests for the mv_books_dc search module.
 
 import time
 
+import cherrypy
+from sqlalchemy import create_engine
+
 from .constants import (
     Crosswalk,
     FileType,
     Language,
     LoCCMainClass,
     OrderBy,
+    SearchField,
     SearchType,
 )
 from .Search import FullTextSearch
 
-s = FullTextSearch()
+cherrypy.config.update("test.conf")
+c = cherrypy.config
+s = FullTextSearch(
+    create_engine(
+        f"postgresql://{c['pguser']}@{c['pghost']}:{c['pgport']}/{c['pgdatabase']}"
+    )
+)
 
 
 def test(name: str, q):
@@ -28,8 +38,14 @@ def test(name: str, q):
         count = data["total"]
         first = data["results"][0] if data["results"] else None
         if first:
-            title = first.get("title", first.get("name", "N/A"))[:40]
-            author = (first.get("author") or "Unknown")[:25]
+            title = (first.get("title") or first.get("name") or "N/A")[:40]
+            fmt = first.get("format")
+            if callable(fmt):
+                author = fmt(pretty=True, dates=False) or "Unknown"
+            else:
+                contribs = first.get("contributors") or []
+                author = (contribs[0]["name"] if contribs else None) or "Unknown"
+            author = author[:25]
         else:
             title, author = "N/A", "N/A"
         print(f"{name:<50} | {count:>6} | {ms:>7.1f}ms | {title} - {author}")
@@ -54,7 +70,7 @@ print("FUZZY Search (typo-tolerant, GiST trigram)")
 print("-" * 130)
 test(
     "FUZZY BOOK",
-    s.query().search("Shakspeare", search_type=SearchType.FUZZY)[1, 10],
+    s.query().search("Frankenstien", search_type=SearchType.FUZZY)[1, 10],
 )
 
 # Search: HYBRID
@@ -65,11 +81,56 @@ test(
     "HYBRID BOOK (exact)",
     s.query().search("Shakespeare", search_type=SearchType.HYBRID)[1, 10],
 )
+# "Frankenstien" (ei/ie typo) is not a real FTS lexeme, so FTS returns 0 and
+# HYBRID falls back to the trigram fuzzy match to recover "Frankenstein".
 test(
     "HYBRID BOOK (typo)",
-    s.query().search("Shakspeare", search_type=SearchType.HYBRID)[1, 10],
+    s.query().search("Frankenstien", search_type=SearchType.HYBRID)[1, 10],
 )
-test("FTS typo (no hit)", s.query().search("Shakspeare")[1, 10])
+test("FTS typo (no hit)", s.query().search("Frankenstien")[1, 10])
+
+# Search: Field-scoped (title, author)
+print("-" * 130)
+print("Field-Scoped Search (title, author)")
+print("-" * 130)
+test(
+    "FTS TITLE",
+    s.query().search("Hamlet", field=SearchField.TITLE)[1, 10],
+)
+test(
+    "FTS AUTHOR",
+    s.query().search("Shakespeare", field=SearchField.AUTHOR)[1, 10],
+)
+test(
+    "FUZZY TITLE",
+    s.query().search("Hamlett", field=SearchField.TITLE, search_type=SearchType.FUZZY)[
+        1, 10
+    ],
+)
+test(
+    "FUZZY AUTHOR",
+    s.query().search(
+        "Shakspeare", field=SearchField.AUTHOR, search_type=SearchType.FUZZY
+    )[1, 10],
+)
+test(
+    "HYBRID TITLE (exact)",
+    s.query().search("Hamlet", field=SearchField.TITLE, search_type=SearchType.HYBRID)[
+        1, 10
+    ],
+)
+test(
+    "HYBRID AUTHOR (typo)",
+    s.query().search(
+        "Shakspeare", field=SearchField.AUTHOR, search_type=SearchType.HYBRID
+    )[1, 10],
+)
+test(
+    "TITLE + AUTHOR (AND)",
+    s.query()
+    .search("Romeo", field=SearchField.TITLE)
+    .search("Shakespeare", field=SearchField.AUTHOR)[1, 10],
+)
 
 # Filters: PK
 print("-" * 130)

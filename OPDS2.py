@@ -20,6 +20,7 @@ from mv_search.constants import (
     Language,
     LoCCMainClass,
     OrderBy,
+    SearchField,
     SearchType,
     SortDirection,
 )
@@ -62,6 +63,11 @@ LANGUAGES.sort(key=lambda x: _LANG_PRIORITY.index(x["code"]))
 
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
+# Templated search URL advertised to clients. title/author are not yet wired
+# into existing feeds but are exposed here for forward compatibility.
+SEARCH_TEMPLATE = (
+    "/opds/search{?query,title,author,lang,audiobook,sort,sort_order,locc,author_id}"
+)
 
 
 # Helpers
@@ -251,15 +257,21 @@ class OPDSFeed:
         subjects: Optional[List[Dict]] = None,
     ) -> List[Dict]:
         """Build common facets for sort, copyright, format, language."""
-        facets = [
-            {
-                "metadata": {"title": "Sort By"},
-                "links": [
-                    _facet(
-                        url_fn(query, lang, audiobook, "downloads", "desc"),
-                        "Most Popular",
-                        sort in ("downloads", ""),
-                    ),
+        sort_links = [
+            _facet(
+                url_fn(query, lang, audiobook, "downloads", "desc"),
+                "Most Popular",
+                sort in ("downloads", ""),
+            ),
+            _facet(
+                url_fn(query, lang, audiobook, "release_date", "desc"),
+                "Newest",
+                sort == "release_date",
+            ),
+        ]
+        if query:
+            sort_links.extend(
+                [
                     _facet(
                         url_fn(query, lang, audiobook, "relevance", ""),
                         "Relevance",
@@ -275,12 +287,19 @@ class OPDSFeed:
                         "Author (A-Z)",
                         sort == "author",
                     ),
-                    _facet(
-                        url_fn(query, lang, audiobook, "random", ""),
-                        "Random",
-                        sort == "random",
-                    ),
-                ],
+                ]
+            )
+        sort_links.append(
+            _facet(
+                url_fn(query, lang, audiobook, "random", ""),
+                "Random",
+                sort == "random",
+            )
+        )
+        facets = [
+            {
+                "metadata": {"title": "Sort By"},
+                "links": sort_links,
             }
         ]
 
@@ -464,7 +483,7 @@ class OPDSFeed:
             "links": [
                 _link("self", "/opds/"),
                 _link("start", "/opds/"),
-                _link("search", "/opds/search{?query}", templated=True),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "navigation": [
                 _nav("/opds/loccs", "Browse Subjects"),
@@ -915,6 +934,8 @@ class OPDSFeed:
     def search(
         self,
         query: str = "",
+        title: str = "",
+        author: str = "",
         page: int = 1,
         limit: int = 25,
         lang: str = "",
@@ -928,11 +949,19 @@ class OPDSFeed:
         page, limit = _paginate(page, limit)
 
         try:
-            has_query = bool(query.strip())
+            has_text = bool(query.strip() or title.strip() or author.strip())
 
             q = self.fts.query(crosswalk=Crosswalk.OPDS)
-            if has_query:
+            if query.strip():
                 q.search(query, search_type=SearchType.HYBRID)
+            if title.strip():
+                q.search(
+                    title, field=SearchField.TITLE, search_type=SearchType.HYBRID
+                )
+            if author.strip():
+                q.search(
+                    author, field=SearchField.AUTHOR, search_type=SearchType.HYBRID
+                )
 
             if locc:
                 q.locc(locc)
@@ -944,7 +973,7 @@ class OPDSFeed:
             result = self.fts.execute(q[page, limit])
 
             subjects = None
-            if has_query or locc or lang or author_id is not None:
+            if has_text or locc or lang or author_id is not None:
                 subjects = self._top_subjects(q)
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
@@ -958,6 +987,8 @@ class OPDSFeed:
 
         base = {
             "limit": limit,
+            "title": title,
+            "author": author,
             "lang": lang,
             "audiobook": audiobook,
             "sort": sort,
@@ -983,7 +1014,7 @@ class OPDSFeed:
                 _link("self", page_url(result["page"])),
                 _link("start", "/opds/"),
                 _link("up", "/opds/"),
-                _link("search", "/opds/search{?query}", templated=True),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "publications": result["results"],
             "facets": facets,

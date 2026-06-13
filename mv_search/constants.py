@@ -36,6 +36,8 @@ class SearchType(str, Enum):
 
 class SearchField(str, Enum):
     BOOK = "book"
+    TITLE = "title"
+    AUTHOR = "author"
 
 
 class OrderBy(str, Enum):

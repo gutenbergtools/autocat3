@@ -28,6 +28,11 @@ __all__ = [
 
 _FIELD_COLS = {
     SearchField.BOOK: ("tsvec", "book_text"),
+    SearchField.TITLE: ("to_tsvector('english', title)", "title"),
+    SearchField.AUTHOR: (
+        "to_tsvector('english', array_to_string(creator_names, ' '))",
+        "array_to_string(creator_names, ' ')",
+    ),
 }
 
 _ORDER_COLUMNS = {
