@@ -67,14 +67,36 @@ sudo -u autocat /var/lib/autocat/autocat3/.venv/bin/python --version
 
 ### 5. Create the materialized view
 
-Download and run the SQL script against your `gutenberg` database:
+Until this is merged officially, the scripts live in [gutenbergtools/pgdb PR #15](https://github.com/gutenbergtools/pgdb/pull/15).
+Clone the repo, check out that PR, and run the scripts against your `gutenberg`
+database. pg_trgm is now managed by its own scripts, so they must be run in
+order, and a few require the `postgres` superuser.
 
 ```bash
-curl -L -O https://raw.githubusercontent.com/zachjesus/pg-db-mv/main/15_materialized_view.sql
-psql -U gutenberg -d gutenberg -f 15_materialized_view.sql
+git clone https://github.com/gutenbergtools/pgdb.git
+cd pgdb
+git fetch origin pull/15/head:full-mv-patch
+git checkout full-mv-patch
 ```
 
-To avoid permission errors create the materialized view as the same user you will be using for `pguser` in the next step.
+Run these in order:
+
+```bash
+# 1. Prep: drop objects depending on the old (unpackaged) pg_trgm — run as gutenberg
+psql -U gutenberg -d gutenberg -f 15_prep_pg_trgm_install.sql
+
+# 2. Drop leftover unpackaged pg_trgm artifacts — MUST run as the postgres superuser
+psql -U postgres -d gutenberg -f 16_drop_pg_trgm_artifacts.sql
+
+# 3. Install the pg_trgm extension and recreate its indexes — MUST run as postgres
+psql -U postgres -d gutenberg -f 17_install_pg_trgm_extension.sql
+
+# 4. Create the materialized view — run as the same user you will use for pguser
+psql -U gutenberg -d gutenberg -f 18_materialized_view.sql
+```
+
+To avoid permission errors, create the materialized view (step 4) as the same
+user you will be using for `pguser` in the next step.
 
 ### 6. Configure
 
