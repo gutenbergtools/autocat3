@@ -123,15 +123,32 @@ class SearchQuery:
             return self
 
         fts_col, text_col = _FIELD_COLS[field]
+        pname, p = self._new_param(txt)
 
-        if search_type == SearchType.FTS:
-            pname, p = self._new_param(txt)
+        if search_type == SearchType.FUZZY:
+            self._search.append((":{} <% {}".format(pname, text_col), p, text_col))
+        elif search_type == SearchType.HYBRID:
+            sql = "{} @@ websearch_to_tsquery('english', :{})".format(fts_col, pname)
+            self._search.append((sql, p, fts_col, SearchType.HYBRID, text_col))
+        else:
             sql = "{} @@ websearch_to_tsquery('english', :{})".format(fts_col, pname)
             self._search.append((sql, p, fts_col))
-        else:
-            pname, p = self._new_param(txt)
-            self._search.append((":{} <% {}".format(pname, text_col), p, text_col))
         return self
+
+    def _is_hybrid(self) -> bool:
+        return any(len(s) > 3 and s[3] == SearchType.HYBRID for s in self._search)
+
+    def _use_fuzzy(self) -> None:
+        """Switch hybrid clauses from tsvector to trigram search."""
+        updated = []
+        for s in self._search:
+            if len(s) > 3 and s[3] == SearchType.HYBRID:
+                _, p, _, _, text_col = s
+                pname = next(iter(p))
+                updated.append((":{} <% {}".format(pname, text_col), p, text_col))
+            else:
+                updated.append(s)
+        self._search = updated
 
     # Filter Methods
 
@@ -358,7 +375,7 @@ class SearchQuery:
 
     def _order_sql(self, params: Dict) -> str:
         if self._order == OrderBy.RELEVANCE and self._search:
-            sql, p, col = self._search[-1]
+            sql, p, col = self._search[-1][:3]
             val = next(iter(p.values())) if p else ""
             params["rank_q"] = str(val).replace("%", "")
             if "<%" in sql:
@@ -423,6 +440,24 @@ class SearchQuery:
             return "SELECT COUNT(*) FROM mv_books_dc WHERE {}".format(filter_sql), params
         return "SELECT COUNT(*) FROM mv_books_dc", params
 
+    def build_exists(self) -> Tuple[str, Dict]:
+        """Build a LIMIT 1 existence check for the current where clauses."""
+        params = self._params()
+        search_sql = " AND ".join(s[0] for s in self._search) if self._search else None
+        filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
+
+        if search_sql and filter_sql:
+            sql = "SELECT 1 FROM (SELECT {} FROM mv_books_dc WHERE {}) t WHERE {} LIMIT 1".format(
+                _SUBQUERY, search_sql, filter_sql
+            )
+        elif search_sql:
+            sql = "SELECT 1 FROM mv_books_dc WHERE {} LIMIT 1".format(search_sql)
+        elif filter_sql:
+            sql = "SELECT 1 FROM mv_books_dc WHERE {} LIMIT 1".format(filter_sql)
+        else:
+            sql = "SELECT 1 FROM mv_books_dc LIMIT 1"
+        return sql, params
+
 
 # =============================================================================
 # FullTextSearch
@@ -452,6 +487,11 @@ class FullTextSearch:
         None); use it for preview feeds that don't paginate.
         """
         with self.Session() as session:
+            if q._is_hybrid():
+                exists_sql, exists_params = q.build_exists()
+                if not session.execute(text(exists_sql), exists_params).first():
+                    q._use_fuzzy()
+
             if with_count:
                 count_sql, count_params = q.build_count()
                 total = session.execute(text(count_sql), count_params).scalar() or 0

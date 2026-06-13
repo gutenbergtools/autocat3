@@ -31,6 +31,7 @@ class FileType(str, Enum):
 class SearchType(str, Enum):
     FTS = "fts"
     FUZZY = "fuzzy"
+    HYBRID = "hybrid"
 
 
 class SearchField(str, Enum):

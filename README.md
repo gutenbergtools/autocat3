@@ -71,7 +71,7 @@ Download and run the SQL script against your `gutenberg` database:
 
 ```bash
 curl -L -O https://raw.githubusercontent.com/zachjesus/pg-db-mv/main/15_materialized_view.sql
-sudo -u postgres psql -d gutenberg -f 15_materialized_view.sql
+psql -U gutenberg -d gutenberg -f 15_materialized_view.sql
 ```
 
 To avoid permission errors create the materialized view as the same user you will be using for `pguser` in the next step.

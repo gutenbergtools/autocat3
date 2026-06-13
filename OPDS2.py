@@ -932,7 +932,7 @@ class OPDSFeed:
 
             q = self.fts.query(crosswalk=Crosswalk.OPDS)
             if has_query:
-                q.search(query, search_type=SearchType.FUZZY)
+                q.search(query, search_type=SearchType.HYBRID)
 
             if locc:
                 q.locc(locc)
@@ -945,15 +945,7 @@ class OPDSFeed:
 
             subjects = None
             if has_query or locc or lang or author_id is not None:
-                sq = self.fts.query()
-                if has_query:
-                    sq.search(query, search_type=SearchType.FUZZY)
-                if locc:
-                    sq.locc(locc)
-                if author_id is not None:
-                    sq.author_id(int(author_id))
-                self._filter(sq, lang, audiobook)
-                subjects = self._top_subjects(sq)
+                subjects = self._top_subjects(q)
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
             return self._error_feed(

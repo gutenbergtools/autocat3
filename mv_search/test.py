@@ -57,6 +57,20 @@ test(
     s.query().search("Shakspeare", search_type=SearchType.FUZZY)[1, 10],
 )
 
+# Search: HYBRID
+print("-" * 130)
+print("HYBRID Search (FTS first, fuzzy fallback)")
+print("-" * 130)
+test(
+    "HYBRID BOOK (exact)",
+    s.query().search("Shakespeare", search_type=SearchType.HYBRID)[1, 10],
+)
+test(
+    "HYBRID BOOK (typo)",
+    s.query().search("Shakspeare", search_type=SearchType.HYBRID)[1, 10],
+)
+test("FTS typo (no hit)", s.query().search("Shakspeare")[1, 10])
+
 # Filters: PK
 print("-" * 130)
 print("Filters: Primary Key")
