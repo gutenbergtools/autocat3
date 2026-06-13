@@ -432,7 +432,7 @@ class OPDSFeed:
                 }
 
         def _category_group(cat):
-            """Daily spotlight shelf, random picks above the downloads floor."""
+            """Daily spotlight shelf, most-downloaded picks above the floor."""
             shelves = list(cat.shelves)
             day = datetime.date.today().toordinal()
 
@@ -443,7 +443,7 @@ class OPDSFeed:
                         self.fts.query(crosswalk=Crosswalk.OPDS)
                         .bookshelf_id(shelf_id)
                         .downloads_gte(SPOTLIGHT_MIN_DOWNLOADS)
-                        .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT],
+                        .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
                         with_count=False,
                     )
                     if result.get("results"):
