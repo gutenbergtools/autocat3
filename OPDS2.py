@@ -6,9 +6,9 @@ OPDS 2.0 JSON feed for the Project Gutenberg catalog.
 
 import datetime
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 import logging
 import json
 
@@ -160,6 +160,7 @@ class OPDSFeed:
     def __init__(self):
         self._fts = None
         self._locc_counts_cache = {}  # parent -> (timestamp, counts)
+        self._shelf_cache = {}  # key -> (built_at, feed)
 
     @property
     def fts(self):
@@ -185,6 +186,43 @@ class OPDSFeed:
         else:
             q.order_by(OrderBy.DOWNLOADS)
         return q
+
+    def _cache_epoch(self) -> datetime.datetime:
+        """Most recent daily cache boundary, a bit after the MV refresh hour (Eastern)."""
+        hour = cherrypy.config.get("mv_refresh_hour", 17)
+        delay = cherrypy.config.get("opds_cache_refresh_delay", 30)
+        now = datetime.datetime.now(ZoneInfo("America/New_York"))
+        boundary = now.replace(
+            hour=hour, minute=0, second=0, microsecond=0
+        ) + datetime.timedelta(minutes=delay)
+        if now < boundary:
+            boundary -= datetime.timedelta(days=1)
+        return boundary
+
+    def _cached_shelf(self, key: str, build: Callable[[], Dict]) -> Dict:
+        """Return a cached shelf feed, rebuilt once a day shortly after the MV
+        refresh. Only non-empty builds are cached, so a failed build retries."""
+        hit = self._shelf_cache.get(key)
+        if hit and hit[0] >= self._cache_epoch():
+            return hit[1]
+        feed = build()
+        if feed.get("groups"):
+            now = datetime.datetime.now(ZoneInfo("America/New_York"))
+            self._shelf_cache[key] = (now, feed)
+        return feed
+
+    def _category_count(self, cat) -> int:
+        """Count distinct books across all of a category's sub-shelves."""
+        try:
+            q = self.fts.query().where(
+                "EXISTS (SELECT 1 FROM mn_books_bookshelves mbb "
+                "WHERE mbb.fk_books = book_id "
+                "AND mbb.fk_bookshelves = ANY(:shelf_ids))",
+                shelf_ids=[sid for sid, _ in cat.shelves],
+            )
+            return self.fts.count(q)
+        except Exception:
+            return 0
 
     def _top_subjects(self, q) -> Optional[List[Dict]]:
         """Get top subjects for a query."""
@@ -373,19 +411,20 @@ class OPDSFeed:
     @cherrypy.expose
     def index(self):
         """Root catalog."""
+        return self._cached_shelf("index", self._build_index)
 
+    def _build_index(self):
         def _recently_added():
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS).order_by(
                     OrderBy.RELEASE_DATE, SortDirection.DESC
                 )[1, SAMPLE_LIMIT],
-                with_count=False,
             )
             if result.get("results"):
                 return {
                     "metadata": {
                         "title": "Recently Added",
-                        "numberOfItems": len(result["results"]),
+                        "numberOfItems": result["total"],
                     },
                     "links": [
                         _link("self", "/opds/search?sort=release_date&sort_order=desc")
@@ -398,13 +437,12 @@ class OPDSFeed:
                 self.fts.query(crosswalk=Crosswalk.OPDS).order_by(OrderBy.DOWNLOADS)[
                     1, SAMPLE_LIMIT
                 ],
-                with_count=False,
             )
             if result.get("results"):
                 return {
                     "metadata": {
                         "title": "Most Popular",
-                        "numberOfItems": len(result["results"]),
+                        "numberOfItems": result["total"],
                     },
                     "links": [
                         _link("self", "/opds/search?sort=downloads&sort_order=desc")
@@ -417,13 +455,12 @@ class OPDSFeed:
                 self.fts.query(crosswalk=Crosswalk.OPDS)
                 .audiobook()
                 .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
-                with_count=False,
             )
             if result.get("results"):
                 return {
                     "metadata": {
                         "title": "Audiobooks",
-                        "numberOfItems": len(result["results"]),
+                        "numberOfItems": result["total"],
                     },
                     "links": [
                         _link("self", "/opds/search?audiobook=true&sort=downloads")
@@ -434,7 +471,7 @@ class OPDSFeed:
         def _category_group(cat):
             """Daily spotlight shelf, most-downloaded picks above the floor."""
             shelves = list(cat.shelves)
-            day = datetime.date.today().toordinal()
+            day = datetime.datetime.now(ZoneInfo("America/New_York")).date().toordinal()
 
             for offset in range(len(shelves)):
                 shelf_id, shelf_name = shelves[(day + offset) % len(shelves)]
@@ -449,11 +486,14 @@ class OPDSFeed:
                     if result.get("results"):
                         return {
                             "metadata": {
-                                "title": f"{cat.genre}: {shelf_name}",
-                                "numberOfItems": len(result["results"]),
+                                "title": cat.genre,
+                                "numberOfItems": self._category_count(cat),
                             },
                             "links": [
-                                _link("self", f"/opds/bookshelves?id={shelf_id}")
+                                _link(
+                                    "self",
+                                    f"/opds/bookshelves?category={cat.name}",
+                                )
                             ],
                             "publications": result["results"],
                         }
@@ -467,16 +507,14 @@ class OPDSFeed:
             lambda c=cat: _category_group(c) for cat in CuratedBookshelves
         ]
 
-        with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
-            futures = [executor.submit(fn) for fn in tasks]
-            groups = []
-            for f in futures:
-                try:
-                    result = f.result()
-                    if result:
-                        groups.append(result)
-                except Exception as e:
-                    cherrypy.log(f"Index group error: {e}")
+        groups = []
+        for fn in tasks:
+            try:
+                result = fn()
+                if result:
+                    groups.append(result)
+            except Exception as e:
+                cherrypy.log(f"Index group error: {e}")
 
         return {
             "metadata": {"title": "Project Gutenberg Catalog"},
@@ -625,7 +663,7 @@ class OPDSFeed:
         return feed
 
     def _bookshelf_category(self, category: str):
-        """List shelves in a category with samples."""
+        """List shelves in a category with daily spotlight samples (cached)."""
         found = next((cat for cat in CuratedBookshelves if cat.name == category), None)
         if not found:
             return self._error_feed(
@@ -636,44 +674,47 @@ class OPDSFeed:
                 status=404,
             )
 
-        shelves = [{"id": s[0], "name": s[1]} for s in found.shelves]
-        groups = []
-
-        for s in shelves:
-            try:
-                result = self.fts.execute(
-                    self.fts.query(crosswalk=Crosswalk.OPDS)
-                    .bookshelf_id(s["id"])
-                    .order_by(OrderBy.RANDOM)[1, SAMPLE_LIMIT],
-                    with_count=False,
-                )
-                if result.get("results"):
-                    groups.append(
-                        {
-                            "metadata": {
-                                "title": s["name"],
-                                "numberOfItems": len(result["results"]),
-                            },
-                            "links": [_link("self", f"/opds/bookshelves?id={s['id']}")],
-                            "publications": result["results"],
-                        }
+        def build():
+            groups = []
+            for sid, sname in found.shelves:
+                try:
+                    result = self.fts.execute(
+                        self.fts.query(crosswalk=Crosswalk.OPDS)
+                        .bookshelf_id(sid)
+                        .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
                     )
-            except Exception as e:
-                cherrypy.log(
-                    f"Bookshelf sample error {s['id']}: {e}",
-                    context="OPDS",
-                    severity=logging.WARNING,
-                )
+                    if result.get("results"):
+                        groups.append(
+                            {
+                                "metadata": {
+                                    "title": sname,
+                                    "numberOfItems": result["total"],
+                                },
+                                "links": [_link("self", f"/opds/bookshelves?id={sid}")],
+                                "publications": result["results"],
+                            }
+                        )
+                except Exception as e:
+                    cherrypy.log(
+                        f"Bookshelf sample error {sid}: {e}",
+                        context="OPDS",
+                        severity=logging.WARNING,
+                    )
 
-        return {
-            "metadata": {"title": found.genre, "numberOfItems": len(shelves)},
-            "links": [
-                _link("self", f"/opds/bookshelves?category={category}"),
-                _link("start", "/opds/"),
-                _link("up", "/opds/bookshelves"),
-            ],
-            "groups": groups,
-        }
+            return {
+                "metadata": {
+                    "title": found.genre,
+                    "numberOfItems": len(found.shelves),
+                },
+                "links": [
+                    _link("self", f"/opds/bookshelves?category={category}"),
+                    _link("start", "/opds/"),
+                    _link("up", "/opds/bookshelves"),
+                ],
+                "groups": groups,
+            }
+
+        return self._cached_shelf(f"cat:{category}", build)
 
     # LoCC
     @cherrypy.expose
