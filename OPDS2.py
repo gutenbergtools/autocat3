@@ -109,7 +109,7 @@ def _url(path: str, params: Dict) -> str:
     return f"{path}?{urlencode(clean, doseq=True)}" if clean else path
 
 
-def _make_page_url(endpoint: str, base: Dict, query: str) -> Callable[[int], str]:
+def _make_page_url(endpoint: str, base: Dict, query: str = "") -> Callable[[int], str]:
     """Create a page URL builder for pagination links."""
 
     def page_url(p: int) -> str:
@@ -327,12 +327,17 @@ class OPDSFeed:
         sort_order: str,
         subjects: Optional[List[Dict]] = None,
         languages: Optional[List[Dict]] = None,
+        scope: Optional[Dict] = None,
     ) -> List[Dict]:
         """Build common facets for sort, copyright, format, language.
 
         languages, when provided, drives a dynamic language facet (codes +
         counts from the result set); otherwise a static common-language list
         is used.
+
+        scope carries the current browse filters (e.g. bookshelf_id, locc) so
+        that clicking a Top Subject narrows within that scope instead of
+        dropping it.
         """
         sort_links = [
             _facet(
@@ -386,7 +391,17 @@ class OPDSFeed:
                     "metadata": {"title": "Top Subjects in Results"},
                     "links": [
                         {
-                            "href": f"/opds/subjects?id={s['id']}",
+                            "href": _url(
+                                "/opds/search",
+                                {
+                                    **(scope or {}),
+                                    "subject_id": s["id"],
+                                    "lang": lang,
+                                    "audiobook": audiobook,
+                                    "sort": sort,
+                                    "sort_order": sort_order,
+                                },
+                            ),
                             "type": OPDS_TYPE,
                             "title": s["name"],
                             "properties": {"numberOfItems": s["count"]},
@@ -598,7 +613,6 @@ class OPDSFeed:
         category: Optional[str] = None,
         page: int = 1,
         limit: int = 25,
-        query: str = "",
         lang: str = "",
         audiobook: str = "",
         sort: str = "",
@@ -612,7 +626,6 @@ class OPDSFeed:
                 int(id),
                 page,
                 limit,
-                query,
                 lang,
                 audiobook,
                 sort,
@@ -645,7 +658,6 @@ class OPDSFeed:
         shelf_id: int,
         page: int,
         limit: int,
-        query: str,
         lang: str,
         audiobook: str,
         sort: str,
@@ -683,7 +695,7 @@ class OPDSFeed:
             "sort": sort,
             "sort_order": sort_order,
         }
-        page_url = _make_page_url("/opds/bookshelves", base, query)
+        page_url = _make_page_url("/opds/bookshelves", base)
         facet_url = _make_facet_url("/opds/bookshelves", base)
 
         subjects_q = self.fts.query().bookshelf_id(shelf_id)
@@ -705,22 +717,19 @@ class OPDSFeed:
                 _link("self", page_url(result["page"])),
                 _link("start", "/opds/"),
                 _link("up", up),
-                _link(
-                    "search",
-                    f"/opds/bookshelves?id={shelf_id}{{&query}}",
-                    templated=True,
-                ),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "publications": result["results"],
             "facets": self._facets(
                 facet_url,
-                query,
+                "",
                 lang,
                 audiobook,
                 sort,
                 sort_order,
                 self._top_subjects(subjects_q),
                 self._top_languages(lang_q),
+                {"bookshelf_id": shelf_id},
             ),
         }
         feed["links"].extend(
@@ -789,7 +798,6 @@ class OPDSFeed:
         parent: str = "",
         page: int = 1,
         limit: int = 25,
-        query: str = "",
         lang: str = "",
         audiobook: str = "",
         sort: str = "",
@@ -809,7 +817,7 @@ class OPDSFeed:
             return self._locc_navigation(parent, children)
 
         return self._locc_books(
-            parent, page, limit, query, lang, audiobook, sort, sort_order
+            parent, page, limit, lang, audiobook, sort, sort_order
         )
 
     def _locc_navigation(self, parent: str, children: List):
@@ -860,7 +868,6 @@ class OPDSFeed:
         parent: str,
         page: int,
         limit: int,
-        query: str,
         lang: str,
         audiobook: str,
         sort: str,
@@ -890,7 +897,7 @@ class OPDSFeed:
             "sort": sort,
             "sort_order": sort_order,
         }
-        page_url = _make_page_url("/opds/loccs", base, query)
+        page_url = _make_page_url("/opds/loccs", base)
         facet_url = _make_facet_url("/opds/loccs", base)
 
         subjects_q = self.fts.query().locc(parent)
@@ -911,20 +918,19 @@ class OPDSFeed:
                 _link("self", page_url(result["page"])),
                 _link("start", "/opds/"),
                 _link("up", "/opds/loccs"),
-                _link(
-                    "search", f"/opds/loccs?parent={parent}{{&query}}", templated=True
-                ),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "publications": result["results"],
             "facets": self._facets(
                 facet_url,
-                query,
+                "",
                 lang,
                 audiobook,
                 sort,
                 sort_order,
                 self._top_subjects(subjects_q),
                 self._top_languages(lang_q),
+                {"locc": parent},
             ),
         }
         feed["links"].extend(
@@ -940,7 +946,6 @@ class OPDSFeed:
         id: Optional[int] = None,
         page: int = 1,
         limit: int = 25,
-        query: str = "",
         lang: str = "",
         audiobook: str = "",
         sort: str = "",
@@ -954,7 +959,6 @@ class OPDSFeed:
                 int(id),
                 page,
                 limit,
-                query,
                 lang,
                 audiobook,
                 sort,
@@ -985,7 +989,6 @@ class OPDSFeed:
         subject_id: int,
         page: int,
         limit: int,
-        query: str,
         lang: str,
         audiobook: str,
         sort: str,
@@ -1015,7 +1018,7 @@ class OPDSFeed:
             "sort": sort,
             "sort_order": sort_order,
         }
-        page_url = _make_page_url("/opds/subjects", base, query)
+        page_url = _make_page_url("/opds/subjects", base)
         facet_url = _make_facet_url("/opds/subjects", base)
 
         # Language facet ignores the active language so users can switch.
@@ -1033,16 +1036,12 @@ class OPDSFeed:
                 _link("self", page_url(result["page"])),
                 _link("start", "/opds/"),
                 _link("up", "/opds/subjects"),
-                _link(
-                    "search",
-                    f"/opds/subjects?id={subject_id}{{&query}}",
-                    templated=True,
-                ),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "publications": result["results"],
             "facets": self._facets(
                 facet_url,
-                query,
+                "",
                 lang,
                 audiobook,
                 sort,
@@ -1071,6 +1070,8 @@ class OPDSFeed:
         sort_order: str = "",
         locc: str = "",
         author_id: Optional[int] = None,
+        subject_id: Optional[int] = None,
+        bookshelf_id: Optional[int] = None,
     ):
         """Full-text search."""
         page, limit = _paginate(page, limit)
@@ -1092,6 +1093,10 @@ class OPDSFeed:
                 q.locc(locc)
             if author_id is not None:
                 q.author_id(int(author_id))
+            if subject_id is not None:
+                q.subject_id(int(subject_id))
+            if bookshelf_id is not None:
+                q.bookshelf_id(int(bookshelf_id))
 
             # Apply audiobook (not language) first so the language facet can be
             # computed over all languages in the result set.
@@ -1127,12 +1132,25 @@ class OPDSFeed:
             "sort_order": sort_order,
             "locc": locc,
             "author_id": author_id,
+            "subject_id": subject_id,
+            "bookshelf_id": bookshelf_id,
         }
         page_url = _make_page_url("/opds/search", base, query)
         facet_url = _make_facet_url("/opds/search", base)
 
+        # Scope carried when narrowing to a Top Subject (subject_id is set by the
+        # facet itself, so it's excluded here to allow switching subjects).
+        scope = {
+            "query": query,
+            "title": title,
+            "author": author,
+            "locc": locc,
+            "author_id": author_id,
+            "bookshelf_id": bookshelf_id,
+        }
         facets = self._facets(
-            facet_url, query, lang, audiobook, sort, sort_order, subjects, languages
+            facet_url, query, lang, audiobook, sort, sort_order, subjects, languages,
+            scope,
         )
 
         feed = {
