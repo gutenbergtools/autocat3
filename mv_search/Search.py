@@ -599,28 +599,39 @@ class FullTextSearch:
             return result
 
     def get_top_subjects_for_query(
-        self, q: "SearchQuery", limit: int = 15, max_books: int = 1000
+        self,
+        q: "SearchQuery",
+        limit: Optional[int] = None,
+        max_books: Optional[int] = None,
     ) -> List[Dict]:
         """
-        Get top N subjects from a search result set for dynamic facets.
+        Get top subjects from a search result set for dynamic facets.
 
         Args:
             q: SearchQuery to derive subjects from
-            limit: Maximum number of subjects to return (default 15)
-            max_books: Maximum number of matching books to sample (default 1000)
+            limit: Max subjects to return, or None for all (default None)
+            max_books: Max matching books to sample, or None for the full
+                result set (default None)
 
         Returns:
             List of dicts with 'id', 'name', and 'count' keys, sorted by count desc
         """
-        max_books = max(1, min(5000, int(max_books)))
-        limit = max(1, min(100, int(limit)))
-
         params = q._params()
-        order_sql = q._order_sql(params)
         search_sql = " AND ".join(s[0] for s in q._search) if q._search else None
         filter_sql = " AND ".join(f[0] for f in q._filters) if q._filters else None
         where_parts = [p for p in (search_sql, filter_sql) if p]
         where_clause = "WHERE {}".format(" AND ".join(where_parts)) if where_parts else ""
+
+        # Sampling only matters with a cap; without one, order is irrelevant.
+        sample_clause = ""
+        if max_books is not None:
+            params["max_books"] = max(1, int(max_books))
+            sample_clause = "ORDER BY {} LIMIT :max_books".format(q._order_sql(params))
+
+        limit_clause = ""
+        if limit is not None:
+            params["limit"] = max(1, int(limit))
+            limit_clause = "LIMIT :limit"
 
         sql = """
             WITH matched_books AS (
@@ -628,9 +639,7 @@ class FullTextSearch:
                     book_id
                 FROM mv_books_dc
                 {}
-                ORDER BY
-                    {}
-                LIMIT :max_books
+                {}
             )
             SELECT
                 s.pk AS id,
@@ -646,14 +655,70 @@ class FullTextSearch:
                 s.subject
             ORDER BY
                 count DESC
-            LIMIT :limit
-        """.format(where_clause, order_sql)
-        params["limit"] = limit
-        params["max_books"] = max_books
+            {}
+        """.format(where_clause, sample_clause, limit_clause)
 
         with self.Session() as session:
             rows = session.execute(text(sql), params).fetchall()
             return [{"id": r.id, "name": r.name, "count": r.count} for r in rows]
+
+    def get_languages_for_query(
+        self,
+        q: "SearchQuery",
+        limit: Optional[int] = None,
+        max_books: Optional[int] = None,
+    ) -> List[Dict]:
+        """
+        Get languages present in a search result set for dynamic facets.
+
+        Args:
+            q: SearchQuery to derive languages from
+            limit: Max languages to return, or None for all (default None)
+            max_books: Max matching books to sample, or None for the full
+                result set (default None)
+
+        Returns:
+            List of dicts with 'code' and 'count' keys, sorted by count desc
+        """
+        params = q._params()
+        search_sql = " AND ".join(s[0] for s in q._search) if q._search else None
+        filter_sql = " AND ".join(f[0] for f in q._filters) if q._filters else None
+        where_parts = [p for p in (search_sql, filter_sql) if p]
+        where_clause = "WHERE {}".format(" AND ".join(where_parts)) if where_parts else ""
+
+        sample_clause = ""
+        if max_books is not None:
+            params["max_books"] = max(1, int(max_books))
+            sample_clause = "ORDER BY {} LIMIT :max_books".format(q._order_sql(params))
+
+        limit_clause = ""
+        if limit is not None:
+            params["limit"] = max(1, int(limit))
+            limit_clause = "LIMIT :limit"
+
+        sql = """
+            WITH matched_books AS (
+                SELECT
+                    lang_codes
+                FROM mv_books_dc
+                {}
+                {}
+            )
+            SELECT
+                lang AS code,
+                COUNT(*) AS count
+            FROM matched_books mb,
+                unnest(mb.lang_codes) AS lang
+            GROUP BY
+                lang
+            ORDER BY
+                count DESC
+            {}
+        """.format(where_clause, sample_clause, limit_clause)
+
+        with self.Session() as session:
+            rows = session.execute(text(sql), params).fetchall()
+            return [{"code": r.code, "count": r.count} for r in rows]
 
     def get_locc_children(self, parent: Union[LoCCMainClass, str]) -> List[Dict]:
         """Get LoCC children for a parent code."""
@@ -665,7 +730,7 @@ class FullTextSearch:
         if not parent_code:
             sorted_classes = sorted(LoCCMainClass, key=lambda x: x.code)
             return [
-                {"code": item.code, "label": item.label, "has_children": True}
+                {"code": item.code, "label": item.label}
                 for item in sorted_classes
             ]
 
@@ -673,13 +738,7 @@ class FullTextSearch:
             """
             SELECT
                 lc.pk AS code,
-                lc.locc AS label,
-                EXISTS (
-                    SELECT 1
-                    FROM loccs lc2
-                    WHERE lc2.pk LIKE lc.pk || '%'
-                      AND lc2.pk != lc.pk
-                ) AS has_children
+                lc.locc AS label
             FROM loccs lc
             WHERE lc.pk LIKE :pattern
               AND lc.pk != :parent
@@ -692,58 +751,6 @@ class FullTextSearch:
         with self.Session() as session:
             rows = session.execute(sql, {"pattern": "{}%".format(parent_code), "parent": parent_code}).mappings().all()
             return [
-                {"code": r["code"], "label": r["label"], "has_children": bool(r["has_children"])}
+                {"code": r["code"], "label": r["label"]}
                 for r in rows
             ]
-
-    def get_locc_nav_counts(self, children: List[Dict]) -> Dict[str, int]:
-        """
-        Counts for LoCC nav items in at most 2 queries: descendant codes for
-        branches, distinct books (via mv_books_dc) for leaves.
-
-        Takes get_locc_children() output, returns {code: count}.
-        """
-        branches = [c["code"] for c in children if c.get("has_children")]
-        leaves = [c["code"] for c in children if not c.get("has_children")]
-        counts = {c["code"]: 0 for c in children}
-
-        branch_sql = text(
-            """
-            SELECT
-                p.code AS code,
-                COUNT(*) AS cnt
-            FROM unnest(CAST(:codes AS text[])) AS p(code)
-            JOIN loccs lc
-                ON lc.pk LIKE p.code || '%'
-               AND lc.pk != p.code
-            GROUP BY
-                p.code
-            """
-        )
-
-        leaf_sql = text(
-            """
-            SELECT
-                p.code AS code,
-                COUNT(DISTINCT mbl.fk_books) AS cnt
-            FROM unnest(CAST(:codes AS text[])) AS p(code)
-            JOIN loccs lc
-                ON lc.pk LIKE p.code || '%'
-            JOIN mn_books_loccs mbl
-                ON mbl.fk_loccs = lc.pk
-            JOIN mv_books_dc b
-                ON b.book_id = mbl.fk_books
-            GROUP BY
-                p.code
-            """
-        )
-
-        with self.Session() as session:
-            if branches:
-                for r in session.execute(branch_sql, {"codes": branches}):
-                    counts[r.code] = r.cnt
-            if leaves:
-                for r in session.execute(leaf_sql, {"codes": leaves}):
-                    counts[r.code] = r.cnt
-
-        return counts

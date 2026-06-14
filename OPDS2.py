@@ -5,7 +5,6 @@ OPDS 2.0 JSON feed for the Project Gutenberg catalog.
 """
 
 import datetime
-import time
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
@@ -27,10 +26,6 @@ from mv_search.constants import (
 from mv_search.Search import FullTextSearch
 
 SAMPLE_LIMIT = 15
-# keep random spotlight picks to reasonably popular books
-SPOTLIGHT_MIN_DOWNLOADS = 1000
-# locc counts only change on the daily MV refresh, so a long TTL is safe
-LOCC_COUNTS_TTL = 6 * 3600
 # Most common Gutenberg languages first, remainder alphabetical by label
 _LANG_PRIORITY = [
     "en",
@@ -60,6 +55,7 @@ LANGUAGES = [
     if lang.code in _LANG_PRIORITY
 ]
 LANGUAGES.sort(key=lambda x: _LANG_PRIORITY.index(x["code"]))
+LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
@@ -155,11 +151,23 @@ def _sort_direction(order: str) -> Optional[SortDirection]:
     return {"asc": SortDirection.ASC, "desc": SortDirection.DESC}.get(order)
 
 
+def _daily_seed() -> int:
+    """Day number (Eastern) used to rotate shelves once per day."""
+    return datetime.datetime.now(ZoneInfo("America/New_York")).date().toordinal()
+
+
+def _book_id(pub: Dict) -> Optional[int]:
+    """Extract the numeric Gutenberg id from an OPDS publication."""
+    try:
+        return int(pub["metadata"]["identifier"].rsplit(":", 1)[-1])
+    except (KeyError, ValueError, AttributeError, TypeError):
+        return None
+
+
 # CherryPy Search API
 class OPDSFeed:
     def __init__(self):
         self._fts = None
-        self._locc_counts_cache = {}  # parent -> (timestamp, counts)
         self._shelf_cache = {}  # key -> (built_at, feed)
 
     @property
@@ -211,6 +219,20 @@ class OPDSFeed:
             self._shelf_cache[key] = (now, feed)
         return feed
 
+    def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
+        """Top-downloaded sample for a shelf, excluding already-shown books."""
+        q = self.fts.query(crosswalk=Crosswalk.OPDS).bookshelf_id(shelf_id)
+        if seen:
+            q.where("book_id <> ALL(:seen_ids)", seen_ids=list(seen))
+        result = self.fts.execute(
+            q.order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT], with_count=with_count
+        )
+        for pub in result.get("results", []):
+            bid = _book_id(pub)
+            if bid is not None:
+                seen.add(bid)
+        return result
+
     def _category_count(self, cat) -> int:
         """Count distinct books across all of a category's sub-shelves."""
         try:
@@ -225,24 +247,35 @@ class OPDSFeed:
             return 0
 
     def _top_subjects(self, q) -> Optional[List[Dict]]:
-        """Get top subjects for a query."""
+        """Top 10 subjects across all matching books (no book sampling)."""
         try:
-            return self.fts.get_top_subjects_for_query(q, limit=15, max_books=500)
+            return self.fts.get_top_subjects_for_query(q, limit=10)
         except Exception as e:
             cherrypy.log(f"Top subjects error: {e}")
             return None
 
-    def _locc_counts(self, parent: str, children: List[Dict]) -> Dict[str, int]:
-        """Nav counts for a LoCC page, cached per parent."""
-        cached = self._locc_counts_cache.get(parent)
-        if cached and time.time() - cached[0] < LOCC_COUNTS_TTL:
-            return cached[1]
+    def _top_languages(self, q) -> Optional[List[Dict]]:
+        """All languages present across all matching books (no book sampling)."""
         try:
-            counts = self.fts.get_locc_nav_counts(children)
+            return self.fts.get_languages_for_query(q)
         except Exception as e:
-            cherrypy.log(f"LoCC nav counts error: {e}", severity=logging.WARNING)
+            cherrypy.log(f"Top languages error: {e}")
+            return None
+
+    def _locc_counts(self, parent: str, children: List[Dict]) -> Dict[str, int]:
+        """Per-child book counts via FTS. Skipped at the top level, where each
+        main class would be one large full-class aggregation."""
+        if not parent:
             return {}
-        self._locc_counts_cache[parent] = (time.time(), counts)
+        counts = {}
+        for child in children:
+            code = child["code"]
+            try:
+                counts[code] = self.fts.count(self.fts.query().locc(code))
+            except Exception as e:
+                cherrypy.log(
+                    f"LoCC nav count error ({code}): {e}", severity=logging.WARNING
+                )
         return counts
 
     # Feed Building
@@ -293,8 +326,14 @@ class OPDSFeed:
         sort: str,
         sort_order: str,
         subjects: Optional[List[Dict]] = None,
+        languages: Optional[List[Dict]] = None,
     ) -> List[Dict]:
-        """Build common facets for sort, copyright, format, language."""
+        """Build common facets for sort, copyright, format, language.
+
+        languages, when provided, drives a dynamic language facet (codes +
+        counts from the result set); otherwise a static common-language list
+        is used.
+        """
         sort_links = [
             _facet(
                 url_fn(query, lang, audiobook, "downloads", "desc"),
@@ -381,31 +420,48 @@ class OPDSFeed:
                 },
                 {
                     "metadata": {"title": "Language"},
-                    "links": [
-                        _facet(
-                            url_fn(query, "", audiobook, sort, sort_order),
-                            "Any",
-                            not lang,
-                        )
-                    ]
-                    + [
-                        _facet(
-                            url_fn(
-                                query,
-                                item["code"],
-                                audiobook,
-                                sort,
-                                sort_order,
-                            ),
-                            item["label"],
-                            lang == item["code"],
-                        )
-                        for item in LANGUAGES
-                    ],
+                    "links": self._language_links(
+                        url_fn, query, lang, audiobook, sort, sort_order, languages
+                    ),
                 },
             ]
         )
         return facets
+
+    def _language_links(
+        self,
+        url_fn: Callable,
+        query: str,
+        lang: str,
+        audiobook: str,
+        sort: str,
+        sort_order: str,
+        languages: Optional[List[Dict]],
+    ) -> List[Dict]:
+        """Language facet links. Dynamic (with counts) when `languages` is
+        given, else the static common-language list."""
+        links = [
+            _facet(url_fn(query, "", audiobook, sort, sort_order), "Any", not lang)
+        ]
+        if languages is not None:
+            items = [
+                (item["code"], LANGUAGE_LABELS.get(item["code"], item["code"]),
+                 item.get("count"))
+                for item in languages
+            ]
+        else:
+            items = [(item["code"], item["label"], None) for item in LANGUAGES]
+
+        for code, label, count in items:
+            link = _facet(
+                url_fn(query, code, audiobook, sort, sort_order),
+                label,
+                lang == code,
+            )
+            if count is not None:
+                link["properties"] = {"numberOfItems": count}
+            links.append(link)
+        return links
 
     # Index
     @cherrypy.expose
@@ -414,6 +470,15 @@ class OPDSFeed:
         return self._cached_shelf("index", self._build_index)
 
     def _build_index(self):
+        seen = set()
+        day = _daily_seed()
+
+        def _mark_seen(results):
+            for pub in results:
+                bid = _book_id(pub)
+                if bid is not None:
+                    seen.add(bid)
+
         def _recently_added():
             result = self.fts.execute(
                 self.fts.query(crosswalk=Crosswalk.OPDS).order_by(
@@ -421,6 +486,7 @@ class OPDSFeed:
                 )[1, SAMPLE_LIMIT],
             )
             if result.get("results"):
+                _mark_seen(result["results"])
                 return {
                     "metadata": {
                         "title": "Recently Added",
@@ -439,6 +505,7 @@ class OPDSFeed:
                 ],
             )
             if result.get("results"):
+                _mark_seen(result["results"])
                 return {
                     "metadata": {
                         "title": "Most Popular",
@@ -457,6 +524,7 @@ class OPDSFeed:
                 .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
             )
             if result.get("results"):
+                _mark_seen(result["results"])
                 return {
                     "metadata": {
                         "title": "Audiobooks",
@@ -469,20 +537,13 @@ class OPDSFeed:
                 }
 
         def _category_group(cat):
-            """Daily spotlight shelf, most-downloaded picks above the floor."""
+            """Daily spotlight shelf (rotates by date), top picks, deduped."""
             shelves = list(cat.shelves)
-            day = datetime.datetime.now(ZoneInfo("America/New_York")).date().toordinal()
 
             for offset in range(len(shelves)):
-                shelf_id, shelf_name = shelves[(day + offset) % len(shelves)]
+                shelf_id, _shelf_name = shelves[(day + offset) % len(shelves)]
                 try:
-                    result = self.fts.execute(
-                        self.fts.query(crosswalk=Crosswalk.OPDS)
-                        .bookshelf_id(shelf_id)
-                        .downloads_gte(SPOTLIGHT_MIN_DOWNLOADS)
-                        .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
-                        with_count=False,
-                    )
+                    result = self._shelf_sample(shelf_id, seen, with_count=False)
                     if result.get("results"):
                         return {
                             "metadata": {
@@ -517,7 +578,7 @@ class OPDSFeed:
                 cherrypy.log(f"Index group error: {e}")
 
         return {
-            "metadata": {"title": "Project Gutenberg Catalog"},
+            "metadata": {"title": "Project Gutenberg"},
             "links": [
                 _link("self", "/opds/"),
                 _link("start", "/opds/"),
@@ -562,7 +623,7 @@ class OPDSFeed:
 
         return {
             "metadata": {
-                "title": "Bookshelves",
+                "title": "Project Gutenberg",
                 "numberOfItems": len(CuratedBookshelves),
             },
             "links": [
@@ -591,11 +652,11 @@ class OPDSFeed:
         sort_order: str,
     ):
         """Browse books in a bookshelf."""
-        name, parent = f"Bookshelf {shelf_id}", None
+        parent = None
         for cat in CuratedBookshelves:
-            for sid, sname in cat.shelves:
+            for sid, _sname in cat.shelves:
                 if sid == shelf_id:
-                    name, parent = sname, cat.name
+                    parent = cat.name
                     break
             if parent:
                 break
@@ -628,10 +689,14 @@ class OPDSFeed:
         subjects_q = self.fts.query().bookshelf_id(shelf_id)
         self._filter(subjects_q, lang, audiobook)
 
+        # Language facet ignores the active language so users can switch.
+        lang_q = self.fts.query().bookshelf_id(shelf_id)
+        self._filter(lang_q, "", audiobook)
+
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
         feed = {
             "metadata": {
-                "title": name,
+                "title": "Project Gutenberg",
                 "numberOfItems": result["total"],
                 "itemsPerPage": result["page_size"],
                 "currentPage": result["page"],
@@ -655,6 +720,7 @@ class OPDSFeed:
                 sort,
                 sort_order,
                 self._top_subjects(subjects_q),
+                self._top_languages(lang_q),
             ),
         }
         feed["links"].extend(
@@ -675,14 +741,14 @@ class OPDSFeed:
             )
 
         def build():
+            seen = set()
+            day = _daily_seed()
+            shelves = list(found.shelves)
+            rotated = [shelves[(day + i) % len(shelves)] for i in range(len(shelves))]
             groups = []
-            for sid, sname in found.shelves:
+            for sid, sname in rotated:
                 try:
-                    result = self.fts.execute(
-                        self.fts.query(crosswalk=Crosswalk.OPDS)
-                        .bookshelf_id(sid)
-                        .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
-                    )
+                    result = self._shelf_sample(sid, seen, with_count=True)
                     if result.get("results"):
                         groups.append(
                             {
@@ -703,7 +769,7 @@ class OPDSFeed:
 
             return {
                 "metadata": {
-                    "title": found.genre,
+                    "title": "Project Gutenberg",
                     "numberOfItems": len(found.shelves),
                 },
                 "links": [
@@ -750,30 +816,35 @@ class OPDSFeed:
         """Build LoCC category navigation."""
         children.sort(key=lambda x: (len(x.get("code", "")), x.get("code", "")))
 
-        # Get parent label from LoCCMainClass if it's a top-level code
-        page_title = "Browse Subjects"
-        if parent:
-            for item in LoCCMainClass:
-                if item.code == parent:
-                    page_title = item.label
-                    break
-            else:
-                page_title = f"Classification: {parent}"
-
         counts = self._locc_counts(parent, children)
 
         nav = []
         for child in children:
             code = child["code"]
-            label = child.get("label", code)
-            label = label.split(":", 1)[1].strip() if ":" in label else label
+            label = child.get("label") or code
+            prefix, sep, rest = label.partition(":")
+            if sep and prefix.strip().upper() == code.upper():
+                label = rest.strip()
+
+            # Below the top level, drop the redundant main-class prefix the
+            # parent crumb already conveys. Try the full label first (e.g.
+            # "History: America:"), then just its lead segment ("History:").
+            if parent:
+                main = code[0].upper() if code else ""
+                mc = next((i for i in LoCCMainClass if i.code == main), None)
+                if mc:
+                    for cand in (mc.label.strip(), mc.label.split(":", 1)[0].strip()):
+                        if cand and label.upper().startswith(cand.upper() + ":"):
+                            label = label[len(cand) + 1 :].strip()
+                            break
 
             nav_item = _nav(f"/opds/loccs?parent={code}", label)
-            nav_item["properties"] = {"numberOfItems": counts.get(code, 0)}
+            if code in counts:
+                nav_item["properties"] = {"numberOfItems": counts[code]}
             nav.append(nav_item)
 
         return {
-            "metadata": {"title": page_title, "numberOfItems": len(children)},
+            "metadata": {"title": "Project Gutenberg", "numberOfItems": len(children)},
             "links": [
                 _link(
                     "self", f"/opds/loccs?parent={parent}" if parent else "/opds/loccs"
@@ -825,9 +896,13 @@ class OPDSFeed:
         subjects_q = self.fts.query().locc(parent)
         self._filter(subjects_q, lang, audiobook)
 
+        # Language facet ignores the active language so users can switch.
+        lang_q = self.fts.query().locc(parent)
+        self._filter(lang_q, "", audiobook)
+
         feed = {
             "metadata": {
-                "title": parent,
+                "title": "Project Gutenberg",
                 "numberOfItems": result["total"],
                 "itemsPerPage": result["page_size"],
                 "currentPage": result["page"],
@@ -849,6 +924,7 @@ class OPDSFeed:
                 sort,
                 sort_order,
                 self._top_subjects(subjects_q),
+                self._top_languages(lang_q),
             ),
         }
         feed["links"].extend(
@@ -889,7 +965,7 @@ class OPDSFeed:
             self.fts.list_subjects(), key=lambda x: x["book_count"], reverse=True
         )
         return {
-            "metadata": {"title": "Subjects", "numberOfItems": len(subjects)},
+            "metadata": {"title": "Project Gutenberg", "numberOfItems": len(subjects)},
             "links": [
                 _link("self", "/opds/subjects"),
                 _link("start", "/opds/"),
@@ -916,8 +992,6 @@ class OPDSFeed:
         sort_order: str,
     ):
         """Browse books for a subject."""
-        name = self.fts.get_subject_name(subject_id) or f"Subject {subject_id}"
-
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).subject_id(subject_id)
             self._filter(q, lang, audiobook)
@@ -944,9 +1018,13 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/subjects", base, query)
         facet_url = _make_facet_url("/opds/subjects", base)
 
+        # Language facet ignores the active language so users can switch.
+        lang_q = self.fts.query().subject_id(subject_id)
+        self._filter(lang_q, "", audiobook)
+
         feed = {
             "metadata": {
-                "title": name,
+                "title": "Project Gutenberg",
                 "numberOfItems": result["total"],
                 "itemsPerPage": result["page_size"],
                 "currentPage": result["page"],
@@ -962,7 +1040,15 @@ class OPDSFeed:
                 ),
             ],
             "publications": result["results"],
-            "facets": self._facets(facet_url, query, lang, audiobook, sort, sort_order),
+            "facets": self._facets(
+                facet_url,
+                query,
+                lang,
+                audiobook,
+                sort,
+                sort_order,
+                languages=self._top_languages(lang_q),
+            ),
         }
         feed["links"].extend(
             self._pagination_links(page_url, result["page"], result["total_pages"])
@@ -990,8 +1076,6 @@ class OPDSFeed:
         page, limit = _paginate(page, limit)
 
         try:
-            has_text = bool(query.strip() or title.strip() or author.strip())
-
             q = self.fts.query(crosswalk=Crosswalk.OPDS)
             if query.strip():
                 q.search(query, search_type=SearchType.HYBRID)
@@ -1009,13 +1093,20 @@ class OPDSFeed:
             if author_id is not None:
                 q.author_id(int(author_id))
 
-            self._filter(q, lang, audiobook)
+            # Apply audiobook (not language) first so the language facet can be
+            # computed over all languages in the result set.
+            self._filter(q, "", audiobook)
+
+            # Always built so every results page (incl. Most Popular / Recently
+            # Added / Audiobooks, which are sort-only) shows consistent facets.
+            languages = self._top_languages(q)
+
+            if lang:
+                q.lang(lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
 
-            subjects = None
-            if has_text or locc or lang or author_id is not None:
-                subjects = self._top_subjects(q)
+            subjects = self._top_subjects(q)
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
             return self._error_feed(
@@ -1041,12 +1132,12 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/search", base)
 
         facets = self._facets(
-            facet_url, query, lang, audiobook, sort, sort_order, subjects
+            facet_url, query, lang, audiobook, sort, sort_order, subjects, languages
         )
 
         feed = {
             "metadata": {
-                "title": "Gutenberg Search Results",
+                "title": "Project Gutenberg",
                 "numberOfItems": result["total"],
                 "itemsPerPage": result["page_size"],
                 "currentPage": result["page"],
