@@ -48,6 +48,7 @@ class ConnectionPool(plugins.SimplePlugin):
         self.params = params
         self.name = 'sqlalchemy'
         self.pool = None
+        self.engine = None
 
 
     def _start(self):
@@ -59,12 +60,12 @@ class ConnectionPool(plugins.SimplePlugin):
         recycle = cherrypy.config.get('sqlalchemy.recycle', 3600)
 
         self.bus.log("... pool_size = %d, max_overflow = %d" % (pool_size, max_overflow))
-        my_pool = pool.QueuePool(ConnectionCreator(self.params),
-                                 pool_size=pool_size,
-                                 max_overflow=max_overflow,
-                                 timeout=timeout,
-                                 recycle=recycle)
-        engine = create_engine(DUMMY_SQL_URL, echo=False, pool=my_pool)
+        self.pool = pool.QueuePool(ConnectionCreator(self.params),
+                                   pool_size=pool_size,
+                                   max_overflow=max_overflow,
+                                   timeout=timeout,
+                                   recycle=recycle)
+        engine = create_engine(DUMMY_SQL_URL, echo=False, pool=self.pool)
         Session = sessionmaker(bind=engine)
         return engine, Session
 
@@ -72,15 +73,15 @@ class ConnectionPool(plugins.SimplePlugin):
     def connect(self):
         """ Return a connection. """
 
-        return self.pool.raw_connection()
+        return self.engine.raw_connection()
 
 
     def start(self):
         """ Called on engine start. """
 
-        if self.pool is None:
+        if self.engine is None:
             self.bus.log("Creating the SQL connectors ...")
-            self.pool, self.Session = self._start()
+            self.engine, self.Session = self._start()
         else:
             self.bus.log("SQL connectors already exists.")
 
@@ -88,20 +89,20 @@ class ConnectionPool(plugins.SimplePlugin):
     def stop(self):
         """ Called on engine stop. """
 
-        if self.pool is not None:
+        if self.engine is not None:
             self.bus.log("Disposing the SQL connection pool.")
             self.Session = None
-            self.pool.dispose()
-            self.pool = None
+            self.engine.dispose()
+            self.engine = None
 
 
     def graceful(self):
         """ Called on engine restart. """
 
-        if self.pool is not None:
+        if self.engine is not None:
             self.bus.log("Restarting the SQL connection pool ...")
-            self.pool.dispose()
-            self.pool, self.Session  = self._start()
+            self.engine.dispose()
+            self.engine, self.Session  = self._start()
 
 
 cherrypy.process.plugins.ConnectionPool = ConnectionPool
