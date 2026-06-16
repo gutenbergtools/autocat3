@@ -46,10 +46,10 @@ class TimerPlugin (cherrypy.process.plugins.Monitor):
 
     def start (self):
         super (TimerPlugin, self).start ()
-        self.tick (startup=True)
+        self.tick ()
     start.priority = 80
 
-    def tick (self, startup=False):
+    def tick (self):
         """ Do things here. """
 
         try:
@@ -60,7 +60,7 @@ class TimerPlugin (cherrypy.process.plugins.Monitor):
         refresh_hour = cherrypy.config.get ('mv_refresh_hour', 17)
         now = datetime.datetime.now (ZoneInfo ('America/New_York'))
 
-        if startup or (now.hour == refresh_hour and self._last_refresh_date != now.date ()):
+        if now.hour == refresh_hour and self._last_refresh_date != now.date ():
             self._try_refresh_mv ()
 
     def _try_refresh_mv (self):
