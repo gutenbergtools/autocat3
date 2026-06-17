@@ -7,7 +7,6 @@ OPDS 2.0 JSON feed for the Project Gutenberg catalog.
 import datetime
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
-from zoneinfo import ZoneInfo
 import logging
 import json
 
@@ -152,8 +151,8 @@ def _sort_direction(order: str) -> Optional[SortDirection]:
 
 
 def _daily_seed() -> int:
-    """Day number (Eastern) used to rotate shelves once per day."""
-    return datetime.datetime.now(ZoneInfo("America/New_York")).date().toordinal()
+    """Day number used to rotate shelves once per day."""
+    return datetime.date.today().toordinal()
 
 
 def _book_id(pub: Dict) -> Optional[int]:
