@@ -59,9 +59,11 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
-SEARCH_TEMPLATE = (
-    "/opds/search{?query,title,author,lang,audiobook,sort,sort_order,locc,author_id}"
-)
+# Only the user-facing search fields are advertised to clients. /opds/search
+# also accepts lang, audiobook, sort, sort_order, locc, author_id, subject_id
+# and bookshelf_id for internal facet/scope carry-over, but those are kept out
+# of the template so clients don't surface them as search inputs.
+SEARCH_TEMPLATE = "/opds/search{?query,title,author}"
 
 
 # Helpers
