@@ -10,7 +10,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from .constants import (
+    BOOKSHELF_CATEGORY_PREFIX,
     Crosswalk,
+    CuratedBookshelves,
     FileType,
     Language,
     LoCCMainClass,
@@ -475,6 +477,7 @@ class FullTextSearch:
     def __init__(self, engine):
         self.engine = engine
         self.Session = sessionmaker(bind=self.engine)
+        self._bookshelf_ids = None
 
     def query(self, crosswalk: Crosswalk = Crosswalk.PG) -> "SearchQuery":
         """Create a new query builder."""
@@ -522,6 +525,34 @@ class FullTextSearch:
         with self.Session() as session:
             sql, params = q.build_count()
             return session.execute(text(sql), params).scalar() or 0
+
+    def bookshelf_ids(self) -> Dict[str, int]:
+        """Map of bookshelf name -> primary key, loaded once and cached.
+
+        Bookshelf rows are static for a given dataset, so curated shelves can
+        reference shelves by name and resolve to ids here instead of carrying
+        hard-coded primary keys.
+        """
+        if self._bookshelf_ids is None:
+            with self.Session() as session:
+                rows = session.execute(
+                    text("SELECT pk, bookshelf FROM bookshelves")
+                ).fetchall()
+            self._bookshelf_ids = {r.bookshelf: r.pk for r in rows}
+        return self._bookshelf_ids
+
+    def curated_shelves(self, cat: CuratedBookshelves) -> List[Tuple[int, str]]:
+        """Resolve a curated category to (shelf_id, label) pairs.
+
+        Labels missing from the current dataset are skipped.
+        """
+        ids = self.bookshelf_ids()
+        resolved = []
+        for label in cat.shelf_names:
+            pk = ids.get(BOOKSHELF_CATEGORY_PREFIX + label)
+            if pk is not None:
+                resolved.append((pk, label))
+        return resolved
 
     def list_bookshelves(self) -> List[Dict]:
         """

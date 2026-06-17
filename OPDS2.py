@@ -240,7 +240,7 @@ class OPDSFeed:
                 "EXISTS (SELECT 1 FROM mn_books_bookshelves mbb "
                 "WHERE mbb.fk_books = book_id "
                 "AND mbb.fk_bookshelves = ANY(:shelf_ids))",
-                shelf_ids=[sid for sid, _ in cat.shelves],
+                shelf_ids=[sid for sid, _ in self.fts.curated_shelves(cat)],
             )
             return self.fts.count(q)
         except Exception:
@@ -328,6 +328,7 @@ class OPDSFeed:
         subjects: Optional[List[Dict]] = None,
         languages: Optional[List[Dict]] = None,
         scope: Optional[Dict] = None,
+        subject_id: Optional[int] = None,
     ) -> List[Dict]:
         """Build common facets for sort, copyright, format, language.
 
@@ -386,28 +387,46 @@ class OPDSFeed:
         ]
 
         if subjects:
+            subject_links = [
+                {
+                    "href": _url(
+                        "/opds/search",
+                        {
+                            **(scope or {}),
+                            "subject_id": s["id"],
+                            "lang": lang,
+                            "audiobook": audiobook,
+                            "sort": sort,
+                            "sort_order": sort_order,
+                        },
+                    ),
+                    "type": OPDS_TYPE,
+                    "title": s["name"],
+                    "properties": {"numberOfItems": s["count"]},
+                }
+                for s in subjects
+            ]
+            if subject_id is not None:
+                subject_links.append(
+                    _facet(
+                        _url(
+                            "/opds/search",
+                            {
+                                **(scope or {}),
+                                "lang": lang,
+                                "audiobook": audiobook,
+                                "sort": sort,
+                                "sort_order": sort_order,
+                            },
+                        ),
+                        "None",
+                        False,
+                    )
+                )
             facets.append(
                 {
                     "metadata": {"title": "Top Subjects in Results"},
-                    "links": [
-                        {
-                            "href": _url(
-                                "/opds/search",
-                                {
-                                    **(scope or {}),
-                                    "subject_id": s["id"],
-                                    "lang": lang,
-                                    "audiobook": audiobook,
-                                    "sort": sort,
-                                    "sort_order": sort_order,
-                                },
-                            ),
-                            "type": OPDS_TYPE,
-                            "title": s["name"],
-                            "properties": {"numberOfItems": s["count"]},
-                        }
-                        for s in subjects
-                    ],
+                    "links": subject_links,
                 }
             )
 
@@ -553,7 +572,9 @@ class OPDSFeed:
 
         def _category_group(cat):
             """Daily spotlight shelf (rotates by date), top picks, deduped."""
-            shelves = list(cat.shelves)
+            shelves = self.fts.curated_shelves(cat)
+            if not shelves:
+                return
 
             for offset in range(len(shelves)):
                 shelf_id, _shelf_name = shelves[(day + offset) % len(shelves)]
@@ -647,7 +668,7 @@ class OPDSFeed:
             "navigation": [
                 {
                     **_nav(f"/opds/bookshelves?category={cat.name}", cat.genre),
-                    "properties": {"numberOfItems": len(cat.shelves)},
+                    "properties": {"numberOfItems": len(cat.shelf_names)},
                 }
                 for cat in CuratedBookshelves
             ],
@@ -666,11 +687,8 @@ class OPDSFeed:
         """Browse books in a bookshelf."""
         parent = None
         for cat in CuratedBookshelves:
-            for sid, _sname in cat.shelves:
-                if sid == shelf_id:
-                    parent = cat.name
-                    break
-            if parent:
+            if any(sid == shelf_id for sid, _ in self.fts.curated_shelves(cat)):
+                parent = cat.name
                 break
 
         try:
@@ -752,7 +770,9 @@ class OPDSFeed:
         def build():
             seen = set()
             day = _daily_seed()
-            shelves = list(found.shelves)
+            shelves = self.fts.curated_shelves(found)
+            if not shelves:
+                return {"groups": []}
             rotated = [shelves[(day + i) % len(shelves)] for i in range(len(shelves))]
             groups = []
             for sid, sname in rotated:
@@ -779,7 +799,7 @@ class OPDSFeed:
             return {
                 "metadata": {
                     "title": "Project Gutenberg",
-                    "numberOfItems": len(found.shelves),
+                    "numberOfItems": len(found.shelf_names),
                 },
                 "links": [
                     _link("self", f"/opds/bookshelves?category={category}"),
@@ -1150,7 +1170,7 @@ class OPDSFeed:
         }
         facets = self._facets(
             facet_url, query, lang, audiobook, sort, sort_order, subjects, languages,
-            scope,
+            scope, subject_id=subject_id,
         )
 
         feed = {
