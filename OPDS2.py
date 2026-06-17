@@ -195,28 +195,16 @@ class OPDSFeed:
             q.order_by(OrderBy.DOWNLOADS)
         return q
 
-    def _cache_epoch(self) -> datetime.datetime:
-        """Most recent daily cache boundary, a bit after the MV refresh hour (Eastern)."""
-        hour = cherrypy.config.get("mv_refresh_hour", 17)
-        delay = cherrypy.config.get("opds_cache_refresh_delay", 30)
-        now = datetime.datetime.now(ZoneInfo("America/New_York"))
-        boundary = now.replace(
-            hour=hour, minute=0, second=0, microsecond=0
-        ) + datetime.timedelta(minutes=delay)
-        if now < boundary:
-            boundary -= datetime.timedelta(days=1)
-        return boundary
-
     def _cached_shelf(self, key: str, build: Callable[[], Dict]) -> Dict:
-        """Return a cached shelf feed, rebuilt once a day shortly after the MV
-        refresh. Only non-empty builds are cached, so a failed build retries."""
+        """Return a cached shelf feed with a 12-hour TTL. Only non-empty builds
+        are cached, so a failed build retries."""
         hit = self._shelf_cache.get(key)
-        if hit and hit[0] >= self._cache_epoch():
+        if hit and datetime.datetime.now() < hit[0]:
             return hit[1]
         feed = build()
         if feed.get("groups"):
-            now = datetime.datetime.now(ZoneInfo("America/New_York"))
-            self._shelf_cache[key] = (now, feed)
+            expires = datetime.datetime.now() + datetime.timedelta(hours=12)
+            self._shelf_cache[key] = (expires, feed)
         return feed
 
     def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
