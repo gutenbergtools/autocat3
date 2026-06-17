@@ -59,8 +59,6 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
-# Templated search URL advertised to clients. title/author are not yet wired
-# into existing feeds but are exposed here for forward compatibility.
 SEARCH_TEMPLATE = (
     "/opds/search{?query,title,author,lang,audiobook,sort,sort_order,locc,author_id}"
 )
