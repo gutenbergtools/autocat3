@@ -104,7 +104,7 @@ class SearchQuery:
         return self
 
     def _new_param(self, value: object) -> Tuple[str, Dict]:
-        pname = "__p{}".format(self._param_counter)
+        pname = f"__p{self._param_counter}"
         self._param_counter += 1
         return pname, {pname: value}
 
@@ -114,7 +114,7 @@ class SearchQuery:
         for v in values:
             pname, p = self._new_param(v)
             params.update(p)
-            placeholders.append(":{}".format(pname))
+            placeholders.append(f":{pname}")
         sql = sql_template.format(*placeholders)
         self._filters.append((sql, params))
         return self
@@ -133,12 +133,12 @@ class SearchQuery:
         pname, p = self._new_param(txt)
 
         if search_type == SearchType.FUZZY:
-            self._search.append((":{} <% {}".format(pname, text_col), p, text_col))
+            self._search.append((f":{pname} <% {text_col}", p, text_col))
         elif search_type == SearchType.HYBRID:
-            sql = "{} @@ websearch_to_tsquery('english', :{})".format(fts_col, pname)
+            sql = f"{fts_col} @@ websearch_to_tsquery('english', :{pname})"
             self._search.append((sql, p, fts_col, SearchType.HYBRID, text_col))
         else:
-            sql = "{} @@ websearch_to_tsquery('english', :{})".format(fts_col, pname)
+            sql = f"{fts_col} @@ websearch_to_tsquery('english', :{pname})"
             self._search.append((sql, p, fts_col))
         return self
 
@@ -152,7 +152,7 @@ class SearchQuery:
             if len(s) > 3 and s[3] == SearchType.HYBRID:
                 _, p, _, _, text_col = s
                 pname = next(iter(p))
-                updated.append((":{} <% {}".format(pname, text_col), p, text_col))
+                updated.append((f":{pname} <% {text_col}", p, text_col))
             else:
                 updated.append(s)
         self._search = updated
@@ -386,8 +386,8 @@ class SearchQuery:
             val = next(iter(p.values())) if p else ""
             params["rank_q"] = str(val).replace("%", "")
             if "<%" in sql:
-                return "word_similarity(:rank_q, {}) DESC, downloads DESC".format(col)
-            return "ts_rank_cd({}, websearch_to_tsquery('english', :rank_q)) DESC, downloads DESC".format(col)
+                return f"word_similarity(:rank_q, {col}) DESC, downloads DESC"
+            return f"ts_rank_cd({col}, websearch_to_tsquery('english', :rank_q)) DESC, downloads DESC"
 
         if self._order == OrderBy.RANDOM:
             return "RANDOM()"
@@ -397,9 +397,9 @@ class SearchQuery:
 
         col, default_dir, nulls = _ORDER_COLUMNS[self._order]
         direction = self._sort_dir or default_dir
-        clause = "{} {}".format(col, direction.value.upper())
+        clause = f"{col} {direction.value.upper()}"
         if nulls:
-            clause += " NULLS {}".format(nulls)
+            clause += f" NULLS {nulls}"
         return clause
 
     def build(self) -> Tuple[str, Dict]:
@@ -411,21 +411,16 @@ class SearchQuery:
         filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
 
         if search_sql and filter_sql:
-            sql = "SELECT {} FROM (SELECT {} FROM mv_books_dc WHERE {}) t WHERE {} ORDER BY {} LIMIT {} OFFSET {}".format(
-                _SELECT, _SUBQUERY, search_sql, filter_sql, order, limit, offset
+            sql = (
+                f"SELECT {_SELECT} FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
+                f"WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
             )
         elif search_sql:
-            sql = "SELECT {} FROM mv_books_dc WHERE {} ORDER BY {} LIMIT {} OFFSET {}".format(
-                _SELECT, search_sql, order, limit, offset
-            )
+            sql = f"SELECT {_SELECT} FROM mv_books_dc WHERE {search_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
         elif filter_sql:
-            sql = "SELECT {} FROM mv_books_dc WHERE {} ORDER BY {} LIMIT {} OFFSET {}".format(
-                _SELECT, filter_sql, order, limit, offset
-            )
+            sql = f"SELECT {_SELECT} FROM mv_books_dc WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
         else:
-            sql = "SELECT {} FROM mv_books_dc ORDER BY {} LIMIT {} OFFSET {}".format(
-                _SELECT, order, limit, offset
-            )
+            sql = f"SELECT {_SELECT} FROM mv_books_dc ORDER BY {order} LIMIT {limit} OFFSET {offset}"
 
         return sql, params
 
@@ -436,15 +431,13 @@ class SearchQuery:
 
         if search_sql and filter_sql:
             return (
-                "SELECT COUNT(*) FROM (SELECT {} FROM mv_books_dc WHERE {}) t WHERE {}".format(
-                    _SUBQUERY, search_sql, filter_sql
-                ),
+                f"SELECT COUNT(*) FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql}",
                 params,
             )
         elif search_sql:
-            return "SELECT COUNT(*) FROM mv_books_dc WHERE {}".format(search_sql), params
+            return f"SELECT COUNT(*) FROM mv_books_dc WHERE {search_sql}", params
         elif filter_sql:
-            return "SELECT COUNT(*) FROM mv_books_dc WHERE {}".format(filter_sql), params
+            return f"SELECT COUNT(*) FROM mv_books_dc WHERE {filter_sql}", params
         return "SELECT COUNT(*) FROM mv_books_dc", params
 
     def build_exists(self) -> Tuple[str, Dict]:
@@ -454,13 +447,14 @@ class SearchQuery:
         filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
 
         if search_sql and filter_sql:
-            sql = "SELECT 1 FROM (SELECT {} FROM mv_books_dc WHERE {}) t WHERE {} LIMIT 1".format(
-                _SUBQUERY, search_sql, filter_sql
+            sql = (
+                f"SELECT 1 FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
+                f"WHERE {filter_sql} LIMIT 1"
             )
         elif search_sql:
-            sql = "SELECT 1 FROM mv_books_dc WHERE {} LIMIT 1".format(search_sql)
+            sql = f"SELECT 1 FROM mv_books_dc WHERE {search_sql} LIMIT 1"
         elif filter_sql:
-            sql = "SELECT 1 FROM mv_books_dc WHERE {} LIMIT 1".format(filter_sql)
+            sql = f"SELECT 1 FROM mv_books_dc WHERE {filter_sql} LIMIT 1"
         else:
             sql = "SELECT 1 FROM mv_books_dc LIMIT 1"
         return sql, params
@@ -651,26 +645,26 @@ class FullTextSearch:
         search_sql = " AND ".join(s[0] for s in q._search) if q._search else None
         filter_sql = " AND ".join(f[0] for f in q._filters) if q._filters else None
         where_parts = [p for p in (search_sql, filter_sql) if p]
-        where_clause = "WHERE {}".format(" AND ".join(where_parts)) if where_parts else ""
+        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
 
         # Sampling only matters with a cap; without one, order is irrelevant.
         sample_clause = ""
         if max_books is not None:
             params["max_books"] = max(1, int(max_books))
-            sample_clause = "ORDER BY {} LIMIT :max_books".format(q._order_sql(params))
+            sample_clause = f"ORDER BY {q._order_sql(params)} LIMIT :max_books"
 
         limit_clause = ""
         if limit is not None:
             params["limit"] = max(1, int(limit))
             limit_clause = "LIMIT :limit"
 
-        sql = """
+        sql = f"""
             WITH matched_books AS (
                 SELECT
                     book_id
                 FROM mv_books_dc
-                {}
-                {}
+                {where_clause}
+                {sample_clause}
             )
             SELECT
                 s.pk AS id,
@@ -686,8 +680,8 @@ class FullTextSearch:
                 s.subject
             ORDER BY
                 count DESC
-            {}
-        """.format(where_clause, sample_clause, limit_clause)
+            {limit_clause}
+        """
 
         with self.Session() as session:
             rows = session.execute(text(sql), params).fetchall()
@@ -715,25 +709,25 @@ class FullTextSearch:
         search_sql = " AND ".join(s[0] for s in q._search) if q._search else None
         filter_sql = " AND ".join(f[0] for f in q._filters) if q._filters else None
         where_parts = [p for p in (search_sql, filter_sql) if p]
-        where_clause = "WHERE {}".format(" AND ".join(where_parts)) if where_parts else ""
+        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
 
         sample_clause = ""
         if max_books is not None:
             params["max_books"] = max(1, int(max_books))
-            sample_clause = "ORDER BY {} LIMIT :max_books".format(q._order_sql(params))
+            sample_clause = f"ORDER BY {q._order_sql(params)} LIMIT :max_books"
 
         limit_clause = ""
         if limit is not None:
             params["limit"] = max(1, int(limit))
             limit_clause = "LIMIT :limit"
 
-        sql = """
+        sql = f"""
             WITH matched_books AS (
                 SELECT
                     lang_codes
                 FROM mv_books_dc
-                {}
-                {}
+                {where_clause}
+                {sample_clause}
             )
             SELECT
                 lang AS code,
@@ -744,8 +738,8 @@ class FullTextSearch:
                 lang
             ORDER BY
                 count DESC
-            {}
-        """.format(where_clause, sample_clause, limit_clause)
+            {limit_clause}
+        """
 
         with self.Session() as session:
             rows = session.execute(text(sql), params).fetchall()
@@ -780,7 +774,7 @@ class FullTextSearch:
         )
 
         with self.Session() as session:
-            rows = session.execute(sql, {"pattern": "{}%".format(parent_code), "parent": parent_code}).mappings().all()
+            rows = session.execute(sql, {"pattern": f"{parent_code}%", "parent": parent_code}).mappings().all()
             return [
                 {"code": r["code"], "label": r["label"]}
                 for r in rows
