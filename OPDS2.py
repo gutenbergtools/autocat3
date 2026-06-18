@@ -59,7 +59,7 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
 # Only the user-facing search fields are advertised to clients. /opds/search
-# also accepts lang, audiobook, sort, sort_order, locc, author_id, subject_id
+# also accepts lang, sort, sort_order, locc, author_id, subject_id
 # and bookshelf_id for internal facet/scope carry-over, but those are kept out
 # of the template so clients don't surface them as search inputs.
 SEARCH_TEMPLATE = "/opds/search{?query,title,author}"
@@ -120,7 +120,7 @@ def _make_page_url(endpoint: str, base: Dict, query: str = "") -> Callable[[int]
 def _make_facet_url(endpoint: str, base: Dict) -> Callable[..., str]:
     """Create a facet URL builder for filter facets."""
 
-    def facet_url(q: str, lng: str, ab: str, srt: str, so: str) -> str:
+    def facet_url(q: str, lng: str, srt: str, so: str) -> str:
         return _url(
             endpoint,
             {
@@ -128,7 +128,6 @@ def _make_facet_url(endpoint: str, base: Dict) -> Callable[..., str]:
                 "query": q,
                 "page": 1,
                 "lang": lng,
-                "audiobook": ab,
                 "sort": srt,
                 "sort_order": so,
             },
@@ -176,14 +175,10 @@ class OPDSFeed:
         return self._fts
 
     # Query Helpers
-    def _filter(self, q, lang: str, audiobook: str):
+    def _filter(self, q, lang: str):
         """Apply common filters to query."""
         if lang:
             q.lang(lang)
-        if audiobook == "true":
-            q.audiobook()
-        elif audiobook == "false":
-            q.text_only()
         return q
 
     def _sort(self, q, sort: str, sort_order: str):
@@ -309,7 +304,6 @@ class OPDSFeed:
         url_fn: Callable,
         query: str,
         lang: str,
-        audiobook: str,
         sort: str,
         sort_order: str,
         subjects: Optional[List[Dict]] = None,
@@ -317,7 +311,7 @@ class OPDSFeed:
         scope: Optional[Dict] = None,
         subject_id: Optional[int] = None,
     ) -> List[Dict]:
-        """Build common facets for sort, copyright, format, language.
+        """Build common facets for sort and language.
 
         languages, when provided, drives a dynamic language facet (codes +
         counts from the result set); otherwise a static common-language list
@@ -329,12 +323,12 @@ class OPDSFeed:
         """
         sort_links = [
             _facet(
-                url_fn(query, lang, audiobook, "downloads", "desc"),
+                url_fn(query, lang, "downloads", "desc"),
                 "Most Popular",
                 sort in ("downloads", ""),
             ),
             _facet(
-                url_fn(query, lang, audiobook, "release_date", "desc"),
+                url_fn(query, lang, "release_date", "desc"),
                 "Newest",
                 sort == "release_date",
             ),
@@ -343,17 +337,17 @@ class OPDSFeed:
             sort_links.extend(
                 [
                     _facet(
-                        url_fn(query, lang, audiobook, "relevance", ""),
+                        url_fn(query, lang, "relevance", ""),
                         "Relevance",
                         sort == "relevance",
                     ),
                     _facet(
-                        url_fn(query, lang, audiobook, "title", "asc"),
+                        url_fn(query, lang, "title", "asc"),
                         "Title (A-Z)",
                         sort == "title",
                     ),
                     _facet(
-                        url_fn(query, lang, audiobook, "author", "asc"),
+                        url_fn(query, lang, "author", "asc"),
                         "Author (A-Z)",
                         sort == "author",
                     ),
@@ -361,7 +355,7 @@ class OPDSFeed:
             )
         sort_links.append(
             _facet(
-                url_fn(query, lang, audiobook, "random", ""),
+                url_fn(query, lang, "random", ""),
                 "Random",
                 sort == "random",
             )
@@ -382,7 +376,6 @@ class OPDSFeed:
                             **(scope or {}),
                             "subject_id": s["id"],
                             "lang": lang,
-                            "audiobook": audiobook,
                             "sort": sort,
                             "sort_order": sort_order,
                         },
@@ -401,7 +394,6 @@ class OPDSFeed:
                             {
                                 **(scope or {}),
                                 "lang": lang,
-                                "audiobook": audiobook,
                                 "sort": sort,
                                 "sort_order": sort_order,
                             },
@@ -417,35 +409,13 @@ class OPDSFeed:
                 }
             )
 
-        facets.extend(
-            [
-                {
-                    "metadata": {"title": "Format"},
-                    "links": [
-                        _facet(
-                            url_fn(query, lang, "", sort, sort_order),
-                            "Any",
-                            not audiobook,
-                        ),
-                        _facet(
-                            url_fn(query, lang, "false", sort, sort_order),
-                            "Text",
-                            audiobook == "false",
-                        ),
-                        _facet(
-                            url_fn(query, lang, "true", sort, sort_order),
-                            "Audiobook",
-                            audiobook == "true",
-                        ),
-                    ],
-                },
-                {
-                    "metadata": {"title": "Language"},
-                    "links": self._language_links(
-                        url_fn, query, lang, audiobook, sort, sort_order, languages
-                    ),
-                },
-            ]
+        facets.append(
+            {
+                "metadata": {"title": "Language"},
+                "links": self._language_links(
+                    url_fn, query, lang, sort, sort_order, languages
+                ),
+            }
         )
         return facets
 
@@ -454,7 +424,6 @@ class OPDSFeed:
         url_fn: Callable,
         query: str,
         lang: str,
-        audiobook: str,
         sort: str,
         sort_order: str,
         languages: Optional[List[Dict]],
@@ -462,7 +431,7 @@ class OPDSFeed:
         """Language facet links. Dynamic (with counts) when `languages` is
         given, else the static common-language list."""
         links = [
-            _facet(url_fn(query, "", audiobook, sort, sort_order), "Any", not lang)
+            _facet(url_fn(query, "", sort, sort_order), "Any", not lang)
         ]
         if languages is not None:
             items = [
@@ -475,7 +444,7 @@ class OPDSFeed:
 
         for code, label, count in items:
             link = _facet(
-                url_fn(query, code, audiobook, sort, sort_order),
+                url_fn(query, code, sort, sort_order),
                 label,
                 lang == code,
             )
@@ -538,25 +507,6 @@ class OPDSFeed:
                     "publications": result["results"],
                 }
 
-        def _audiobooks():
-            result = self.fts.execute(
-                self.fts.query(crosswalk=Crosswalk.OPDS)
-                .audiobook()
-                .order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT],
-            )
-            if result.get("results"):
-                _mark_seen(result["results"])
-                return {
-                    "metadata": {
-                        "title": "Audiobooks",
-                        "numberOfItems": result["total"],
-                    },
-                    "links": [
-                        _link("self", "/opds/search?audiobook=true&sort=downloads")
-                    ],
-                    "publications": result["results"],
-                }
-
         def _category_group(cat):
             """Daily spotlight shelf (rotates by date), top picks, deduped."""
             shelves = self.fts.curated_shelves(cat)
@@ -587,7 +537,7 @@ class OPDSFeed:
                         severity=logging.WARNING,
                     )
 
-        tasks = [_recently_added, _most_popular, _audiobooks] + [
+        tasks = [_recently_added, _most_popular] + [
             lambda c=cat: _category_group(c) for cat in CuratedBookshelves
         ]
 
@@ -622,7 +572,6 @@ class OPDSFeed:
         page: int = 1,
         limit: int = 25,
         lang: str = "",
-        audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
     ):
@@ -635,7 +584,6 @@ class OPDSFeed:
                 page,
                 limit,
                 lang,
-                audiobook,
                 sort,
                 sort_order,
             )
@@ -667,7 +615,6 @@ class OPDSFeed:
         page: int,
         limit: int,
         lang: str,
-        audiobook: str,
         sort: str,
         sort_order: str,
     ):
@@ -680,7 +627,7 @@ class OPDSFeed:
 
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).bookshelf_id(shelf_id)
-            self._filter(q, lang, audiobook)
+            self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
@@ -696,7 +643,6 @@ class OPDSFeed:
             "id": shelf_id,
             "limit": limit,
             "lang": lang,
-            "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
         }
@@ -704,11 +650,10 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/bookshelves", base)
 
         subjects_q = self.fts.query().bookshelf_id(shelf_id)
-        self._filter(subjects_q, lang, audiobook)
+        self._filter(subjects_q, lang)
 
         # Language facet ignores the active language so users can switch.
         lang_q = self.fts.query().bookshelf_id(shelf_id)
-        self._filter(lang_q, "", audiobook)
 
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
         feed = {
@@ -729,7 +674,6 @@ class OPDSFeed:
                 facet_url,
                 "",
                 lang,
-                audiobook,
                 sort,
                 sort_order,
                 self._top_subjects(subjects_q),
@@ -806,7 +750,6 @@ class OPDSFeed:
         page: int = 1,
         limit: int = 25,
         lang: str = "",
-        audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
     ):
@@ -824,7 +767,7 @@ class OPDSFeed:
             return self._locc_navigation(parent, children)
 
         return self._locc_books(
-            parent, page, limit, lang, audiobook, sort, sort_order
+            parent, page, limit, lang, sort, sort_order
         )
 
     def _locc_navigation(self, parent: str, children: List):
@@ -876,14 +819,13 @@ class OPDSFeed:
         page: int,
         limit: int,
         lang: str,
-        audiobook: str,
         sort: str,
         sort_order: str,
     ):
         """Browse books in a LoCC leaf."""
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).locc(parent)
-            self._filter(q, lang, audiobook)
+            self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
@@ -900,7 +842,6 @@ class OPDSFeed:
             "parent": parent,
             "limit": limit,
             "lang": lang,
-            "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
         }
@@ -908,11 +849,11 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/loccs", base)
 
         subjects_q = self.fts.query().locc(parent)
-        self._filter(subjects_q, lang, audiobook)
+        self._filter(subjects_q, lang)
 
         # Language facet ignores the active language so users can switch.
         lang_q = self.fts.query().locc(parent)
-        self._filter(lang_q, "", audiobook)
+        self._filter(lang_q, "")
 
         feed = {
             "metadata": {
@@ -932,7 +873,6 @@ class OPDSFeed:
                 facet_url,
                 "",
                 lang,
-                audiobook,
                 sort,
                 sort_order,
                 self._top_subjects(subjects_q),
@@ -954,7 +894,6 @@ class OPDSFeed:
         page: int = 1,
         limit: int = 25,
         lang: str = "",
-        audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
     ):
@@ -967,7 +906,6 @@ class OPDSFeed:
                 page,
                 limit,
                 lang,
-                audiobook,
                 sort,
                 sort_order,
             )
@@ -997,14 +935,13 @@ class OPDSFeed:
         page: int,
         limit: int,
         lang: str,
-        audiobook: str,
         sort: str,
         sort_order: str,
     ):
         """Browse books for a subject."""
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS).subject_id(subject_id)
-            self._filter(q, lang, audiobook)
+            self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
         except Exception as e:
@@ -1021,7 +958,6 @@ class OPDSFeed:
             "id": subject_id,
             "limit": limit,
             "lang": lang,
-            "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
         }
@@ -1030,7 +966,7 @@ class OPDSFeed:
 
         # Language facet ignores the active language so users can switch.
         lang_q = self.fts.query().subject_id(subject_id)
-        self._filter(lang_q, "", audiobook)
+        self._filter(lang_q, "")
 
         feed = {
             "metadata": {
@@ -1050,7 +986,6 @@ class OPDSFeed:
                 facet_url,
                 "",
                 lang,
-                audiobook,
                 sort,
                 sort_order,
                 languages=self._top_languages(lang_q),
@@ -1072,7 +1007,6 @@ class OPDSFeed:
         page: int = 1,
         limit: int = 25,
         lang: str = "",
-        audiobook: str = "",
         sort: str = "",
         sort_order: str = "",
         locc: str = "",
@@ -1105,12 +1039,6 @@ class OPDSFeed:
             if bookshelf_id is not None:
                 q.bookshelf_id(int(bookshelf_id))
 
-            # Apply audiobook (not language) first so the language facet can be
-            # computed over all languages in the result set.
-            self._filter(q, "", audiobook)
-
-            # Always built so every results page (incl. Most Popular / Recently
-            # Added / Audiobooks, which are sort-only) shows consistent facets.
             languages = self._top_languages(q)
 
             if lang:
@@ -1134,7 +1062,6 @@ class OPDSFeed:
             "title": title,
             "author": author,
             "lang": lang,
-            "audiobook": audiobook,
             "sort": sort,
             "sort_order": sort_order,
             "locc": locc,
@@ -1156,7 +1083,7 @@ class OPDSFeed:
             "bookshelf_id": bookshelf_id,
         }
         facets = self._facets(
-            facet_url, query, lang, audiobook, sort, sort_order, subjects, languages,
+            facet_url, query, lang, sort, sort_order, subjects, languages,
             scope, subject_id=subject_id,
         )
 

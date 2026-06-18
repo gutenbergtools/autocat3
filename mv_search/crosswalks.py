@@ -5,7 +5,6 @@ Row-to-dict transforms for PG and OPDS 2.0 output formats.
 """
 
 import html
-import re
 from typing import Any, Dict, List, Optional
 from itertools import zip_longest
 
@@ -15,17 +14,6 @@ from .formatters import format_dict_result, ContributorFormat
 _LOCC_LABELS = {item.code: item.label for item in LoCCMainClass}
 
 LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
-
-
-def _estimate_mp3_duration(file_size_bytes: int, bitrate_kbps: int = 128) -> int:
-    """Estimate MP3 duration from file size assuming CBR encoding.
-    
-    LibriVox standard: 128kbps CBR, 44.1kHz, mono.
-    Formula: duration = file_size_bytes * 8 / bitrate_bps
-    """
-    if not file_size_bytes or file_size_bytes <= 0:
-        return 0
-    return int(file_size_bytes * 8 / (bitrate_kbps * 1000))
 
 
 def _rights_text(copyrighted: Optional[int]) -> str:
@@ -147,39 +135,26 @@ def crosswalk_pg(row) -> Dict[str, Any]:
 
 @format_dict_result
 def crosswalk_opds(row) -> Dict[str, Any]:
-    """Transform row to OPDS 2.0 / Readium Audiobook Profile format."""
+    """Transform row to OPDS 2.0 publication format."""
     creators = _build_creators(row)
     raw_subjects = _build_subjects(row)
     bookshelves = _build_bookshelves(row)
     formats = _build_formats(row)
     locc_codes = [c for c in (list(row.locc_codes) if row.locc_codes else []) if c]
     formatter = ContributorFormat(creators)
-    is_audio = row.is_audio
 
     metadata = {
-        "@type": "http://schema.org/Audiobook" if is_audio else "http://schema.org/Book",
+        "@type": "http://schema.org/Book",
         "identifier": f"urn:gutenberg:{row.book_id}",
         "title": row.title,
         "language": (list(row.lang_codes) if row.lang_codes else ["en"])[0] or "en",
+        "accessibility": {
+            "hazard": ["none"],
+            "accessMode": ["textual"],
+            "accessModeSufficient": [["textual"]],
+            "feature": ["displayTransformability", "unlocked"],
+        },
     }
-
-    if is_audio:
-        metadata["conformsTo"] = "https://readium.org/webpub-manifest/profiles/audiobook"
-
-    # Accessibility metadata (W3C/schema.org)
-    accessibility = {
-        "hazard": ["none"],
-    }
-    if is_audio:
-        accessibility["conformsTo"] = ["https://readium.org/webpub-manifest/profiles/audiobook"]
-        accessibility["accessMode"] = ["auditory"]
-        accessibility["accessModeSufficient"] = [["auditory"]]
-        accessibility["feature"] = ["unlocked"]
-    else:
-        accessibility["accessMode"] = ["textual"]
-        accessibility["accessModeSufficient"] = [["textual"]]
-        accessibility["feature"] = ["displayTransformability", "unlocked"]
-    metadata["accessibility"] = accessibility
 
     authors = [c for c in creators if c.get("role", "").lower() in ("author", "aut", "creator", "cre", "")]
     if authors and authors[0].get("name"):
@@ -189,13 +164,6 @@ def crosswalk_opds(row) -> Dict[str, Any]:
             author["identifier"] = f"https://www.gutenberg.org/ebooks/author/{p['id']}"
             author["links"] = [{"href": f"/opds/search?author_id={p['id']}", "type": "application/opds+json"}]
         metadata["author"] = author
-
-    if is_audio:
-        narrator_roles = ("narrator", "nrt", "reader", "prf", "spk", "sng", "performer", "speaker", "singer")
-        narrators = [c for c in creators if c.get("role", "").lower() in narrator_roles]
-        if narrators:
-            narrator_fmt = ContributorFormat(narrators)
-            metadata["narrator"] = narrator_fmt(all=True, pretty=True, dates=False, show_role=False).split("; ")
 
     if row.release_date:
         metadata["published"] = row.release_date
@@ -220,7 +188,6 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     if desc_parts:
         metadata["description"] = "<p>" + "</p><p>".join(html.escape(p) for p in desc_parts) + "</p>"
 
-    # Structured subjects with OPDS browse links
     subject_objs = []
     for s in raw_subjects:
         if s.get("subject"):
@@ -228,7 +195,6 @@ def crosswalk_opds(row) -> Dict[str, Any]:
             if s.get("id"):
                 subj["links"] = [{"href": f"/opds/subjects?id={s['id']}", "type": "application/opds+json"}]
             subject_objs.append(subj)
-    # LoCC as labeled subjects instead of raw codes in collections
     for code in locc_codes:
         main_class = code[0].upper() if code else ""
         label = _LOCC_LABELS.get(main_class, "")
@@ -243,7 +209,6 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     if row.publisher:
         metadata["publisher"] = row.publisher
 
-    # Collections: bookshelves with OPDS browse links (LoCC moved to subjects above)
     collections = []
     for b in bookshelves:
         if b.get("bookshelf"):
@@ -258,94 +223,32 @@ def crosswalk_opds(row) -> Dict[str, Any]:
         metadata["belongsTo"] = {"collection": collections}
 
     links = []
-    reading_order = []
+    target_format = "epub3.images"
+    fallback_formats = ["epub.images", "epub.noimages", "kindle.images", "pdf.images", "pdf.noimages", "html"]
 
-    if is_audio:
-        total_duration = 0
+    for try_format in [target_format] + fallback_formats:
         for f in formats:
             fn = f.get("filename")
+            if not fn:
+                continue
             ftype = (f.get("filetype") or "").strip().lower()
-            if not fn or ftype != "mp3":
+            if ftype != try_format:
                 continue
 
-            href = _gutenberg_url(fn)
-            track = {
-                "href": href,
-                "type": "audio/mpeg",
-                "bitrate": 128,  # LibriVox standard: 128kbps CBR
-            }
-
-            file_size = f.get("extent")
-            if file_size and file_size > 0:
-                duration = _estimate_mp3_duration(file_size)
-                track["duration"] = duration
-                total_duration += duration
-
-            match = re.search(r'-(\d+)\.mp3$', fn, re.IGNORECASE)
-            if match:
-                track["title"] = f"Part {match.group(1)}"
-
-            reading_order.append(track)
-
-        reading_order.sort(key=lambda t: t.get("title", ""))
-
-        if total_duration > 0:
-            metadata["duration"] = total_duration
-
-        links.append({
-            "rel": "self",
-            "href": f"https://www.gutenberg.org/ebooks/{row.book_id}.audiobook",
-            "type": "application/audiobook+json",
-        })
-
-        has_zip = False
-        for f in formats:
-            fn = f.get("filename") or ""
-            if fn.endswith("-mp3.zip") or fn.endswith("_mp3.zip"):
-                links.append({
-                    "rel": "http://opds-spec.org/acquisition/open-access",
-                    "href": _gutenberg_url(fn),
-                    "type": "application/zip",
-                    "title": "Download all MP3s (ZIP)",
-                    **({"length": f["extent"]} if f.get("extent") and f["extent"] > 0 else {}),
-                })
-                has_zip = True
-                break
-
-        if not has_zip:
-            # No ZIP available - fall back to HTML page
-            links.append({
+            mtype = (f.get("mediatype") or "").strip()
+            link = {
                 "rel": "http://opds-spec.org/acquisition/open-access",
-                "href": f"https://www.gutenberg.org/ebooks/{row.book_id}",
-                "type": "text/html",
-            })
-    else:
-        target_format = "epub3.images"
-        fallback_formats = ["epub.images", "epub.noimages", "kindle.images", "pdf.images", "pdf.noimages", "html"]
-
-        for try_format in [target_format] + fallback_formats:
-            for f in formats:
-                fn = f.get("filename")
-                if not fn:
-                    continue
-                ftype = (f.get("filetype") or "").strip().lower()
-                if ftype != try_format:
-                    continue
-
-                mtype = (f.get("mediatype") or "").strip()
-                link = {
-                    "rel": "http://opds-spec.org/acquisition/open-access",
-                    "href": _gutenberg_url(fn),
-                    "type": mtype or "application/epub+zip",
-                }
-                if f.get("extent") is not None and f["extent"] > 0:
-                    link["length"] = f["extent"]
-                if f.get("hr_filetype"):
-                    link["title"] = f["hr_filetype"]
-                links.append(link)
-                break
-            if links:
-                break
+                "href": _gutenberg_url(fn),
+                "type": mtype or "application/epub+zip",
+            }
+            if f.get("extent") is not None and f["extent"] > 0:
+                link["length"] = f["extent"]
+            if f.get("hr_filetype"):
+                link["title"] = f["hr_filetype"]
+            links.append(link)
+            break
+        if links:
+            break
 
     if not links:
         links.append({
@@ -354,17 +257,7 @@ def crosswalk_opds(row) -> Dict[str, Any]:
             "type": "text/html",
         })
 
-    if is_audio:
-        result = {
-            "@context": "http://readium.org/webpub-manifest/context.jsonld",
-            "metadata": metadata,
-            "links": links,
-        }
-    else:
-        result = {"metadata": metadata, "links": links}
-
-    if reading_order:
-        result["readingOrder"] = reading_order
+    result = {"metadata": metadata, "links": links}
 
     images = []
     for f in formats:
@@ -373,9 +266,7 @@ def crosswalk_opds(row) -> Dict[str, Any]:
         if fn and "cover" in ft:
             images.append({"href": _gutenberg_url(fn), "type": "image/jpeg"})
     if images:
-        result["images"] = images  # OPDS 2.0
-        if is_audio:
-            result["resources"] = [{"rel": "cover", **img} for img in images]  # Readium
+        result["images"] = images
 
     return result
 
