@@ -15,6 +15,10 @@ _LOCC_LABELS = {item.code: item.label for item in LoCCMainClass}
 
 LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 
+# Readium Web Publication Manifest subject schemes
+SCHEME_LCC = "http://purl.org/dc/terms/LCC"
+SCHEME_GUTENBERG_SUBJECT = "https://www.gutenberg.org/ebooks/subject/"
+
 
 def _rights_text(copyrighted: Optional[int]) -> str:
     return (
@@ -145,7 +149,7 @@ def crosswalk_opds(row) -> Dict[str, Any]:
 
     metadata = {
         "@type": "http://schema.org/Book",
-        "identifier": f"urn:gutenberg:{row.book_id}",
+        "identifier": f"https://www.gutenberg.org/ebooks/{row.book_id}",
         "title": row.title,
         "language": (list(row.lang_codes) if row.lang_codes else ["en"])[0] or "en",
         "accessibility": {
@@ -192,7 +196,9 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     for s in raw_subjects:
         if s.get("subject"):
             subj = {"name": s["subject"]}
-            if s.get("id"):
+            if s.get("id") is not None:
+                subj["scheme"] = SCHEME_GUTENBERG_SUBJECT
+                subj["code"] = str(s["id"])
                 subj["links"] = [{"href": f"/opds/subjects?id={s['id']}", "type": "application/opds+json"}]
             subject_objs.append(subj)
     for code in locc_codes:
@@ -201,6 +207,9 @@ def crosswalk_opds(row) -> Dict[str, Any]:
         name = f"{label}: {code}" if label else code
         subject_objs.append({
             "name": name,
+            "sortAs": code,
+            "scheme": SCHEME_LCC,
+            "code": code,
             "links": [{"href": f"/opds/loccs?parent={code}", "type": "application/opds+json"}],
         })
     if subject_objs:

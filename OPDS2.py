@@ -158,9 +158,12 @@ def _daily_seed() -> int:
 def _book_id(pub: Dict) -> Optional[int]:
     """Extract the numeric Gutenberg id from an OPDS publication."""
     try:
-        return int(pub["metadata"]["identifier"].rsplit(":", 1)[-1])
+        ident = pub["metadata"]["identifier"]
+        if isinstance(ident, str) and "/ebooks/" in ident:
+            return int(ident.rstrip("/").rsplit("/", 1)[-1])
     except (KeyError, ValueError, AttributeError, TypeError):
-        return None
+        pass
+    return None
 
 
 # CherryPy Search API
