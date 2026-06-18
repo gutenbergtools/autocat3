@@ -21,8 +21,8 @@ SCHEME_GUTENBERG_SUBJECT = "https://www.gutenberg.org/ebooks/subject/"
 
 # PG-generated cover JPEGs (fixed output sizes from ebookconverter)
 _COVER_SPECS = (
-    ("cover.small", 66, 95, "http://opds-spec.org/image/thumbnail"),
     ("cover.medium", 200, 288, "http://opds-spec.org/image"),
+    ("cover.small", 66, 95, "http://opds-spec.org/image/thumbnail"),
 )
 
 
