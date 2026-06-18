@@ -20,7 +20,6 @@ from __future__ import unicode_literals
 
 import datetime
 import logging
-from zoneinfo import ZoneInfo
 
 import psycopg2
 import cherrypy
@@ -58,7 +57,7 @@ class TimerPlugin (cherrypy.process.plugins.Monitor):
             pass
 
         refresh_hour = cherrypy.config.get ('mv_refresh_hour', 17)
-        now = datetime.datetime.now (ZoneInfo ('America/New_York'))
+        now = datetime.datetime.now ()
 
         if now.hour == refresh_hour and self._last_refresh_date != now.date ():
             self._try_refresh_mv ()
@@ -88,7 +87,7 @@ class TimerPlugin (cherrypy.process.plugins.Monitor):
 
             cur.execute ("SELECT refresh_mv_books_dc()")
             conn.commit ()
-            self._last_refresh_date = datetime.datetime.now (ZoneInfo ('America/New_York')).date ()
+            self._last_refresh_date = datetime.datetime.now ().date ()
             cherrypy.log ("MV refresh completed.", context='TIMER', severity=logging.INFO)
         except Exception as e:
             cherrypy.log ("MV refresh failed: %s" % e, context='TIMER', severity=logging.ERROR)
