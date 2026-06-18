@@ -402,32 +402,45 @@ class SearchQuery:
             clause += f" NULLS {nulls}"
         return clause
 
-    def build(self) -> Tuple[str, Dict]:
+    def _where_parts(self) -> Tuple[Optional[str], Optional[str]]:
+        search_sql = " AND ".join(s[0] for s in self._search) if self._search else None
+        filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
+        return search_sql, filter_sql
+
+    def build(self, *, with_count: bool = False) -> Tuple[str, Dict]:
         params = self._params()
         order = self._order_sql(params)
         limit, offset = self._page_size, (self._page - 1) * self._page_size
+        total_col = ", COUNT(*) OVER() AS total_count" if with_count else ""
 
-        search_sql = " AND ".join(s[0] for s in self._search) if self._search else None
-        filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
+        search_sql, filter_sql = self._where_parts()
 
         if search_sql and filter_sql:
             sql = (
-                f"SELECT {_SELECT} FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
+                f"SELECT {_SELECT}{total_col} FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
                 f"WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
             )
         elif search_sql:
-            sql = f"SELECT {_SELECT} FROM mv_books_dc WHERE {search_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            sql = (
+                f"SELECT {_SELECT}{total_col} FROM mv_books_dc WHERE {search_sql} "
+                f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            )
         elif filter_sql:
-            sql = f"SELECT {_SELECT} FROM mv_books_dc WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            sql = (
+                f"SELECT {_SELECT}{total_col} FROM mv_books_dc WHERE {filter_sql} "
+                f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            )
         else:
-            sql = f"SELECT {_SELECT} FROM mv_books_dc ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            sql = (
+                f"SELECT {_SELECT}{total_col} FROM mv_books_dc "
+                f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
+            )
 
         return sql, params
 
     def build_count(self) -> Tuple[str, Dict]:
         params = self._params()
-        search_sql = " AND ".join(s[0] for s in self._search) if self._search else None
-        filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
+        search_sql, filter_sql = self._where_parts()
 
         if search_sql and filter_sql:
             return (
@@ -439,25 +452,6 @@ class SearchQuery:
         elif filter_sql:
             return f"SELECT COUNT(*) FROM mv_books_dc WHERE {filter_sql}", params
         return "SELECT COUNT(*) FROM mv_books_dc", params
-
-    def build_exists(self) -> Tuple[str, Dict]:
-        """Build a LIMIT 1 existence check for the current where clauses."""
-        params = self._params()
-        search_sql = " AND ".join(s[0] for s in self._search) if self._search else None
-        filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
-
-        if search_sql and filter_sql:
-            sql = (
-                f"SELECT 1 FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
-                f"WHERE {filter_sql} LIMIT 1"
-            )
-        elif search_sql:
-            sql = f"SELECT 1 FROM mv_books_dc WHERE {search_sql} LIMIT 1"
-        elif filter_sql:
-            sql = f"SELECT 1 FROM mv_books_dc WHERE {filter_sql} LIMIT 1"
-        else:
-            sql = "SELECT 1 FROM mv_books_dc LIMIT 1"
-        return sql, params
 
 
 # =============================================================================
@@ -485,26 +479,23 @@ class FullTextSearch:
     def execute(self, q: "SearchQuery", with_count: bool = True) -> Dict:
         """Execute query and return paginated results.
 
-        with_count=False skips the COUNT(*) round-trip ('total' comes back
-        None); use it for preview feeds that don't paginate.
+        with_count=False skips the window total ('total' comes back None);
+        use it for preview feeds that don't paginate.
         """
         with self.Session() as session:
-            if q._is_hybrid():
-                exists_sql, exists_params = q.build_exists()
-                if not session.execute(text(exists_sql), exists_params).first():
-                    q._use_fuzzy()
-
-            if with_count:
-                count_sql, count_params = q.build_count()
-                total = session.execute(text(count_sql), count_params).scalar() or 0
-                total_pages = max(1, (total + q._page_size - 1) // q._page_size)
-                q._page = max(1, min(q._page, total_pages))
-            else:
-                total = None
-                total_pages = 1
-
-            sql, params = q.build()
+            sql, params = q.build(with_count=with_count)
             rows = session.execute(text(sql), params).fetchall()
+            if q._is_hybrid() and not rows:
+                q._use_fuzzy()
+                sql, params = q.build(with_count=with_count)
+                rows = session.execute(text(sql), params).fetchall()
+
+        if with_count:
+            total = rows[0].total_count if rows else 0
+            total_pages = max(1, (total + q._page_size - 1) // q._page_size)
+        else:
+            total = None
+            total_pages = 1
 
         return {
             "results": [self._transform(r, q._crosswalk) for r in rows],
@@ -623,69 +614,117 @@ class FullTextSearch:
             result = session.execute(text(sql), {"id": subject_id}).scalar()
             return result
 
+    def get_facets_for_query(
+        self,
+        q: "SearchQuery",
+        *,
+        subject_limit: Optional[int] = None,
+        language_limit: Optional[int] = None,
+        max_books: Optional[int] = None,
+        include_subjects: bool = True,
+        include_languages: bool = True,
+    ) -> Dict[str, List[Dict]]:
+        """Subjects and languages from one matched-books scan."""
+        if not include_subjects and not include_languages:
+            return {"subjects": [], "languages": []}
+
+        params = q._params()
+        search_sql, filter_sql = q._where_parts()
+        where_parts = [p for p in (search_sql, filter_sql) if p]
+        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+
+        sample_clause = ""
+        if max_books is not None:
+            params["max_books"] = max(1, int(max_books))
+            sample_clause = f"ORDER BY {q._order_sql(params)} LIMIT :max_books"
+
+        subject_limit_clause = ""
+        if subject_limit is not None:
+            params["subject_limit"] = max(1, int(subject_limit))
+            subject_limit_clause = "LIMIT :subject_limit"
+
+        language_limit_clause = ""
+        if language_limit is not None:
+            params["language_limit"] = max(1, int(language_limit))
+            language_limit_clause = "LIMIT :language_limit"
+
+        parts = []
+        if include_subjects:
+            parts.append(
+                f"""
+                SELECT
+                    'subject' AS facet,
+                    s.pk::text AS key,
+                    s.subject AS label,
+                    COUNT(*) AS count
+                FROM matched_books mb
+                JOIN mn_books_subjects mbs
+                    ON mbs.fk_books = mb.book_id
+                JOIN subjects s
+                    ON s.pk = mbs.fk_subjects
+                GROUP BY
+                    s.pk,
+                    s.subject
+                ORDER BY
+                    count DESC
+                {subject_limit_clause}"""
+            )
+        if include_languages:
+            parts.append(
+                f"""
+                SELECT
+                    'language' AS facet,
+                    lang AS key,
+                    NULL::text AS label,
+                    COUNT(*) AS count
+                FROM matched_books mb,
+                    unnest(mb.lang_codes) AS lang
+                GROUP BY
+                    lang
+                ORDER BY
+                    count DESC
+                {language_limit_clause}"""
+            )
+
+        sql = f"""
+            WITH matched_books AS (
+                SELECT
+                    book_id,
+                    lang_codes
+                FROM mv_books_dc
+                {where_clause}
+                {sample_clause}
+            )
+            {" UNION ALL ".join(parts)}
+        """
+
+        subjects = []
+        languages = []
+        with self.Session() as session:
+            for row in session.execute(text(sql), params).fetchall():
+                if row.facet == "subject":
+                    subjects.append(
+                        {"id": int(row.key), "name": row.label, "count": row.count}
+                    )
+                else:
+                    languages.append({"code": row.key, "count": row.count})
+
+        return {"subjects": subjects, "languages": languages}
+
     def get_top_subjects_for_query(
         self,
         q: "SearchQuery",
         limit: Optional[int] = None,
         max_books: Optional[int] = None,
     ) -> List[Dict]:
-        """
-        Get top subjects from a search result set for dynamic facets.
-
-        Args:
-            q: SearchQuery to derive subjects from
-            limit: Max subjects to return, or None for all (default None)
-            max_books: Max matching books to sample, or None for the full
-                result set (default None)
-
-        Returns:
-            List of dicts with 'id', 'name', and 'count' keys, sorted by count desc
-        """
-        params = q._params()
-        search_sql = " AND ".join(s[0] for s in q._search) if q._search else None
-        filter_sql = " AND ".join(f[0] for f in q._filters) if q._filters else None
-        where_parts = [p for p in (search_sql, filter_sql) if p]
-        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
-
-        # Sampling only matters with a cap; without one, order is irrelevant.
-        sample_clause = ""
-        if max_books is not None:
-            params["max_books"] = max(1, int(max_books))
-            sample_clause = f"ORDER BY {q._order_sql(params)} LIMIT :max_books"
-
-        limit_clause = ""
-        if limit is not None:
-            params["limit"] = max(1, int(limit))
-            limit_clause = "LIMIT :limit"
-
-        sql = f"""
-            WITH matched_books AS (
-                SELECT
-                    book_id
-                FROM mv_books_dc
-                {where_clause}
-                {sample_clause}
-            )
-            SELECT
-                s.pk AS id,
-                s.subject AS name,
-                COUNT(*) AS count
-            FROM matched_books mb
-            JOIN mn_books_subjects mbs
-                ON mbs.fk_books = mb.book_id
-            JOIN subjects s
-                ON s.pk = mbs.fk_subjects
-            GROUP BY
-                s.pk,
-                s.subject
-            ORDER BY
-                count DESC
-            {limit_clause}
-        """
-
-        with self.Session() as session:
-            rows = session.execute(text(sql), params).fetchall()
-            return [{"id": r.id, "name": r.name, "count": r.count} for r in rows]
+        """Get top subjects from a search result set for dynamic facets."""
+        return self.get_facets_for_query(
+            q,
+            subject_limit=limit,
+            max_books=max_books,
+            include_subjects=True,
+            include_languages=False,
+        )["subjects"]
 
     def get_languages_for_query(
         self,
@@ -693,57 +732,14 @@ class FullTextSearch:
         limit: Optional[int] = None,
         max_books: Optional[int] = None,
     ) -> List[Dict]:
-        """
-        Get languages present in a search result set for dynamic facets.
-
-        Args:
-            q: SearchQuery to derive languages from
-            limit: Max languages to return, or None for all (default None)
-            max_books: Max matching books to sample, or None for the full
-                result set (default None)
-
-        Returns:
-            List of dicts with 'code' and 'count' keys, sorted by count desc
-        """
-        params = q._params()
-        search_sql = " AND ".join(s[0] for s in q._search) if q._search else None
-        filter_sql = " AND ".join(f[0] for f in q._filters) if q._filters else None
-        where_parts = [p for p in (search_sql, filter_sql) if p]
-        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
-
-        sample_clause = ""
-        if max_books is not None:
-            params["max_books"] = max(1, int(max_books))
-            sample_clause = f"ORDER BY {q._order_sql(params)} LIMIT :max_books"
-
-        limit_clause = ""
-        if limit is not None:
-            params["limit"] = max(1, int(limit))
-            limit_clause = "LIMIT :limit"
-
-        sql = f"""
-            WITH matched_books AS (
-                SELECT
-                    lang_codes
-                FROM mv_books_dc
-                {where_clause}
-                {sample_clause}
-            )
-            SELECT
-                lang AS code,
-                COUNT(*) AS count
-            FROM matched_books mb,
-                unnest(mb.lang_codes) AS lang
-            GROUP BY
-                lang
-            ORDER BY
-                count DESC
-            {limit_clause}
-        """
-
-        with self.Session() as session:
-            rows = session.execute(text(sql), params).fetchall()
-            return [{"code": r.code, "count": r.count} for r in rows]
+        """Get languages present in a search result set for dynamic facets."""
+        return self.get_facets_for_query(
+            q,
+            language_limit=limit,
+            max_books=max_books,
+            include_subjects=False,
+            include_languages=True,
+        )["languages"]
 
     def get_locc_children(self, parent: Union[LoCCMainClass, str]) -> List[Dict]:
         """Get LoCC children for a parent code."""
