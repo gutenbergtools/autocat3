@@ -19,6 +19,12 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 SCHEME_LCC = "http://purl.org/dc/terms/LCC"
 SCHEME_GUTENBERG_SUBJECT = "https://www.gutenberg.org/ebooks/subject/"
 
+# PG-generated cover JPEGs (fixed output sizes from ebookconverter)
+_COVER_SPECS = (
+    ("cover.small", 66, 95, "http://opds-spec.org/image/thumbnail"),
+    ("cover.medium", 200, 288, "http://opds-spec.org/image"),
+)
+
 
 def _rights_text(copyrighted: Optional[int]) -> str:
     return (
@@ -274,12 +280,24 @@ def crosswalk_opds(row) -> Dict[str, Any]:
 
     result = {"metadata": metadata, "links": links}
 
+    formats_by_type = {
+        (f.get("filetype") or "").strip(): f
+        for f in formats
+        if f.get("filename") and (f.get("filetype") or "").strip()
+    }
     images = []
-    for f in formats:
-        ft = f.get("filetype") or ""
-        fn = f.get("filename")
-        if fn and "cover" in ft:
-            images.append({"href": _gutenberg_url(fn), "type": "image/jpeg"})
+    for filetype, width, height, rel in _COVER_SPECS:
+        f = formats_by_type.get(filetype)
+        if not f:
+            continue
+        mtype = (f.get("mediatype") or "").strip() or "image/jpeg"
+        images.append({
+            "href": _gutenberg_url(f["filename"]),
+            "type": mtype,
+            "width": width,
+            "height": height,
+            "rel": rel,
+        })
     if images:
         result["images"] = images
 
