@@ -222,9 +222,14 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     if collections:
         metadata["belongsTo"] = {"collection": collections}
 
-    links = []
+    links = [{
+        "rel": "self",
+        "href": f"/opds/publications?id={row.book_id}",
+        "type": "application/opds-publication+json",
+    }]
     target_format = "epub3.images"
     fallback_formats = ["epub.images", "epub.noimages", "kindle.images", "pdf.images", "pdf.noimages", "html"]
+    has_acquisition = False
 
     for try_format in [target_format] + fallback_formats:
         for f in formats:
@@ -246,11 +251,12 @@ def crosswalk_opds(row) -> Dict[str, Any]:
             if f.get("hr_filetype"):
                 link["title"] = f["hr_filetype"]
             links.append(link)
+            has_acquisition = True
             break
-        if links:
+        if has_acquisition:
             break
 
-    if not links:
+    if not has_acquisition:
         links.append({
             "rel": "http://opds-spec.org/acquisition/open-access",
             "href": f"https://www.gutenberg.org/ebooks/{row.book_id}",

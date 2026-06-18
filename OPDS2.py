@@ -58,6 +58,7 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
+OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
 # Only the user-facing search fields are advertised to clients. /opds/search
 # also accepts lang, sort, sort_order, locc, author_id, subject_id
 # and bookshelf_id for internal facet/scope carry-over, but those are kept out
@@ -995,6 +996,25 @@ class OPDSFeed:
             self._pagination_links(page_url, result["page"], result["total_pages"])
         )
         return feed
+
+    # Publications
+
+    @cherrypy.expose
+    def publications(self, id: int):
+        """Single publication by Gutenberg ebook number."""
+        try:
+            result = self.fts.execute(
+                self.fts.query(crosswalk=Crosswalk.OPDS).etext(int(id))[1, 1]
+            )
+        except Exception as e:
+            cherrypy.log(f"Publication error: {e}")
+            raise cherrypy.HTTPError(500, "Unable to load publication.")
+
+        if not result.get("results"):
+            raise cherrypy.HTTPError(404, "No ebook by that number.")
+
+        cherrypy.response.headers["Content-Type"] = OPDS_PUBLICATION_TYPE
+        return result["results"][0]
 
     # Search
 
