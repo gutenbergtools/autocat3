@@ -173,7 +173,6 @@ class OPDSFeed:
     def __init__(self):
         self._fts = None
         self._feed_cache = {}  # key -> (expires, feed)
-        self._facet_cache = {}  # key -> (expires, (languages, subjects))
 
     @property
     def fts(self):
@@ -214,46 +213,6 @@ class OPDSFeed:
                 feed,
             )
         return feed
-
-    def _get_cached_facets(self, key: Tuple):
-        hit = self._facet_cache.get(key)
-        if hit and datetime.datetime.now() < hit[0]:
-            return hit[1]
-        return None
-
-    def _set_cached_facets(self, key: Tuple, languages, subjects) -> None:
-        self._facet_cache[key] = (
-            datetime.datetime.now() + self._CACHE_TTL,
-            (languages, subjects),
-        )
-
-    def _search_facet_key(
-        self,
-        query: str,
-        title: str,
-        author: str,
-        locc: str,
-        author_id: Optional[int],
-        subject_id: Optional[int],
-        bookshelf_id: Optional[int],
-        lang: str,
-        sort: str,
-        sort_order: str,
-    ) -> Tuple:
-        """Cache key for /opds/search facet queries (page omitted; facets do not change when paginating)."""
-        return (
-            "search",
-            query.strip(),
-            title.strip(),
-            author.strip(),
-            locc or "",
-            author_id,
-            subject_id,
-            bookshelf_id,
-            lang or "",
-            sort or "",
-            sort_order or "",
-        )
 
     def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
         """Top-downloaded sample for a shelf, excluding already-shown books."""
@@ -1113,32 +1072,14 @@ class OPDSFeed:
             if bookshelf_id is not None:
                 q.bookshelf_id(int(bookshelf_id))
 
-            facet_key = self._search_facet_key(
-                query,
-                title,
-                author,
-                locc,
-                author_id,
-                subject_id,
-                bookshelf_id,
-                lang,
-                sort,
-                sort_order,
-            )
-            cached = self._get_cached_facets(facet_key)
-            if cached is not None:
-                languages, subjects = cached
-                if lang:
-                    q.lang(lang)
-            else:
-                languages = self._top_languages(q)
-                if lang:
-                    q.lang(lang)
-                subjects = self._top_subjects(q)
-                self._set_cached_facets(facet_key, languages, subjects)
+            languages = self._top_languages(q)
 
+            if lang:
+                q.lang(lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
+
+            subjects = self._top_subjects(q)
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
             return self._error_feed(
