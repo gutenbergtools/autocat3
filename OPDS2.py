@@ -145,6 +145,13 @@ def _paginate(page, limit, default=25) -> Tuple[int, int]:
         return 1, default
 
 
+def _optional_int(value) -> Optional[int]:
+    """Parse CherryPy query params that may arrive as str, int, or empty."""
+    if value in (None, ""):
+        return None
+    return int(value)
+
+
 def _sort_direction(order: str) -> Optional[SortDirection]:
     """Parse sort order string."""
     return {"asc": SortDirection.ASC, "desc": SortDirection.DESC}.get(order)
@@ -381,44 +388,12 @@ class OPDSFeed:
         ]
 
         if subjects:
-            subject_links = [
-                {
-                    "href": _url(
-                        "/opds/search",
-                        {
-                            **(scope or {}),
-                            "subject_id": s["id"],
-                            "lang": lang,
-                            "sort": sort,
-                            "sort_order": sort_order,
-                        },
-                    ),
-                    "type": OPDS_TYPE,
-                    "title": s["name"],
-                    "properties": {"numberOfItems": s["count"]},
-                }
-                for s in subjects
-            ]
-            if subject_id is not None:
-                subject_links.append(
-                    _facet(
-                        _url(
-                            "/opds/search",
-                            {
-                                **(scope or {}),
-                                "lang": lang,
-                                "sort": sort,
-                                "sort_order": sort_order,
-                            },
-                        ),
-                        "None",
-                        False,
-                    )
-                )
             facets.append(
                 {
                     "metadata": {"title": "Top Subjects in Results"},
-                    "links": subject_links,
+                    "links": self._subject_links(
+                        scope, lang, sort, sort_order, subjects, subject_id
+                    ),
                 }
             )
 
@@ -463,6 +438,40 @@ class OPDSFeed:
             )
             if count is not None:
                 link["properties"] = {"numberOfItems": count}
+            links.append(link)
+        return links
+
+    def _subject_links(
+        self,
+        scope: Optional[Dict],
+        lang: str,
+        sort: str,
+        sort_order: str,
+        subjects: List[Dict],
+        subject_id: Optional[int],
+    ) -> List[Dict]:
+        """Subject facet links for search (dynamic counts, Any to clear)."""
+
+        def subject_url(**extra) -> str:
+            return _url(
+                "/opds/search",
+                {
+                    **(scope or {}),
+                    "lang": lang,
+                    "sort": sort,
+                    "sort_order": sort_order,
+                    **extra,
+                },
+            )
+
+        links = [_facet(subject_url(), "Any", subject_id is None)]
+        for s in subjects:
+            link = _facet(
+                subject_url(subject_id=s["id"]),
+                s["name"],
+                subject_id == s["id"],
+            )
+            link["properties"] = {"numberOfItems": s["count"]}
             links.append(link)
         return links
 
@@ -1049,6 +1058,9 @@ class OPDSFeed:
     ):
         """Full-text search."""
         page, limit = _paginate(page, limit)
+        subject_id = _optional_int(subject_id)
+        author_id = _optional_int(author_id)
+        bookshelf_id = _optional_int(bookshelf_id)
 
         try:
             q = self.fts.query(crosswalk=Crosswalk.OPDS)
@@ -1066,20 +1078,19 @@ class OPDSFeed:
             if locc:
                 q.locc(locc)
             if author_id is not None:
-                q.author_id(int(author_id))
-            if subject_id is not None:
-                q.subject_id(int(subject_id))
+                q.author_id(author_id)
             if bookshelf_id is not None:
-                q.bookshelf_id(int(bookshelf_id))
+                q.bookshelf_id(bookshelf_id)
 
             languages = self._top_languages(q)
+            subjects = self._top_subjects(q)
 
             if lang:
                 q.lang(lang)
+            if subject_id is not None:
+                q.subject_id(subject_id)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
-
-            subjects = self._top_subjects(q)
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
             return self._error_feed(
