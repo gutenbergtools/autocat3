@@ -270,14 +270,12 @@ def crosswalk_opds(row) -> Dict[str, Any]:
         shelf_id = b.get("id")
         if not name or shelf_id is None:
             continue
-        display_name = name
-        if display_name.startswith(BOOKSHELF_CATEGORY_PREFIX):
-            display_name = display_name[len(BOOKSHELF_CATEGORY_PREFIX):]
+        title = name.removeprefix(BOOKSHELF_CATEGORY_PREFIX)
         links.append({
             "rel": "related",
             "href": f"/opds/bookshelves?id={shelf_id}",
             "type": "application/opds+json",
-            "title": f"In {display_name}…",
+            "title": title,
         })
 
     result = {"metadata": metadata, "links": links}
