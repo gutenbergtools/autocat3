@@ -984,11 +984,7 @@ class OPDSFeed:
                 sort_order,
             )
 
-        return self._cache_feed(
-            "subjects:index",
-            self._build_subjects_index,
-            store=lambda feed: bool(feed.get("navigation")),
-        )
+        return self._build_subjects_index()
 
     def _subject_books(
         self,
