@@ -8,7 +8,7 @@ import html
 from typing import Any, Dict, List, Optional
 from itertools import zip_longest
 
-from .constants import Crosswalk, Language, LoCCMainClass
+from .constants import BOOKSHELF_CATEGORY_PREFIX, Crosswalk, Language, LoCCMainClass
 from .formatters import format_dict_result, ContributorFormat
 
 _LOCC_LABELS = {item.code: item.label for item in LoCCMainClass}
@@ -224,19 +224,6 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     if row.publisher:
         metadata["publisher"] = row.publisher
 
-    collections = []
-    for b in bookshelves:
-        if b.get("bookshelf"):
-            collection = {
-                "name": b["bookshelf"],
-                "identifier": f"https://www.gutenberg.org/ebooks/bookshelf/{b.get('id', '')}",
-            }
-            if b.get("id"):
-                collection["links"] = [{"href": f"/opds/bookshelves?id={b['id']}", "type": "application/opds+json"}]
-            collections.append(collection)
-    if collections:
-        metadata["belongsTo"] = {"collection": collections}
-
     links = [{
         "rel": "self",
         "href": f"/opds/publications?id={row.book_id}",
@@ -276,6 +263,21 @@ def crosswalk_opds(row) -> Dict[str, Any]:
             "rel": "http://opds-spec.org/acquisition/open-access",
             "href": f"https://www.gutenberg.org/ebooks/{row.book_id}",
             "type": "text/html",
+        })
+
+    for b in bookshelves:
+        name = b.get("bookshelf")
+        shelf_id = b.get("id")
+        if not name or shelf_id is None:
+            continue
+        display_name = name
+        if display_name.startswith(BOOKSHELF_CATEGORY_PREFIX):
+            display_name = display_name[len(BOOKSHELF_CATEGORY_PREFIX):]
+        links.append({
+            "rel": "related",
+            "href": f"/opds/bookshelves?id={shelf_id}",
+            "type": "application/opds+json",
+            "title": f"In {display_name}…",
         })
 
     result = {"metadata": metadata, "links": links}
