@@ -168,9 +168,12 @@ def _book_id(pub: Dict) -> Optional[int]:
 
 # CherryPy Search API
 class OPDSFeed:
+    _CACHE_TTL = datetime.timedelta(hours=12)
+
     def __init__(self):
         self._fts = None
-        self._shelf_cache = {}  # key -> (built_at, feed)
+        self._feed_cache = {}  # key -> (expires, feed)
+        self._facet_cache = {}  # key -> (expires, (languages, subjects))
 
     @property
     def fts(self):
@@ -193,17 +196,64 @@ class OPDSFeed:
             q.order_by(OrderBy.DOWNLOADS)
         return q
 
-    def _cached_shelf(self, key: str, build: Callable[[], Dict]) -> Dict:
-        """Return a cached shelf feed with a 12-hour TTL. Only non-empty builds
-        are cached, so a failed build retries."""
-        hit = self._shelf_cache.get(key)
+    def _cache_feed(
+        self,
+        key: str,
+        build: Callable[[], Dict],
+        *,
+        store: Callable[[Dict], bool],
+    ) -> Dict:
+        """Return a cached feed with a 12-hour TTL."""
+        hit = self._feed_cache.get(key)
         if hit and datetime.datetime.now() < hit[0]:
             return hit[1]
         feed = build()
-        if feed.get("groups"):
-            expires = datetime.datetime.now() + datetime.timedelta(hours=12)
-            self._shelf_cache[key] = (expires, feed)
+        if store(feed):
+            self._feed_cache[key] = (
+                datetime.datetime.now() + self._CACHE_TTL,
+                feed,
+            )
         return feed
+
+    def _get_cached_facets(self, key: Tuple):
+        hit = self._facet_cache.get(key)
+        if hit and datetime.datetime.now() < hit[0]:
+            return hit[1]
+        return None
+
+    def _set_cached_facets(self, key: Tuple, languages, subjects) -> None:
+        self._facet_cache[key] = (
+            datetime.datetime.now() + self._CACHE_TTL,
+            (languages, subjects),
+        )
+
+    def _search_facet_key(
+        self,
+        query: str,
+        title: str,
+        author: str,
+        locc: str,
+        author_id: Optional[int],
+        subject_id: Optional[int],
+        bookshelf_id: Optional[int],
+        lang: str,
+        sort: str,
+        sort_order: str,
+    ) -> Tuple:
+        """Cache key for /opds/search facet queries (page omitted; facets do not change when paginating)."""
+        return (
+            "search",
+            query.strip(),
+            title.strip(),
+            author.strip(),
+            locc or "",
+            author_id,
+            subject_id,
+            bookshelf_id,
+            lang or "",
+            sort or "",
+            sort_order or "",
+        )
 
     def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
         """Top-downloaded sample for a shelf, excluding already-shown books."""
@@ -461,7 +511,9 @@ class OPDSFeed:
     @cherrypy.expose
     def index(self):
         """Root catalog."""
-        return self._cached_shelf("index", self._build_index)
+        return self._cache_feed(
+            "index", self._build_index, store=lambda feed: bool(feed.get("groups"))
+        )
 
     def _build_index(self):
         seen = set()
@@ -655,8 +707,6 @@ class OPDSFeed:
 
         subjects_q = self.fts.query().bookshelf_id(shelf_id)
         self._filter(subjects_q, lang)
-
-        # Language facet ignores the active language so users can switch.
         lang_q = self.fts.query().bookshelf_id(shelf_id)
 
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
@@ -744,7 +794,9 @@ class OPDSFeed:
                 "groups": groups,
             }
 
-        return self._cached_shelf(f"cat:{category}", build)
+        return self._cache_feed(
+            f"cat:{category}", build, store=lambda feed: bool(feed.get("groups"))
+        )
 
     # LoCC
     @cherrypy.expose
@@ -791,6 +843,7 @@ class OPDSFeed:
             # Below the top level, drop the redundant main-class prefix the
             # parent crumb already conveys. Try the full label first (e.g.
             # "History: America:"), then just its lead segment ("History:").
+            # DB locc strings use "Language and Literatures:" (plural); see LoCCMainClass.P.
             if parent:
                 main = code[0].upper() if code else ""
                 mc = next((i for i in LoCCMainClass if i.code == main), None)
@@ -854,10 +907,7 @@ class OPDSFeed:
 
         subjects_q = self.fts.query().locc(parent)
         self._filter(subjects_q, lang)
-
-        # Language facet ignores the active language so users can switch.
         lang_q = self.fts.query().locc(parent)
-        self._filter(lang_q, "")
 
         feed = {
             "metadata": {
@@ -891,6 +941,26 @@ class OPDSFeed:
 
     # Subjects
 
+    def _build_subjects_index(self) -> Dict:
+        subjects = sorted(
+            self.fts.list_subjects(), key=lambda x: x["book_count"], reverse=True
+        )
+        return {
+            "metadata": {"title": "Project Gutenberg", "numberOfItems": len(subjects)},
+            "links": [
+                _link("self", "/opds/subjects"),
+                _link("start", "/opds/"),
+                _link("up", "/opds/"),
+            ],
+            "navigation": [
+                {
+                    **_nav(f"/opds/subjects?id={s['id']}", s["name"]),
+                    "properties": {"numberOfItems": s["book_count"]},
+                }
+                for s in subjects[:100]
+            ],
+        }
+
     @cherrypy.expose
     def subjects(
         self,
@@ -914,24 +984,11 @@ class OPDSFeed:
                 sort_order,
             )
 
-        subjects = sorted(
-            self.fts.list_subjects(), key=lambda x: x["book_count"], reverse=True
+        return self._cache_feed(
+            "subjects:index",
+            self._build_subjects_index,
+            store=lambda feed: bool(feed.get("navigation")),
         )
-        return {
-            "metadata": {"title": "Project Gutenberg", "numberOfItems": len(subjects)},
-            "links": [
-                _link("self", "/opds/subjects"),
-                _link("start", "/opds/"),
-                _link("up", "/opds/"),
-            ],
-            "navigation": [
-                {
-                    **_nav(f"/opds/subjects?id={s['id']}", s["name"]),
-                    "properties": {"numberOfItems": s["book_count"]},
-                }
-                for s in subjects[:100]
-            ],
-        }
 
     def _subject_books(
         self,
@@ -968,9 +1025,7 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/subjects", base)
         facet_url = _make_facet_url("/opds/subjects", base)
 
-        # Language facet ignores the active language so users can switch.
         lang_q = self.fts.query().subject_id(subject_id)
-        self._filter(lang_q, "")
 
         feed = {
             "metadata": {
@@ -1062,14 +1117,32 @@ class OPDSFeed:
             if bookshelf_id is not None:
                 q.bookshelf_id(int(bookshelf_id))
 
-            languages = self._top_languages(q)
+            facet_key = self._search_facet_key(
+                query,
+                title,
+                author,
+                locc,
+                author_id,
+                subject_id,
+                bookshelf_id,
+                lang,
+                sort,
+                sort_order,
+            )
+            cached = self._get_cached_facets(facet_key)
+            if cached is not None:
+                languages, subjects = cached
+                if lang:
+                    q.lang(lang)
+            else:
+                languages = self._top_languages(q)
+                if lang:
+                    q.lang(lang)
+                subjects = self._top_subjects(q)
+                self._set_cached_facets(facet_key, languages, subjects)
 
-            if lang:
-                q.lang(lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
-
-            subjects = self._top_subjects(q)
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
             return self._error_feed(

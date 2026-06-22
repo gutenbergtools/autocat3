@@ -160,7 +160,7 @@ class LoCCMainClass(Enum):
     L = ("L", "Education")
     M = ("M", "Music")
     N = ("N", "Fine Arts")
-    P = ("P", "Language and Literature")
+    P = ("P", "Language and Literatures")
     Q = ("Q", "Science")
     R = ("R", "Medicine")
     S = ("S", "Agriculture")
