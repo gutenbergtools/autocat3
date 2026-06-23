@@ -306,8 +306,7 @@ class OPDSFeed:
             return 0
 
     def _locc_counts(self, parent: str, children: List[Dict]) -> Dict[str, int]:
-        """Per-child book counts via FTS. Skipped at the top level, where each
-        main class would be one large full-class aggregation."""
+        """Per-child book counts for LoCC nav (skipped at top level)."""
         if not parent:
             return {}
         counts = {}
@@ -829,13 +828,17 @@ class OPDSFeed:
             children = []
 
         if children:
-            return self._locc_navigation(parent, children)
+            return self._cache_feed(
+                f"locc_nav:{parent or '_root'}",
+                lambda: self._build_locc_navigation(parent, children),
+                store=lambda feed: bool(feed.get("navigation")),
+            )
 
         return self._locc_books(
             parent, page, limit, lang, sort, sort_order
         )
 
-    def _locc_navigation(self, parent: str, children: List):
+    def _build_locc_navigation(self, parent: str, children: List) -> Dict:
         """Build LoCC category navigation."""
         children.sort(key=lambda x: (len(x.get("code", "")), x.get("code", "")))
 
