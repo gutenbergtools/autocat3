@@ -805,8 +805,25 @@ class FullTextSearch:
                 subject_limit=subject_limit,
                 include_subjects=include_subjects,
             )
+            subjects = data["subjects"] if include_subjects else None
+            if include_subjects and subject_id is not None and subjects is not None:
+                if not any(s["id"] == subject_id for s in subjects):
+                    name = self.get_subject_name(subject_id)
+                    if name:
+                        pin_q = scope_fn(self.query())
+                        if lang:
+                            pin_q.lang(lang)
+                        pin_q.subject_id(subject_id)
+                        subjects = [
+                            {
+                                "id": subject_id,
+                                "name": name,
+                                "count": self.count(pin_q),
+                            },
+                            *subjects,
+                        ][:subject_limit]
             return {
-                "subjects": data["subjects"] if include_subjects else None,
+                "subjects": subjects,
                 "languages": data["languages"],
             }
         except Exception:
