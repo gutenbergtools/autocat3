@@ -63,6 +63,7 @@ class SortDirection(str, Enum):
 class Crosswalk(str, Enum):
     PG = "pg"
     OPDS = "opds"
+    OPDS_SMALL = "opds_small"
 
 
 class Language(Enum):

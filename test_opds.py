@@ -21,7 +21,7 @@ from cherrypy.process import plugins
 from libgutenberg import GutenbergDatabase
 
 import ConnectionPool  # noqa: F401  registers plugins.ConnectionPool
-from OPDS2 import OPDSFeed, OPDS_TYPE, _json_error_page
+from OPDS2 import OPDSFeed, OPDS_MOUNT_CONFIG
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 TEST_CONF = os.path.join(ROOT, "test.conf")
@@ -46,23 +46,6 @@ SERVER_TUNING = {
     "sqlalchemy.max_overflow": PROD_MAX_OVERFLOW,
     "sqlalchemy.timeout": PROD_POOL_TIMEOUT,
     "sqlalchemy.recycle": 3600,
-}
-
-OPDS_MOUNT_CONFIG = {
-    "/": {
-        "tools.response_headers.on": True,
-        "tools.json_in.on": True,
-        "tools.json_out.on": True,
-        "error_page.404": _json_error_page,
-        "error_page.500": _json_error_page,
-        "error_page.default": _json_error_page,
-        "tools.response_headers.headers": [
-            ("Content-Type", OPDS_TYPE),
-            ("Access-Control-Allow-Origin", "*"),
-            ("Access-Control-Allow-Methods", "GET"),
-            ("Access-Control-Allow-Headers", "Accept, Content-Type"),
-        ],
-    }
 }
 
 LOAD_ROUTES = (

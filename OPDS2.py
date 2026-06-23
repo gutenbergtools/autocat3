@@ -24,6 +24,9 @@ from mv_search.constants import (
 )
 from mv_search.Search import FullTextSearch
 
+OPDS = Crosswalk.OPDS
+OPDS_SMALL = Crosswalk.OPDS_SMALL
+
 SAMPLE_LIMIT = 15
 # Most common Gutenberg languages first, remainder alphabetical by label
 _LANG_PRIORITY = [
@@ -88,6 +91,32 @@ def _json_error_page(status, message, traceback, version):
 def _link(rel: str, href: str, **extras) -> Dict:
     """Create an OPDS link dict."""
     return {"rel": rel, "href": href, "type": OPDS_TYPE, **extras}
+
+
+OPDS_GZIP_MIME_TYPES = [
+    "application/json",
+    "application/opds+json",
+    "application/opds-publication+json",
+]
+
+OPDS_MOUNT_CONFIG = {
+    "/": {
+        "tools.response_headers.on": True,
+        "tools.json_in.on": True,
+        "tools.json_out.on": True,
+        "tools.gzip.on": True,
+        "tools.gzip.mime_types": OPDS_GZIP_MIME_TYPES,
+        "error_page.404": _json_error_page,
+        "error_page.500": _json_error_page,
+        "error_page.default": _json_error_page,
+        "tools.response_headers.headers": [
+            ("Content-Type", OPDS_TYPE),
+            ("Access-Control-Allow-Origin", "*"),
+            ("Access-Control-Allow-Methods", "GET"),
+            ("Access-Control-Allow-Headers", "Accept, Content-Type"),
+        ],
+    }
+}
 
 
 def _nav(href: str, title: str) -> Dict:
@@ -175,6 +204,9 @@ def _book_id(pub: Dict) -> Optional[int]:
 
 # CherryPy Search API
 class OPDSFeed:
+    """OPDS 2 feed. List/catalog endpoints use OPDS_SMALL; only publications()
+    uses OPDS for full book detail."""
+
     _CACHE_TTL = datetime.timedelta(hours=12)
 
     def __init__(self):
@@ -223,7 +255,7 @@ class OPDSFeed:
 
     def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
         """Top-downloaded sample for a shelf, excluding already-shown books."""
-        q = self.fts.query(crosswalk=Crosswalk.OPDS).bookshelf_id(shelf_id)
+        q = self.fts.query(crosswalk=OPDS_SMALL).bookshelf_id(shelf_id)
         if seen:
             q.where("book_id <> ALL(:seen_ids)", seen_ids=list(seen))
         result = self.fts.execute(
@@ -495,7 +527,7 @@ class OPDSFeed:
 
         def _recently_added():
             result = self.fts.execute(
-                self.fts.query(crosswalk=Crosswalk.OPDS).order_by(
+                self.fts.query(crosswalk=OPDS_SMALL).order_by(
                     OrderBy.RELEASE_DATE, SortDirection.DESC
                 )[1, SAMPLE_LIMIT],
             )
@@ -514,7 +546,7 @@ class OPDSFeed:
 
         def _most_popular():
             result = self.fts.execute(
-                self.fts.query(crosswalk=Crosswalk.OPDS).order_by(OrderBy.DOWNLOADS)[
+                self.fts.query(crosswalk=OPDS_SMALL).order_by(OrderBy.DOWNLOADS)[
                     1, SAMPLE_LIMIT
                 ],
             )
@@ -650,7 +682,7 @@ class OPDSFeed:
                 break
 
         try:
-            q = self.fts.query(crosswalk=Crosswalk.OPDS).bookshelf_id(shelf_id)
+            q = self.fts.query(crosswalk=OPDS_SMALL).bookshelf_id(shelf_id)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -849,7 +881,7 @@ class OPDSFeed:
     ):
         """Browse books in a LoCC leaf."""
         try:
-            q = self.fts.query(crosswalk=Crosswalk.OPDS).locc(parent)
+            q = self.fts.query(crosswalk=OPDS_SMALL).locc(parent)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -965,7 +997,7 @@ class OPDSFeed:
     ):
         """Browse books for a subject."""
         try:
-            q = self.fts.query(crosswalk=Crosswalk.OPDS).subject_id(subject_id)
+            q = self.fts.query(crosswalk=OPDS_SMALL).subject_id(subject_id)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -1026,7 +1058,7 @@ class OPDSFeed:
         """Single publication by Gutenberg ebook number."""
         try:
             result = self.fts.execute(
-                self.fts.query(crosswalk=Crosswalk.OPDS).etext(int(id))[1, 1]
+                self.fts.query(crosswalk=OPDS).etext(int(id))[1, 1]
             )
         except Exception as e:
             cherrypy.log(f"Publication error: {e}")
@@ -1063,7 +1095,7 @@ class OPDSFeed:
         bookshelf_id = _optional_int(bookshelf_id)
 
         try:
-            q = self.fts.query(crosswalk=Crosswalk.OPDS)
+            q = self.fts.query(crosswalk=OPDS_SMALL)
             if query.strip():
                 q.search(query, search_type=SearchType.HYBRID)
             if title.strip():
@@ -1188,17 +1220,7 @@ if __name__ == "__main__":
             cherrypy.response.body = b""
             cherrypy.request.handler = None
 
-    cherrypy.tree.mount(
-        OPDSFeed(),
-        "/opds",
-        {
-            "/": {
-                "tools.cors.on": True,
-                "tools.json_out.on": True,
-                "request.methods_with_bodies": ("POST", "PUT", "PATCH"),
-            }
-        },
-    )
+    cherrypy.tree.mount(OPDSFeed(), "/opds", OPDS_MOUNT_CONFIG)
     try:
         cherrypy.engine.start()
         cherrypy.engine.block()

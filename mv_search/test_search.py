@@ -329,6 +329,23 @@ class CrosswalkTests(SearchTestBase):
         self.assertIn("metadata", first)
         self.assertIn("links", first)
         self.assertIn("title", first["metadata"])
+        self.assertIn("description", first["metadata"])
+
+    def test_crosswalk_opds_small(self):
+        data = self.s.execute(
+            self.s.query(Crosswalk.OPDS_SMALL).search("Shakespeare")[1, 5]
+        )
+        self.assertGreater(data["total"], 0)
+        first = data["results"][0]
+        self.assertIn("metadata", first)
+        self.assertIn("links", first)
+        self.assertIn("title", first["metadata"])
+        self.assertNotIn("description", first["metadata"])
+        self.assertEqual(first["links"][0]["rel"], "self")
+        self.assertIn("images", first)
+        self.assertEqual(len(first["images"]), 2)
+        self.assertEqual(first["images"][0]["rel"], "http://opds-spec.org/image")
+        self.assertEqual(first["images"][1]["rel"], "http://opds-spec.org/image/thumbnail")
 
 
 class PaginationTests(SearchTestBase):

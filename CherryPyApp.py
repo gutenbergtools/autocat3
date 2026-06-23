@@ -44,7 +44,7 @@ import diagnostics
 import Sitemap
 import Formatters
 from errors import ErrorPage
-from OPDS2 import OPDSFeed, _json_error_page
+from OPDS2 import OPDSFeed, OPDS_MOUNT_CONFIG, _json_error_page
 
 import Timer
 
@@ -334,22 +334,7 @@ def main():
                              'tools.staticdir.dir': install_dir + "/pics"}})
     # Mount OPDS feed at /opds
     cherrypy.log("Mounting OPDS feed", context='ENGINE', severity=logging.INFO)
-    cherrypy.tree.mount(OPDSFeed(), '/opds', {
-        '/': {
-            'tools.response_headers.on': True,
-            'tools.json_in.on': True,
-            'tools.json_out.on': True,
-            'error_page.404': _json_error_page,
-            'error_page.500': _json_error_page,
-            'error_page.default': _json_error_page,
-            'tools.response_headers.headers': [
-                ('Content-Type', 'application/opds+json'),
-                ('Access-Control-Allow-Origin', '*'),
-                ('Access-Control-Allow-Methods', 'GET'),
-                ('Access-Control-Allow-Headers', 'Accept, Content-Type'),
-            ],
-        }
-    })
+    cherrypy.tree.mount(OPDSFeed(), '/opds', OPDS_MOUNT_CONFIG)
 
     return app
 

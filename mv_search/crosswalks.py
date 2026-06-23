@@ -19,10 +19,22 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 SCHEME_LCC = "http://purl.org/dc/terms/LCC"
 SCHEME_GUTENBERG_SUBJECT = "https://www.gutenberg.org/ebooks/subject/"
 
+_OPDS_FEED_TYPE = "application/opds+json"
+_OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
+
 # PG-generated cover JPEGs (fixed output sizes from ebookconverter)
 _COVER_SPECS = (
     ("cover.medium", 200, 288, "http://opds-spec.org/image"),
     ("cover.small", 66, 95, "http://opds-spec.org/image/thumbnail"),
+)
+_ACQUISITION_FORMATS = (
+    "epub3.images",
+    "epub.images",
+    "epub.noimages",
+    "kindle.images",
+    "pdf.images",
+    "pdf.noimages",
+    "html",
 )
 
 
@@ -111,6 +123,187 @@ def _build_formats(row) -> List[Dict[str, Any]]:
     return results
 
 
+def _opds_book_metadata(row) -> Dict[str, Any]:
+    return {
+        "@type": "http://schema.org/Book",
+        "identifier": f"https://www.gutenberg.org/ebooks/{row.book_id}",
+        "title": row.title,
+        "language": (list(row.lang_codes) if row.lang_codes else ["en"])[0] or "en",
+    }
+
+
+def _opds_accessibility() -> Dict[str, Any]:
+    return {
+        "hazard": ["none"],
+        "accessMode": ["textual"],
+        "accessModeSufficient": [["textual"]],
+        "feature": ["displayTransformability", "unlocked"],
+    }
+
+
+def _opds_primary_author(
+    creators: List[Dict[str, Any]], *, with_search_link: bool = False
+) -> Optional[Dict[str, Any]]:
+    authors = [
+        c
+        for c in creators
+        if c.get("role", "").lower() in ("author", "aut", "creator", "cre", "")
+    ]
+    if not authors or not authors[0].get("name"):
+        return None
+    person = authors[0]
+    author = {"name": person["name"], "sortAs": person["name"]}
+    if with_search_link and person.get("id"):
+        author["identifier"] = f"https://www.gutenberg.org/ebooks/author/{person['id']}"
+        author["links"] = [
+            {"href": f"/opds/search?author_id={person['id']}", "type": _OPDS_FEED_TYPE}
+        ]
+    return author
+
+
+def _opds_description(row, creators, formatter: ContributorFormat) -> Optional[str]:
+    desc_parts = []
+    if creators:
+        desc_parts.append(
+            f"Creators: {formatter(all=True, strunk_join=True, pretty=True, dates=True, show_role=True)}"
+        )
+    summary = (list(row.summary) if row.summary else [None])[0]
+    if summary:
+        desc_parts.append(summary)
+    credits = (list(row.credits) if row.credits else [None])[0]
+    if credits:
+        desc_parts.append(f"Credits: {credits}")
+    if row.reading_level:
+        desc_parts.append(f"Reading Level: {row.reading_level}")
+    dcmitype = [t for t in (list(row.dcmitypes) if row.dcmitypes else []) if t]
+    if dcmitype:
+        desc_parts.append(f"Category: {', '.join(dcmitype)}")
+    desc_parts.append(f"Rights: {_rights_text(row.copyrighted)}")
+    desc_parts.append(f"Downloads: {row.downloads}")
+    if not desc_parts:
+        return None
+    return "<p>" + "</p><p>".join(html.escape(p) for p in desc_parts) + "</p>"
+
+
+def _opds_subject_metadata(
+    raw_subjects: List[Dict[str, Any]], locc_codes: List[str]
+) -> List[Dict[str, Any]]:
+    subject_objs = []
+    for s in raw_subjects:
+        if not s.get("subject"):
+            continue
+        subj = {"name": s["subject"]}
+        if s.get("id") is not None:
+            subj["scheme"] = SCHEME_GUTENBERG_SUBJECT
+            subj["code"] = str(s["id"])
+            subj["links"] = [
+                {"href": f"/opds/subjects?id={s['id']}", "type": _OPDS_FEED_TYPE}
+            ]
+        subject_objs.append(subj)
+    for code in locc_codes:
+        main_class = code[0].upper() if code else ""
+        label = _LOCC_LABELS.get(main_class, "")
+        name = f"{label}: {code}" if label else code
+        subject_objs.append({
+            "name": name,
+            "sortAs": code,
+            "scheme": SCHEME_LCC,
+            "code": code,
+            "links": [{"href": f"/opds/loccs?parent={code}", "type": _OPDS_FEED_TYPE}],
+        })
+    return subject_objs
+
+
+def _opds_self_link(book_id) -> Dict[str, str]:
+    return {
+        "rel": "self",
+        "href": f"/opds/publications?id={book_id}",
+        "type": _OPDS_PUBLICATION_TYPE,
+    }
+
+
+def _opds_acquisition_links(
+    formats: List[Dict[str, Any]], book_id
+) -> List[Dict[str, Any]]:
+    for try_format in _ACQUISITION_FORMATS:
+        for f in formats:
+            fn = f.get("filename")
+            if not fn:
+                continue
+            ftype = (f.get("filetype") or "").strip().lower()
+            if ftype != try_format:
+                continue
+            mtype = (f.get("mediatype") or "").strip()
+            link = {
+                "rel": "http://opds-spec.org/acquisition/open-access",
+                "href": _gutenberg_url(fn),
+                "type": mtype or "application/epub+zip",
+            }
+            if f.get("extent") is not None and f["extent"] > 0:
+                link["length"] = f["extent"]
+            if f.get("hr_filetype"):
+                link["title"] = f["hr_filetype"]
+            return [link]
+    return [{
+        "rel": "http://opds-spec.org/acquisition/open-access",
+        "href": f"https://www.gutenberg.org/ebooks/{book_id}",
+        "type": "text/html",
+    }]
+
+
+def _opds_bookshelf_links(bookshelves: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    links = []
+    for b in bookshelves:
+        name = b.get("bookshelf")
+        shelf_id = b.get("id")
+        if not name or shelf_id is None:
+            continue
+        title = name.removeprefix(BOOKSHELF_CATEGORY_PREFIX)
+        links.append({
+            "rel": "related",
+            "href": f"/opds/bookshelves?id={shelf_id}",
+            "type": _OPDS_FEED_TYPE,
+            "title": title,
+        })
+    return links
+
+
+def _opds_cover_images(formats: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    formats_by_type = {
+        (f.get("filetype") or "").strip(): f
+        for f in formats
+        if f.get("filename") and (f.get("filetype") or "").strip()
+    }
+    images = []
+    for filetype, width, height, rel in _COVER_SPECS:
+        f = formats_by_type.get(filetype)
+        if not f:
+            continue
+        mtype = (f.get("mediatype") or "").strip() or "image/jpeg"
+        images.append({
+            "href": _gutenberg_url(f["filename"]),
+            "type": mtype,
+            "width": width,
+            "height": height,
+            "rel": rel,
+        })
+    return images
+
+
+def _opds_row_parts(row):
+    """Shared row parsing for OPDS crosswalks."""
+    creators = _build_creators(row)
+    formats = _build_formats(row)
+    return {
+        "creators": creators,
+        "formats": formats,
+        "raw_subjects": _build_subjects(row),
+        "bookshelves": _build_bookshelves(row),
+        "locc_codes": [c for c in (list(row.locc_codes) if row.locc_codes else []) if c],
+        "formatter": ContributorFormat(creators),
+    }
+
+
 @format_dict_result
 def crosswalk_pg(row) -> Dict[str, Any]:
     creators = _build_creators(row)
@@ -144,160 +337,55 @@ def crosswalk_pg(row) -> Dict[str, Any]:
 
 
 @format_dict_result
-def crosswalk_opds(row) -> Dict[str, Any]:
-    """Transform row to OPDS 2.0 publication format."""
-    creators = _build_creators(row)
-    raw_subjects = _build_subjects(row)
-    bookshelves = _build_bookshelves(row)
-    formats = _build_formats(row)
-    locc_codes = [c for c in (list(row.locc_codes) if row.locc_codes else []) if c]
-    formatter = ContributorFormat(creators)
+def crosswalk_opds_small(row) -> Dict[str, Any]:
+    """Compact OPDS publication for catalog/search/browse lists."""
+    parts = _opds_row_parts(row)
+    metadata = _opds_book_metadata(row)
+    author = _opds_primary_author(parts["creators"])
+    if author:
+        metadata["author"] = author
 
-    metadata = {
-        "@type": "http://schema.org/Book",
-        "identifier": f"https://www.gutenberg.org/ebooks/{row.book_id}",
-        "title": row.title,
-        "language": (list(row.lang_codes) if row.lang_codes else ["en"])[0] or "en",
-        "accessibility": {
-            "hazard": ["none"],
-            "accessMode": ["textual"],
-            "accessModeSufficient": [["textual"]],
-            "feature": ["displayTransformability", "unlocked"],
-        },
+    result = {
+        "metadata": metadata,
+        "links": [_opds_self_link(row.book_id)],
     }
+    images = _opds_cover_images(parts["formats"])
+    if images:
+        result["images"] = images
+    return result
 
-    authors = [c for c in creators if c.get("role", "").lower() in ("author", "aut", "creator", "cre", "")]
-    if authors and authors[0].get("name"):
-        p = authors[0]
-        author = {"name": p["name"], "sortAs": p["name"]}
-        if p.get("id"):
-            author["identifier"] = f"https://www.gutenberg.org/ebooks/author/{p['id']}"
-            author["links"] = [{"href": f"/opds/search?author_id={p['id']}", "type": "application/opds+json"}]
+
+@format_dict_result
+def crosswalk_opds(row) -> Dict[str, Any]:
+    """Full OPDS publication for /opds/publications detail."""
+    parts = _opds_row_parts(row)
+    metadata = _opds_book_metadata(row)
+    metadata["accessibility"] = _opds_accessibility()
+
+    author = _opds_primary_author(parts["creators"], with_search_link=True)
+    if author:
         metadata["author"] = author
 
     if row.release_date:
         metadata["published"] = row.release_date
 
-    desc_parts = []
-    if creators:
-        desc_parts.append(f"Creators: {formatter(all=True, strunk_join=True, pretty=True, dates=True, show_role=True)}")
-    summary = (list(row.summary) if row.summary else [None])[0]
-    if summary:
-        desc_parts.append(summary)
-    credits = (list(row.credits) if row.credits else [None])[0]
-    if credits:
-        desc_parts.append(f"Credits: {credits}")
-    if row.reading_level:
-        desc_parts.append(f"Reading Level: {row.reading_level}")
-    dcmitype = [t for t in (list(row.dcmitypes) if row.dcmitypes else []) if t]
-    if dcmitype:
-        desc_parts.append(f"Category: {', '.join(dcmitype)}")
-    desc_parts.append(f"Rights: {_rights_text(row.copyrighted)}")
-    desc_parts.append(f"Downloads: {row.downloads}")
+    description = _opds_description(row, parts["creators"], parts["formatter"])
+    if description:
+        metadata["description"] = description
 
-    if desc_parts:
-        metadata["description"] = "<p>" + "</p><p>".join(html.escape(p) for p in desc_parts) + "</p>"
-
-    subject_objs = []
-    for s in raw_subjects:
-        if s.get("subject"):
-            subj = {"name": s["subject"]}
-            if s.get("id") is not None:
-                subj["scheme"] = SCHEME_GUTENBERG_SUBJECT
-                subj["code"] = str(s["id"])
-                subj["links"] = [{"href": f"/opds/subjects?id={s['id']}", "type": "application/opds+json"}]
-            subject_objs.append(subj)
-    for code in locc_codes:
-        main_class = code[0].upper() if code else ""
-        label = _LOCC_LABELS.get(main_class, "")
-        name = f"{label}: {code}" if label else code
-        subject_objs.append({
-            "name": name,
-            "sortAs": code,
-            "scheme": SCHEME_LCC,
-            "code": code,
-            "links": [{"href": f"/opds/loccs?parent={code}", "type": "application/opds+json"}],
-        })
+    subject_objs = _opds_subject_metadata(parts["raw_subjects"], parts["locc_codes"])
     if subject_objs:
         metadata["subject"] = subject_objs
 
     if row.publisher:
         metadata["publisher"] = row.publisher
 
-    links = [{
-        "rel": "self",
-        "href": f"/opds/publications?id={row.book_id}",
-        "type": "application/opds-publication+json",
-    }]
-    target_format = "epub3.images"
-    fallback_formats = ["epub.images", "epub.noimages", "kindle.images", "pdf.images", "pdf.noimages", "html"]
-    has_acquisition = False
-
-    for try_format in [target_format] + fallback_formats:
-        for f in formats:
-            fn = f.get("filename")
-            if not fn:
-                continue
-            ftype = (f.get("filetype") or "").strip().lower()
-            if ftype != try_format:
-                continue
-
-            mtype = (f.get("mediatype") or "").strip()
-            link = {
-                "rel": "http://opds-spec.org/acquisition/open-access",
-                "href": _gutenberg_url(fn),
-                "type": mtype or "application/epub+zip",
-            }
-            if f.get("extent") is not None and f["extent"] > 0:
-                link["length"] = f["extent"]
-            if f.get("hr_filetype"):
-                link["title"] = f["hr_filetype"]
-            links.append(link)
-            has_acquisition = True
-            break
-        if has_acquisition:
-            break
-
-    if not has_acquisition:
-        links.append({
-            "rel": "http://opds-spec.org/acquisition/open-access",
-            "href": f"https://www.gutenberg.org/ebooks/{row.book_id}",
-            "type": "text/html",
-        })
-
-    for b in bookshelves:
-        name = b.get("bookshelf")
-        shelf_id = b.get("id")
-        if not name or shelf_id is None:
-            continue
-        title = name.removeprefix(BOOKSHELF_CATEGORY_PREFIX)
-        links.append({
-            "rel": "related",
-            "href": f"/opds/bookshelves?id={shelf_id}",
-            "type": "application/opds+json",
-            "title": title,
-        })
+    links = [_opds_self_link(row.book_id)]
+    links.extend(_opds_acquisition_links(parts["formats"], row.book_id))
+    links.extend(_opds_bookshelf_links(parts["bookshelves"]))
 
     result = {"metadata": metadata, "links": links}
-
-    formats_by_type = {
-        (f.get("filetype") or "").strip(): f
-        for f in formats
-        if f.get("filename") and (f.get("filetype") or "").strip()
-    }
-    images = []
-    for filetype, width, height, rel in _COVER_SPECS:
-        f = formats_by_type.get(filetype)
-        if not f:
-            continue
-        mtype = (f.get("mediatype") or "").strip() or "image/jpeg"
-        images.append({
-            "href": _gutenberg_url(f["filename"]),
-            "type": mtype,
-            "width": width,
-            "height": height,
-            "rel": rel,
-        })
+    images = _opds_cover_images(parts["formats"])
     if images:
         result["images"] = images
 
@@ -307,4 +395,5 @@ def crosswalk_opds(row) -> Dict[str, Any]:
 CROSSWALK_MAP = {
     Crosswalk.PG: crosswalk_pg,
     Crosswalk.OPDS: crosswalk_opds,
+    Crosswalk.OPDS_SMALL: crosswalk_opds_small,
 }
