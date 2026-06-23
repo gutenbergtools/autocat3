@@ -101,6 +101,28 @@ def _build_bookshelves(row) -> List[Dict[str, Any]]:
     ]
 
 
+def _build_cover_formats(row) -> List[Dict[str, Any]]:
+    filenames = list(row.format_filenames) if row.format_filenames else []
+    filetypes = list(row.format_filetypes) if row.format_filetypes else []
+    mediatypes = list(row.format_mediatypes) if row.format_mediatypes else []
+    return [
+        {"filename": fn, "filetype": ftype, "mediatype": med}
+        for fn, ftype, med in zip_longest(filenames, filetypes, mediatypes, fillvalue=None)
+        if fn
+    ]
+
+
+def _build_creators_slim(row) -> List[Dict[str, Any]]:
+    names = list(row.creator_names) if row.creator_names else []
+    roles = list(row.creator_roles) if row.creator_roles else []
+    ids = list(row.creator_ids) if row.creator_ids else []
+    return [
+        {"id": cid, "name": name, "role": role or "Author"}
+        for name, role, cid in zip_longest(names, roles, ids, fillvalue=None)
+        if name
+    ]
+
+
 def _build_formats(row) -> List[Dict[str, Any]]:
     filenames = list(row.format_filenames) if row.format_filenames else []
     filetypes = list(row.format_filetypes) if row.format_filetypes else []
@@ -339,9 +361,8 @@ def crosswalk_pg(row) -> Dict[str, Any]:
 @format_dict_result
 def crosswalk_opds_small(row) -> Dict[str, Any]:
     """Compact OPDS publication for catalog/search/browse lists."""
-    parts = _opds_row_parts(row)
     metadata = _opds_book_metadata(row)
-    author = _opds_primary_author(parts["creators"])
+    author = _opds_primary_author(_build_creators_slim(row))
     if author:
         metadata["author"] = author
 
@@ -349,7 +370,7 @@ def crosswalk_opds_small(row) -> Dict[str, Any]:
         "metadata": metadata,
         "links": [_opds_self_link(row.book_id)],
     }
-    images = _opds_cover_images(parts["formats"])
+    images = _opds_cover_images(_build_cover_formats(row))
     if images:
         result["images"] = images
     return result

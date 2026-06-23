@@ -181,6 +181,31 @@ def _optional_int(value) -> Optional[int]:
     return int(value)
 
 
+def _search_scope(
+    q,
+    query: str,
+    title: str,
+    author: str,
+    locc: str,
+    author_id: Optional[int],
+    bookshelf_id: Optional[int],
+):
+    """Apply search-route filters (not lang or subject_id)."""
+    if query.strip():
+        q.search(query, search_type=SearchType.HYBRID)
+    if title.strip():
+        q.search(title, field=SearchField.TITLE, search_type=SearchType.HYBRID)
+    if author.strip():
+        q.search(author, field=SearchField.AUTHOR, search_type=SearchType.HYBRID)
+    if locc:
+        q.locc(locc)
+    if author_id is not None:
+        q.author_id(author_id)
+    if bookshelf_id is not None:
+        q.bookshelf_id(bookshelf_id)
+    return q
+
+
 def _sort_direction(order: str) -> Optional[SortDirection]:
     """Parse sort order string."""
     return {"asc": SortDirection.ASC, "desc": SortDirection.DESC}.get(order)
@@ -279,22 +304,6 @@ class OPDSFeed:
             return self.fts.count(q)
         except Exception:
             return 0
-
-    def _top_subjects(self, q) -> Optional[List[Dict]]:
-        """Top 10 subjects across all matching books (no book sampling)."""
-        try:
-            return self.fts.get_top_subjects_for_query(q, limit=10)
-        except Exception as e:
-            cherrypy.log(f"Top subjects error: {e}")
-            return None
-
-    def _top_languages(self, q) -> Optional[List[Dict]]:
-        """All languages present across all matching books (no book sampling)."""
-        try:
-            return self.fts.get_languages_for_query(q)
-        except Exception as e:
-            cherrypy.log(f"Top languages error: {e}")
-            return None
 
     def _locc_counts(self, parent: str, children: List[Dict]) -> Dict[str, int]:
         """Per-child book counts via FTS. Skipped at the top level, where each
@@ -705,9 +714,9 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/bookshelves", base)
         facet_url = _make_facet_url("/opds/bookshelves", base)
 
-        subjects_q = self.fts.query().bookshelf_id(shelf_id)
-        self._filter(subjects_q, lang)
-        lang_q = self.fts.query().bookshelf_id(shelf_id)
+        facet_counts = self.fts.get_opds_facets(
+            lambda q: q.bookshelf_id(shelf_id), lang=lang
+        )
 
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
         feed = {
@@ -730,8 +739,8 @@ class OPDSFeed:
                 lang,
                 sort,
                 sort_order,
-                self._top_subjects(subjects_q),
-                self._top_languages(lang_q),
+                facet_counts["subjects"],
+                facet_counts["languages"],
                 {"bookshelf_id": shelf_id},
             ),
         }
@@ -905,9 +914,7 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/loccs", base)
         facet_url = _make_facet_url("/opds/loccs", base)
 
-        subjects_q = self.fts.query().locc(parent)
-        self._filter(subjects_q, lang)
-        lang_q = self.fts.query().locc(parent)
+        facet_counts = self.fts.get_opds_facets(lambda q: q.locc(parent), lang=lang)
 
         feed = {
             "metadata": {
@@ -929,8 +936,8 @@ class OPDSFeed:
                 lang,
                 sort,
                 sort_order,
-                self._top_subjects(subjects_q),
-                self._top_languages(lang_q),
+                facet_counts["subjects"],
+                facet_counts["languages"],
                 {"locc": parent},
             ),
         }
@@ -1021,7 +1028,11 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/subjects", base)
         facet_url = _make_facet_url("/opds/subjects", base)
 
-        lang_q = self.fts.query().subject_id(subject_id)
+        facet_counts = self.fts.get_opds_facets(
+            lambda q: q.subject_id(subject_id),
+            lang=lang,
+            include_subjects=False,
+        )
 
         feed = {
             "metadata": {
@@ -1043,7 +1054,7 @@ class OPDSFeed:
                 lang,
                 sort,
                 sort_order,
-                languages=self._top_languages(lang_q),
+                languages=facet_counts["languages"],
             ),
         }
         feed["links"].extend(
@@ -1095,28 +1106,15 @@ class OPDSFeed:
         bookshelf_id = _optional_int(bookshelf_id)
 
         try:
+            scope = lambda q: _search_scope(
+                q, query, title, author, locc, author_id, bookshelf_id
+            )
+            facet_counts = self.fts.get_opds_facets(
+                scope, lang=lang, subject_id=subject_id
+            )
+
             q = self.fts.query(crosswalk=OPDS_SMALL)
-            if query.strip():
-                q.search(query, search_type=SearchType.HYBRID)
-            if title.strip():
-                q.search(
-                    title, field=SearchField.TITLE, search_type=SearchType.HYBRID
-                )
-            if author.strip():
-                q.search(
-                    author, field=SearchField.AUTHOR, search_type=SearchType.HYBRID
-                )
-
-            if locc:
-                q.locc(locc)
-            if author_id is not None:
-                q.author_id(author_id)
-            if bookshelf_id is not None:
-                q.bookshelf_id(bookshelf_id)
-
-            languages = self._top_languages(q)
-            subjects = self._top_subjects(q)
-
+            scope(q)
             if lang:
                 q.lang(lang)
             if subject_id is not None:
@@ -1150,7 +1148,7 @@ class OPDSFeed:
 
         # Scope carried when narrowing to a Top Subject (subject_id is set by the
         # facet itself, so it's excluded here to allow switching subjects).
-        scope = {
+        search_scope = {
             "query": query,
             "title": title,
             "author": author,
@@ -1159,8 +1157,9 @@ class OPDSFeed:
             "bookshelf_id": bookshelf_id,
         }
         facets = self._facets(
-            facet_url, query, lang, sort, sort_order, subjects, languages,
-            scope, subject_id=subject_id,
+            facet_url, query, lang, sort, sort_order,
+            facet_counts["subjects"], facet_counts["languages"],
+            search_scope, subject_id=subject_id,
         )
 
         feed = {

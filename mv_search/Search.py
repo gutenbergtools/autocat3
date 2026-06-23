@@ -4,7 +4,8 @@ Search.py — Zachary Rosario
 Query builder and search interface for the mv_books_dc materialized view.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+import logging
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
@@ -52,6 +53,10 @@ _SELECT = """book_id, title, downloads, CAST(release_date AS text) AS release_da
     locc_codes, is_audio, dcmitypes, publisher, summary, credits,
     reading_level, coverpage, format_filenames, format_filetypes,
     format_hr_filetypes, format_mediatypes, format_extents"""
+
+_SELECT_OPDS_SMALL = """book_id, title, lang_codes,
+    creator_ids, creator_names, creator_roles,
+    format_filenames, format_filetypes, format_mediatypes"""
 
 _SUBQUERY = """book_id, title, downloads, CAST(release_date AS text) AS release_date,
     copyrighted, lang_codes, is_audio,
@@ -407,32 +412,59 @@ class SearchQuery:
         filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
         return search_sql, filter_sql
 
+    def _where_sql(self, param_prefix: str = "") -> Tuple[str, Dict]:
+        """WHERE clause and bind params (for facet CTEs)."""
+        params = self._params()
+        search_sql, filter_sql = self._where_parts()
+        where_parts = [p for p in (search_sql, filter_sql) if p]
+        if not where_parts:
+            return "", dict(params)
+
+        if param_prefix:
+            mapping = {old: f"{param_prefix}{old}" for old in params}
+            new_params = {mapping[k]: v for k, v in params.items()}
+            remapped_parts = []
+            for part in where_parts:
+                s = part
+                for old in sorted(mapping, key=len, reverse=True):
+                    s = s.replace(f":{old}", f":{mapping[old]}")
+                remapped_parts.append(s)
+            return f"WHERE {' AND '.join(remapped_parts)}", new_params
+
+        return f"WHERE {' AND '.join(where_parts)}", dict(params)
+
+    def _result_select(self) -> str:
+        if self._crosswalk == Crosswalk.OPDS_SMALL:
+            return _SELECT_OPDS_SMALL
+        return _SELECT
+
     def build(self, *, with_count: bool = False) -> Tuple[str, Dict]:
         params = self._params()
         order = self._order_sql(params)
         limit, offset = self._page_size, (self._page - 1) * self._page_size
         total_col = ", COUNT(*) OVER() AS total_count" if with_count else ""
+        select_cols = self._result_select()
 
         search_sql, filter_sql = self._where_parts()
 
         if search_sql and filter_sql:
             sql = (
-                f"SELECT {_SELECT}{total_col} FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
+                f"SELECT {select_cols}{total_col} FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
                 f"WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
             )
         elif search_sql:
             sql = (
-                f"SELECT {_SELECT}{total_col} FROM mv_books_dc WHERE {search_sql} "
+                f"SELECT {select_cols}{total_col} FROM mv_books_dc WHERE {search_sql} "
                 f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
             )
         elif filter_sql:
             sql = (
-                f"SELECT {_SELECT}{total_col} FROM mv_books_dc WHERE {filter_sql} "
+                f"SELECT {select_cols}{total_col} FROM mv_books_dc WHERE {filter_sql} "
                 f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
             )
         else:
             sql = (
-                f"SELECT {_SELECT}{total_col} FROM mv_books_dc "
+                f"SELECT {select_cols}{total_col} FROM mv_books_dc "
                 f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
             )
 
@@ -616,27 +648,68 @@ class FullTextSearch:
 
     def get_facets_for_query(
         self,
-        q: "SearchQuery",
+        subject_q: "SearchQuery",
+        language_q: Optional["SearchQuery"] = None,
         *,
         subject_limit: Optional[int] = None,
         language_limit: Optional[int] = None,
-        max_books: Optional[int] = None,
         include_subjects: bool = True,
         include_languages: bool = True,
     ) -> Dict[str, List[Dict]]:
-        """Subjects and languages from one matched-books scan."""
+        """Subject and language facets in one round-trip.
+
+        subject_q includes active lang (if any), not subject_id.
+        language_q includes subject_id (if any), not lang.
+        """
         if not include_subjects and not include_languages:
             return {"subjects": [], "languages": []}
 
-        params = q._params()
-        search_sql, filter_sql = q._where_parts()
-        where_parts = [p for p in (search_sql, filter_sql) if p]
-        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+        if language_q is None:
+            language_q = subject_q
 
-        sample_clause = ""
-        if max_books is not None:
-            params["max_books"] = max(1, int(max_books))
-            sample_clause = f"ORDER BY {q._order_sql(params)} LIMIT :max_books"
+        sub_where, sub_params = subject_q._where_sql()
+        lang_where, lang_params = language_q._where_sql()
+        dual_base = sub_where != lang_where or sub_params != lang_params
+        if dual_base and include_languages:
+            lang_where, lang_params = language_q._where_sql("lq_")
+
+        params = {}
+        if include_subjects:
+            params.update(sub_params)
+        if include_languages:
+            params.update(lang_params)
+        cte_parts = []
+        subject_from = ""
+        language_from = ""
+
+        if include_subjects and include_languages and not dual_base:
+            cte_parts.append(
+                f"""matched_books AS (
+                SELECT book_id, lang_codes
+                FROM mv_books_dc
+                {sub_where}
+            )"""
+            )
+            subject_from = language_from = "matched_books mb"
+        else:
+            if include_subjects:
+                cte_parts.append(
+                    f"""subject_books AS (
+                    SELECT book_id
+                    FROM mv_books_dc
+                    {sub_where}
+                )"""
+                )
+                subject_from = "subject_books mb"
+            if include_languages:
+                cte_parts.append(
+                    f"""language_books AS (
+                    SELECT book_id, lang_codes
+                    FROM mv_books_dc
+                    {lang_where}
+                )"""
+                )
+                language_from = "language_books mb"
 
         subject_limit_clause = ""
         if subject_limit is not None:
@@ -651,13 +724,13 @@ class FullTextSearch:
         parts = []
         if include_subjects:
             parts.append(
-                f"""
+                f"""(
                 SELECT
                     'subject' AS facet,
                     s.pk::text AS key,
                     s.subject AS label,
                     COUNT(*) AS count
-                FROM matched_books mb
+                FROM {subject_from}
                 JOIN mn_books_subjects mbs
                     ON mbs.fk_books = mb.book_id
                 JOIN subjects s
@@ -667,34 +740,29 @@ class FullTextSearch:
                     s.subject
                 ORDER BY
                     count DESC
-                {subject_limit_clause}"""
+                {subject_limit_clause}
+            )"""
             )
         if include_languages:
             parts.append(
-                f"""
+                f"""(
                 SELECT
                     'language' AS facet,
                     lang AS key,
                     NULL::text AS label,
                     COUNT(*) AS count
-                FROM matched_books mb,
+                FROM {language_from},
                     unnest(mb.lang_codes) AS lang
                 GROUP BY
                     lang
                 ORDER BY
                     count DESC
-                {language_limit_clause}"""
+                {language_limit_clause}
+            )"""
             )
 
         sql = f"""
-            WITH matched_books AS (
-                SELECT
-                    book_id,
-                    lang_codes
-                FROM mv_books_dc
-                {where_clause}
-                {sample_clause}
-            )
+            WITH {", ".join(cte_parts)}
             {" UNION ALL ".join(parts)}
         """
 
@@ -711,35 +779,39 @@ class FullTextSearch:
 
         return {"subjects": subjects, "languages": languages}
 
-    def get_top_subjects_for_query(
+    def get_opds_facets(
         self,
-        q: "SearchQuery",
-        limit: Optional[int] = None,
-        max_books: Optional[int] = None,
-    ) -> List[Dict]:
-        """Get top subjects from a search result set for dynamic facets."""
-        return self.get_facets_for_query(
-            q,
-            subject_limit=limit,
-            max_books=max_books,
-            include_subjects=True,
-            include_languages=False,
-        )["subjects"]
+        scope_fn: Callable[["SearchQuery"], "SearchQuery"],
+        lang: str = "",
+        subject_id: Optional[int] = None,
+        *,
+        subject_limit: int = 10,
+        include_subjects: bool = True,
+    ) -> Dict[str, Optional[List[Dict]]]:
+        """OPDS facet counts in one query.
 
-    def get_languages_for_query(
-        self,
-        q: "SearchQuery",
-        limit: Optional[int] = None,
-        max_books: Optional[int] = None,
-    ) -> List[Dict]:
-        """Get languages present in a search result set for dynamic facets."""
-        return self.get_facets_for_query(
-            q,
-            language_limit=limit,
-            max_books=max_books,
-            include_subjects=False,
-            include_languages=True,
-        )["languages"]
+        Subjects use scope + lang; languages use scope + subject_id.
+        """
+        try:
+            subject_q = scope_fn(self.query())
+            if include_subjects and lang:
+                subject_q.lang(lang)
+            language_q = scope_fn(self.query())
+            if subject_id is not None:
+                language_q.subject_id(subject_id)
+            data = self.get_facets_for_query(
+                subject_q,
+                language_q,
+                subject_limit=subject_limit,
+                include_subjects=include_subjects,
+            )
+            return {
+                "subjects": data["subjects"] if include_subjects else None,
+                "languages": data["languages"],
+            }
+        except Exception:
+            logging.getLogger(__name__).exception("OPDS facet query failed")
+            return {"subjects": None, "languages": None}
 
     def get_locc_children(self, parent: Union[LoCCMainClass, str]) -> List[Dict]:
         """Get LoCC children for a parent code."""
