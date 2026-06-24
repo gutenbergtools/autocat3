@@ -163,24 +163,62 @@ def _opds_accessibility() -> Dict[str, Any]:
     }
 
 
-def _opds_primary_author(
-    creators: List[Dict[str, Any]], *, with_search_link: bool = False
-) -> Optional[Dict[str, Any]]:
-    authors = [
-        c
-        for c in creators
-        if c.get("role", "").lower() in ("author", "aut", "creator", "cre", "")
-    ]
-    if not authors or not authors[0].get("name"):
-        return None
-    person = authors[0]
-    author = {"name": person["name"], "sortAs": person["name"]}
+_OPDS_ROLE_FIELDS = {
+    "author": "author",
+    "creator": "author",
+    "dubious author": "author",
+    "collaborator": "author",
+    "translator": "translator",
+    "editor": "editor",
+    "artist": "artist",
+    "illustrator": "illustrator",
+    "letterer": "letterer",
+    "penciler": "penciler",
+    "colorist": "colorist",
+    "inker": "inker",
+    "narrator": "narrator",
+}
+
+
+def _build_opds_contributor_entry(
+    person: Dict[str, Any], *, with_search_link: bool = False
+) -> Dict[str, Any]:
+    contributor = {"name": person["name"], "sortAs": person["name"]}
     if with_search_link and person.get("id"):
-        author["identifier"] = f"https://www.gutenberg.org/ebooks/author/{person['id']}"
-        author["links"] = [
+        contributor["identifier"] = (
+            f"https://www.gutenberg.org/ebooks/author/{person['id']}"
+        )
+        contributor["links"] = [
             {"href": f"/opds/search?author_id={person['id']}", "type": _OPDS_FEED_TYPE}
         ]
-    return author
+    return contributor
+
+
+def _set_publication_contributors(
+    publication_metadata: Dict[str, Any],
+    creators: List[Dict[str, Any]],
+    *,
+    with_search_link: bool = False,
+) -> None:
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for person in creators:
+        if not person.get("name"):
+            continue
+        role = (person.get("role") or "author").strip().lower()
+        field = _OPDS_ROLE_FIELDS.get(role, "contributor")
+        grouped.setdefault(field, []).append(
+            _build_opds_contributor_entry(person, with_search_link=with_search_link)
+        )
+
+    for field, entries in grouped.items():
+        publication_metadata[field] = entries[0] if len(entries) == 1 else entries
+
+    if "author" not in grouped:
+        publication_metadata["author"] = (
+            _build_opds_contributor_entry(creators[0], with_search_link=with_search_link)
+            if creators
+            else {"name": "Anonymous", "sortAs": "Anonymous"}
+        )
 
 
 def _opds_description(row, creators, formatter: ContributorFormat) -> Optional[str]:
@@ -231,7 +269,7 @@ def _opds_subject_metadata(
             "sortAs": code,
             "scheme": SCHEME_LCC,
             "code": code,
-            "links": [{"href": f"/opds/loccs?parent={code}", "type": _OPDS_FEED_TYPE}],
+            "links": [{"href": f"/opds/search?locc={code}", "type": _OPDS_FEED_TYPE}],
         })
     return subject_objs
 
@@ -361,13 +399,11 @@ def crosswalk_pg(row) -> Dict[str, Any]:
 @format_dict_result
 def crosswalk_opds_small(row) -> Dict[str, Any]:
     """Compact OPDS publication for catalog/search/browse lists."""
-    metadata = _opds_book_metadata(row)
-    author = _opds_primary_author(_build_creators_slim(row))
-    if author:
-        metadata["author"] = author
+    publication_metadata = _opds_book_metadata(row)
+    _set_publication_contributors(publication_metadata, _build_creators_slim(row))
 
     result = {
-        "metadata": metadata,
+        "metadata": publication_metadata,
         "links": [_opds_self_link(row.book_id)],
     }
     images = _opds_cover_images(_build_cover_formats(row))
@@ -380,32 +416,32 @@ def crosswalk_opds_small(row) -> Dict[str, Any]:
 def crosswalk_opds(row) -> Dict[str, Any]:
     """Full OPDS publication for /opds/publications detail."""
     parts = _opds_row_parts(row)
-    metadata = _opds_book_metadata(row)
-    metadata["accessibility"] = _opds_accessibility()
+    publication_metadata = _opds_book_metadata(row)
+    publication_metadata["accessibility"] = _opds_accessibility()
 
-    author = _opds_primary_author(parts["creators"], with_search_link=True)
-    if author:
-        metadata["author"] = author
+    _set_publication_contributors(
+        publication_metadata, parts["creators"], with_search_link=True
+    )
 
     if row.release_date:
-        metadata["published"] = row.release_date
+        publication_metadata["published"] = row.release_date
 
     description = _opds_description(row, parts["creators"], parts["formatter"])
     if description:
-        metadata["description"] = description
+        publication_metadata["description"] = description
 
     subject_objs = _opds_subject_metadata(parts["raw_subjects"], parts["locc_codes"])
     if subject_objs:
-        metadata["subject"] = subject_objs
+        publication_metadata["subject"] = subject_objs
 
     if row.publisher:
-        metadata["publisher"] = row.publisher
+        publication_metadata["publisher"] = row.publisher
 
     links = [_opds_self_link(row.book_id)]
     links.extend(_opds_acquisition_links(parts["formats"], row.book_id))
     links.extend(_opds_bookshelf_links(parts["bookshelves"]))
 
-    result = {"metadata": metadata, "links": links}
+    result = {"metadata": publication_metadata, "links": links}
     images = _opds_cover_images(parts["formats"])
     if images:
         result["images"] = images

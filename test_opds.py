@@ -26,15 +26,13 @@ from OPDS2 import OPDSFeed, OPDS_MOUNT_CONFIG
 ROOT = os.path.dirname(os.path.abspath(__file__))
 TEST_CONF = os.path.join(ROOT, "test.conf")
 
-# Match CherryPy.conf production server/DB pool limits.
+# CherryPy.conf production server/DB pool limits.
 PROD_THREAD_POOL = 20
 PROD_POOL_SIZE = 20
 PROD_MAX_OVERFLOW = 0
 PROD_POOL_TIMEOUT = 3
 
-# HTTP load per route: CLIENT_CONCURRENCY parallel requests at a time,
-# REQUESTS_PER_ROUTE total timed (set equal for a single prod-like burst).
-REQUESTS_PER_ROUTE = 20
+REQUESTS_PER_ROUTE = 1000
 CLIENT_CONCURRENCY = 20
 WARMUP_REQUESTS = 2
 
@@ -53,12 +51,10 @@ LOAD_ROUTES = (
     ("/opds/search?query=Shakespeare", "search"),
     ("/opds/search?query=Shakespeare&page=2", "search page 2"),
     ("/opds/publications?id=1342", "publication"),
-    # category= uses CuratedBookshelves enum name (see OPDS2 index links), not genre label.
     ("/opds/bookshelves?category=LITERATURE", "bookshelf category"),
     ("/opds/bookshelves?id=68", "bookshelf id"),
     ("/opds/subjects?id=1", "subject browse"),
     ("/opds/loccs?parent=P", "locc nav P"),
-    # PN leaf: ~1.1k books (~44 pages). PS is ~12k and skews the benchmark.
     ("/opds/loccs?parent=PN", "locc leaf PN"),
     ("/opds/loccs", "loccs index"),
 )
@@ -103,7 +99,7 @@ def http_get(base_url, path, timeout=60):
 
 
 def warmup_route(base_url, path):
-    """Prime caches and DB plans before timed requests (sequential, like first visitors)."""
+    """Prime caches and DB plans before timed requests."""
     for _ in range(WARMUP_REQUESTS):
         response = http_get(base_url, path)
         if response.status_code != 200:

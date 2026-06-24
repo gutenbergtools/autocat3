@@ -20,6 +20,7 @@ from .constants import (
     SearchType,
 )
 from .Search import FullTextSearch
+from .crosswalks import _set_publication_contributors
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_CONF = os.path.join(ROOT, "test.conf")
@@ -346,6 +347,36 @@ class CrosswalkTests(SearchTestBase):
         self.assertEqual(len(first["images"]), 2)
         self.assertEqual(first["images"][0]["rel"], "http://opds-spec.org/image")
         self.assertEqual(first["images"][1]["rel"], "http://opds-spec.org/image/thumbnail")
+
+
+class OpdsContributorTests(unittest.TestCase):
+    def _metadata_for(self, *creators, with_search_link=False):
+        publication_metadata = {}
+        _set_publication_contributors(
+            publication_metadata, list(creators), with_search_link=with_search_link
+        )
+        return publication_metadata
+
+    def test_author_and_introduction_contributor(self):
+        metadata = self._metadata_for(
+            {"id": 68, "name": "Austen, Jane", "role": "Author"},
+            {"id": 77, "name": "Someone Else", "role": "Author of introduction, etc."},
+        )
+        self.assertEqual(metadata["author"]["name"], "Austen, Jane")
+        self.assertEqual(metadata["contributor"]["name"], "Someone Else")
+
+    def test_no_author_uses_first_creator(self):
+        metadata = self._metadata_for(
+            {"id": 55321, "name": "Renouf, P. Le Page", "role": "Translator"},
+            {"id": 55322, "name": "Naville, Edouard", "role": "Translator"},
+            with_search_link=True,
+        )
+        self.assertEqual(metadata["author"]["name"], "Renouf, P. Le Page")
+        self.assertEqual(len(metadata["translator"]), 2)
+        self.assertIn("links", metadata["translator"][0])
+
+    def test_no_creators_uses_anonymous(self):
+        self.assertEqual(self._metadata_for()["author"]["name"], "Anonymous")
 
 
 class PaginationTests(SearchTestBase):
