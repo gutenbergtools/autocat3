@@ -94,49 +94,6 @@ class SearchPage(Page):
         """ Give derived class a chance to react if no records were found. """
         os.entries.insert(0, self.no_records_found(os))
 
-
-    # this method is turned off; should remove it at some point
-    def output_suggestions(self, os, max_suggestions_per_word=3, max_suggestions=9):
-        """ Make suggestions. """
-
-        # similarity == matching_trigrams / (len1 + len2 - matching_trigrams)
-
-        sql_query = """
-            SELECT
-               word,
-               nentry,
-               similarity (word, %(word)s) AS sml
-            FROM terms
-            WHERE word %% %(word)s
-            ORDER BY sml DESC, nentry DESC LIMIT %(suggestions)s;"""
-
-        q = os.query.lower()
-        words = q.split()
-        words.sort(key=len, reverse=True) # only suggest on the longest words
-        sugg = []
-        done_words = []
-        for word in words:
-            if len(word) > 3 and word not in done_words:
-                done_words.append(word)
-                try:
-                    rows = BaseSearcher.SQLSearcher().execute(
-                        sql_query,
-                        {'word': word, 'suggestions': max_suggestions_per_word + 1})
-                    for i, row in enumerate(rows):
-                        if i >= max_suggestions_per_word:
-                            break
-                        corr = row.word
-                        if corr != word and (word, corr) not in sugg:
-                            sugg.append((word, corr))
-                except DatabaseError:
-                    pass
-            if len(sugg) > max_suggestions:
-                break
-        for word, corr in reversed(sugg):
-            os.entries.insert(0, self.did_you_mean(os, corr, q.replace(word, corr)))
-
-
-
     def index(self, **kwargs):
         """ Output a search result page. """
 
@@ -187,10 +144,6 @@ class SearchPage(Page):
         # warn user about no records found
         if os.total_results == 0:
             self.nothing_found(os)
-
-        # suggest alternate queries
-        #if os.total_results < 5:
-        #    self.output_suggestions(os)
 
         os.finalize()
         self.finalize(os)
