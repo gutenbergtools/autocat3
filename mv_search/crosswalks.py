@@ -72,7 +72,7 @@ def _build_creators(row) -> List[Dict[str, Any]]:
         creators.append({
             "id": cid,
             "name": name,
-            "role": role or "Author",
+            "role": role,
             "born_floor": bf,
             "born_ceil": bc,
             "died_floor": df,
@@ -117,7 +117,7 @@ def _build_creators_slim(row) -> List[Dict[str, Any]]:
     roles = list(row.creator_roles) if row.creator_roles else []
     ids = list(row.creator_ids) if row.creator_ids else []
     return [
-        {"id": cid, "name": name, "role": role or "Author"}
+        {"id": cid, "name": name, "role": role}
         for name, role, cid in zip_longest(names, roles, ids, fillvalue=None)
         if name
     ]
@@ -163,11 +163,13 @@ def _opds_accessibility() -> Dict[str, Any]:
     }
 
 
+# Readium Web Publication Manifest contributor fields.
+# creator_roles in mv_books_dc uses full MARC relator labels (e.g. "Author",
+# "Illustrator"). Roles without a direct WPM field map to "contributor".
 _OPDS_ROLE_FIELDS = {
     "author": "author",
     "creator": "author",
     "dubious author": "author",
-    "collaborator": "author",
     "translator": "translator",
     "editor": "editor",
     "artist": "artist",
@@ -176,8 +178,14 @@ _OPDS_ROLE_FIELDS = {
     "penciler": "penciler",
     "colorist": "colorist",
     "inker": "inker",
-    "narrator": "narrator",
 }
+
+
+def _opds_role_field(role: Optional[str]) -> str:
+    """Map a mv_books_dc creator_roles label to a WPM metadata field."""
+    if not role:
+        return "contributor"
+    return _OPDS_ROLE_FIELDS.get(role.strip().lower(), "contributor")
 
 
 def _build_opds_contributor_entry(
@@ -204,21 +212,13 @@ def _set_publication_contributors(
     for person in creators:
         if not person.get("name"):
             continue
-        role = (person.get("role") or "author").strip().lower()
-        field = _OPDS_ROLE_FIELDS.get(role, "contributor")
+        field = _opds_role_field(person.get("role"))
         grouped.setdefault(field, []).append(
             _build_opds_contributor_entry(person, with_search_link=with_search_link)
         )
 
     for field, entries in grouped.items():
         publication_metadata[field] = entries[0] if len(entries) == 1 else entries
-
-    if "author" not in grouped:
-        publication_metadata["author"] = (
-            _build_opds_contributor_entry(creators[0], with_search_link=with_search_link)
-            if creators
-            else {"name": "Anonymous", "sortAs": "Anonymous"}
-        )
 
 
 def _opds_description(row, creators, formatter: ContributorFormat) -> Optional[str]:

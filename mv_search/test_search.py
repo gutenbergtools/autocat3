@@ -365,18 +365,32 @@ class OpdsContributorTests(unittest.TestCase):
         self.assertEqual(metadata["author"]["name"], "Austen, Jane")
         self.assertEqual(metadata["contributor"]["name"], "Someone Else")
 
-    def test_no_author_uses_first_creator(self):
+    def test_translator_only_no_author_field(self):
         metadata = self._metadata_for(
             {"id": 55321, "name": "Renouf, P. Le Page", "role": "Translator"},
             {"id": 55322, "name": "Naville, Edouard", "role": "Translator"},
             with_search_link=True,
         )
-        self.assertEqual(metadata["author"]["name"], "Renouf, P. Le Page")
+        self.assertNotIn("author", metadata)
         self.assertEqual(len(metadata["translator"]), 2)
         self.assertIn("links", metadata["translator"][0])
 
-    def test_no_creators_uses_anonymous(self):
-        self.assertEqual(self._metadata_for()["author"]["name"], "Anonymous")
+    def test_narrator_maps_to_contributor(self):
+        metadata = self._metadata_for(
+            {"id": 1, "name": "Doe, Jane", "role": "Narrator"},
+        )
+        self.assertNotIn("author", metadata)
+        self.assertEqual(metadata["contributor"]["name"], "Doe, Jane")
+
+    def test_collaborator_maps_to_contributor(self):
+        metadata = self._metadata_for(
+            {"id": 1, "name": "Smith, John", "role": "Collaborator"},
+        )
+        self.assertNotIn("author", metadata)
+        self.assertEqual(metadata["contributor"]["name"], "Smith, John")
+
+    def test_no_creators_omits_author(self):
+        self.assertNotIn("author", self._metadata_for())
 
 
 class PaginationTests(SearchTestBase):
