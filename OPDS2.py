@@ -124,6 +124,17 @@ def _nav(href: str, title: str) -> Dict:
     return {"href": href, "title": title, "type": OPDS_TYPE, "rel": "subsection"}
 
 
+def _navigation_group() -> Dict:
+    """Homepage browse entry points."""
+    return {
+        "metadata": {"title": "Navigation", "numberOfItems": 2},
+        "navigation": [
+            _nav("/opds/loccs", "Browse Subjects"),
+            _nav("/opds/bookshelves", "Browse Bookshelves"),
+        ],
+    }
+
+
 def _facet(href: str, title: str, active: bool) -> Dict:
     """Create a facet link. Includes 'rel': 'self' only if active."""
     link = {"href": href, "type": OPDS_TYPE, "title": title}
@@ -305,20 +316,18 @@ class OPDSFeed:
         except Exception:
             return 0
 
-    def _locc_counts(self, parent: str, children: List[Dict]) -> Dict[str, int]:
-        """Per-child book counts for LoCC nav (skipped at top level)."""
-        if not parent:
-            return {}
-        counts = {}
-        for child in children:
-            code = child["code"]
-            try:
-                counts[code] = self.fts.count(self.fts.query().locc(code))
-            except Exception as e:
-                cherrypy.log(
-                    f"LoCC nav count error ({code}): {e}", severity=logging.WARNING
-                )
-        return counts
+    def _locc_nav_item_count(self, code: str) -> Optional[int]:
+        """Sub-subject count when a code has children; book count at leaves."""
+        try:
+            sub = self.fts.get_locc_children(code)
+            if sub:
+                return len(sub)
+            return self.fts.count(self.fts.query().locc(code))
+        except Exception as e:
+            cherrypy.log(
+                f"LoCC nav count error ({code}): {e}", severity=logging.WARNING
+            )
+            return None
 
     # Feed Building
     def _pagination_links(
@@ -605,7 +614,7 @@ class OPDSFeed:
             lambda c=cat: _category_group(c) for cat in CuratedBookshelves
         ]
 
-        groups = []
+        groups = [_navigation_group()]
         for fn in tasks:
             try:
                 result = fn()
@@ -620,9 +629,6 @@ class OPDSFeed:
                 _link("self", "/opds/"),
                 _link("start", "/opds/"),
                 _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
-            "navigation": [
-                _nav("/opds/loccs", "Browse Subjects"),
             ],
             "groups": groups,
         }
@@ -654,6 +660,20 @@ class OPDSFeed:
         if category is not None:
             return self._bookshelf_category(category)
 
+        return self._cache_feed(
+            "bookshelf_nav:_root",
+            self._build_bookshelf_navigation,
+            store=lambda feed: bool(feed.get("navigation")),
+        )
+
+    def _build_bookshelf_navigation(self) -> Dict:
+        """Build curated bookshelf category navigation."""
+        nav = []
+        for cat in CuratedBookshelves:
+            nav_item = _nav(f"/opds/bookshelves?category={cat.name}", cat.genre)
+            nav_item["properties"] = {"numberOfItems": len(cat.shelf_names)}
+            nav.append(nav_item)
+
         return {
             "metadata": {
                 "title": "Project Gutenberg",
@@ -664,13 +684,38 @@ class OPDSFeed:
                 _link("start", "/opds/"),
                 _link("up", "/opds/"),
             ],
-            "navigation": [
-                {
-                    **_nav(f"/opds/bookshelves?category={cat.name}", cat.genre),
-                    "properties": {"numberOfItems": len(cat.shelf_names)},
-                }
-                for cat in CuratedBookshelves
+            "navigation": nav,
+        }
+
+    def _build_bookshelf_category_navigation(
+        self, category: str, cat: CuratedBookshelves
+    ) -> Dict:
+        """Build sub-shelf navigation for a curated category."""
+        nav = []
+        for sid, sname in self.fts.curated_shelves(cat):
+            nav_item = _nav(f"/opds/bookshelves?id={sid}", sname)
+            try:
+                count = self.fts.count(self.fts.query().bookshelf_id(sid))
+                if count:
+                    nav_item["properties"] = {"numberOfItems": count}
+            except Exception as e:
+                cherrypy.log(
+                    f"Bookshelf nav count error ({sid}): {e}",
+                    severity=logging.WARNING,
+                )
+            nav.append(nav_item)
+
+        return {
+            "metadata": {
+                "title": "Project Gutenberg",
+                "numberOfItems": len(nav),
+            },
+            "links": [
+                _link("self", f"/opds/bookshelves?category={category}"),
+                _link("start", "/opds/"),
+                _link("up", "/opds/bookshelves"),
             ],
+            "navigation": nav,
         }
 
     def _bookshelf_books(
@@ -749,7 +794,7 @@ class OPDSFeed:
         return feed
 
     def _bookshelf_category(self, category: str):
-        """List shelves in a category with daily spotlight samples (cached)."""
+        """List sub-shelves in a category as navigation links."""
         found = next((cat for cat in CuratedBookshelves if cat.name == category), None)
         if not found:
             return self._error_feed(
@@ -760,50 +805,10 @@ class OPDSFeed:
                 status=404,
             )
 
-        def build():
-            seen = set()
-            day = _daily_seed()
-            shelves = self.fts.curated_shelves(found)
-            if not shelves:
-                return {"groups": []}
-            rotated = [shelves[(day + i) % len(shelves)] for i in range(len(shelves))]
-            groups = []
-            for sid, sname in rotated:
-                try:
-                    result = self._shelf_sample(sid, seen, with_count=True)
-                    if result.get("results"):
-                        groups.append(
-                            {
-                                "metadata": {
-                                    "title": sname,
-                                    "numberOfItems": result["total"],
-                                },
-                                "links": [_link("self", f"/opds/bookshelves?id={sid}")],
-                                "publications": result["results"],
-                            }
-                        )
-                except Exception as e:
-                    cherrypy.log(
-                        f"Bookshelf sample error {sid}: {e}",
-                        context="OPDS",
-                        severity=logging.WARNING,
-                    )
-
-            return {
-                "metadata": {
-                    "title": "Project Gutenberg",
-                    "numberOfItems": len(found.shelf_names),
-                },
-                "links": [
-                    _link("self", f"/opds/bookshelves?category={category}"),
-                    _link("start", "/opds/"),
-                    _link("up", "/opds/bookshelves"),
-                ],
-                "groups": groups,
-            }
-
         return self._cache_feed(
-            f"cat:{category}", build, store=lambda feed: bool(feed.get("groups"))
+            f"bookshelf_nav:{category}",
+            lambda: self._build_bookshelf_category_navigation(category, found),
+            store=lambda feed: bool(feed.get("navigation")),
         )
 
     # LoCC
@@ -842,8 +847,6 @@ class OPDSFeed:
         """Build LoCC category navigation."""
         children.sort(key=lambda x: (len(x.get("code", "")), x.get("code", "")))
 
-        counts = self._locc_counts(parent, children)
-
         nav = []
         for child in children:
             code = child["code"]
@@ -866,8 +869,9 @@ class OPDSFeed:
                             break
 
             nav_item = _nav(f"/opds/loccs?parent={code}", label)
-            if code in counts:
-                nav_item["properties"] = {"numberOfItems": counts[code]}
+            count = self._locc_nav_item_count(code)
+            if count is not None:
+                nav_item["properties"] = {"numberOfItems": count}
             nav.append(nav_item)
 
         return {

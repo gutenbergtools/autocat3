@@ -52,6 +52,7 @@ LOAD_ROUTES = (
     ("/opds/search?query=Shakespeare&page=2", "search page 2"),
     ("/opds/publications?id=1342", "publication"),
     ("/opds/also?id=1342", "also downloaded"),
+    ("/opds/bookshelves", "bookshelves index"),
     ("/opds/bookshelves?category=LITERATURE", "bookshelf category"),
     ("/opds/bookshelves?id=68", "bookshelf id"),
     ("/opds/subjects?id=1", "subject browse"),
