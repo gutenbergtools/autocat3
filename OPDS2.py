@@ -683,6 +683,7 @@ class OPDSFeed:
                 _link("self", "/opds/bookshelves"),
                 _link("start", "/opds/"),
                 _link("up", "/opds/"),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "navigation": nav,
         }
@@ -714,6 +715,7 @@ class OPDSFeed:
                 _link("self", f"/opds/bookshelves?category={category}"),
                 _link("start", "/opds/"),
                 _link("up", "/opds/bookshelves"),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "navigation": nav,
         }
@@ -876,6 +878,7 @@ class OPDSFeed:
                     _link("self", f"/opds/bookshelf_groups?category={category}"),
                     _link("start", "/opds/"),
                     _link("up", "/opds/"),
+                    _link("search", SEARCH_TEMPLATE, templated=True),
                 ],
                 "groups": groups,
             }
@@ -955,6 +958,7 @@ class OPDSFeed:
                 ),
                 _link("start", "/opds/"),
                 _link("up", "/opds/loccs" if parent else "/opds/"),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "navigation": nav,
         }
@@ -1038,6 +1042,7 @@ class OPDSFeed:
                 _link("self", "/opds/subjects"),
                 _link("start", "/opds/"),
                 _link("up", "/opds/"),
+                _link("search", SEARCH_TEMPLATE, templated=True),
             ],
             "navigation": [
                 {
