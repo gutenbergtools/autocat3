@@ -454,16 +454,18 @@ class SearchQuery:
         if self._also_downloaded_for is not None:
             params["__also_dl_for"] = self._also_downloaded_for
             sql = (
-                f"SELECT {select_cols}{total_col} FROM mv_books_dc"
-                " JOIN ("
-                " SELECT s1.fk_books AS pk, count(s1.id) AS dl"
-                " FROM scores.also_downloads AS s1,"
-                " scores.also_downloads AS s2"
-                " WHERE s2.fk_books = :__also_dl_for"
-                " AND s1.fk_books != :__also_dl_for"
-                " AND s1.id = s2.id"
-                " GROUP BY s1.fk_books"
-                ") d ON d.pk = book_id"
+                f"SELECT {select_cols}{total_col} FROM ("
+                " SELECT r.fk_books AS pk, sum(r.cnt) AS dl"
+                " FROM (SELECT id FROM scores.also_downloads"
+                " WHERE fk_books = :__also_dl_for) sessions"
+                " CROSS JOIN LATERAL ("
+                " SELECT fk_books, count(*)::bigint AS cnt"
+                " FROM scores.also_downloads"
+                " WHERE id = sessions.id"
+                " AND fk_books != :__also_dl_for"
+                " GROUP BY fk_books"
+                " ) r GROUP BY r.fk_books"
+                ") d JOIN mv_books_dc ON book_id = d.pk"
                 " ORDER BY d.dl DESC"
                 f" LIMIT {limit} OFFSET {offset}"
             )
@@ -500,20 +502,28 @@ class SearchQuery:
         if self._also_downloaded_for is not None:
             params["__also_dl_for"] = self._also_downloaded_for
             return (
-                "SELECT COUNT(*) FROM mv_books_dc JOIN ("
-                " SELECT s1.fk_books AS pk FROM scores.also_downloads AS s1,"
-                " scores.also_downloads AS s2"
-                " WHERE s2.fk_books = :__also_dl_for"
-                " AND s1.fk_books != :__also_dl_for"
-                " AND s1.id = s2.id GROUP BY s1.fk_books"
-                ") d ON d.pk = book_id"
+                "SELECT COUNT(*) FROM ("
+                " SELECT r.fk_books AS pk"
+                " FROM (SELECT id FROM scores.also_downloads"
+                " WHERE fk_books = :__also_dl_for) sessions"
+                " CROSS JOIN LATERAL ("
+                " SELECT fk_books"
+                " FROM scores.also_downloads"
+                " WHERE id = sessions.id"
+                " AND fk_books != :__also_dl_for"
+                " GROUP BY fk_books"
+                " ) r GROUP BY r.fk_books"
+                ") d"
             ), params
 
         search_sql, filter_sql = self._where_parts()
 
         if search_sql and filter_sql:
             return (
-                f"SELECT COUNT(*) FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql}",
+                "SELECT COUNT(*) FROM (SELECT book_id, lang_codes, downloads, copyrighted,"
+                " is_audio, max_author_birthyear, min_author_birthyear,"
+                " max_author_deathyear, min_author_deathyear, release_date"
+                f" FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql}",
                 params,
             )
         elif search_sql:
@@ -560,7 +570,7 @@ class FullTextSearch:
                 rows = session.execute(text(sql), params).fetchall()
 
         if with_count:
-            total = rows[0].total_count if rows else self.count(q)
+            total = rows[0].total_count if rows else 0
             total_pages = max(1, (total + q._page_size - 1) // q._page_size)
         else:
             total = None
