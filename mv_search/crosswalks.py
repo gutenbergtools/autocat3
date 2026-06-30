@@ -18,6 +18,7 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 # Readium Web Publication Manifest subject schemes
 SCHEME_LCC = "http://purl.org/dc/terms/LCC"
 SCHEME_GUTENBERG_SUBJECT = "https://www.gutenberg.org/ebooks/subject/"
+SCHEME_GUTENBERG_BOOKSHELF = "https://www.gutenberg.org/ebooks/bookshelf/"
 
 _OPDS_FEED_TYPE = "application/opds+json"
 _OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
@@ -245,6 +246,26 @@ def _opds_description(row, creators, formatter: ContributorFormat) -> Optional[s
     return "<p>" + "</p><p>".join(html.escape(p) for p in desc_parts) + "</p>"
 
 
+def _opds_bookshelf_subject_metadata(
+    bookshelves: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    subject_objs = []
+    for b in bookshelves:
+        name = b.get("bookshelf")
+        shelf_id = b.get("id")
+        if not name or shelf_id is None:
+            continue
+        subject_objs.append({
+            "name": name.removeprefix(BOOKSHELF_CATEGORY_PREFIX),
+            "scheme": SCHEME_GUTENBERG_BOOKSHELF,
+            "code": str(shelf_id),
+            "links": [
+                {"href": f"/opds/bookshelves?id={shelf_id}", "type": _OPDS_FEED_TYPE}
+            ],
+        })
+    return subject_objs
+
+
 def _opds_subject_metadata(
     raw_subjects: List[Dict[str, Any]], locc_codes: List[str]
 ) -> List[Dict[str, Any]]:
@@ -430,7 +451,10 @@ def crosswalk_opds(row) -> Dict[str, Any]:
     if description:
         publication_metadata["description"] = description
 
-    subject_objs = _opds_subject_metadata(parts["raw_subjects"], parts["locc_codes"])
+    subject_objs = (
+        _opds_bookshelf_subject_metadata(parts["bookshelves"])
+        + _opds_subject_metadata(parts["raw_subjects"], parts["locc_codes"])
+    )
     if subject_objs:
         publication_metadata["subject"] = subject_objs
 
