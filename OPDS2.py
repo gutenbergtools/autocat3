@@ -599,7 +599,7 @@ class OPDSFeed:
                             "links": [
                                 _link(
                                     "self",
-                                    f"/opds/bookshelves?category={cat.name}",
+                                    f"/opds/bookshelf_groups?category={cat.name}",
                                 )
                             ],
                             "publications": result["results"],
@@ -658,7 +658,7 @@ class OPDSFeed:
                 sort_order,
             )
         if category is not None:
-            return self._bookshelf_category(category)
+            return self._bookshelf_category_nav(category)
 
         return self._cache_feed(
             "bookshelf_nav:_root",
@@ -793,8 +793,8 @@ class OPDSFeed:
         )
         return feed
 
-    def _bookshelf_category(self, category: str):
-        """List sub-shelves in a category as navigation links."""
+    def _bookshelf_category_nav(self, category: str):
+        """Browse Bookshelves: sub-shelf links only (no publication previews)."""
         found = next((cat for cat in CuratedBookshelves if cat.name == category), None)
         if not found:
             return self._error_feed(
@@ -809,6 +809,79 @@ class OPDSFeed:
             f"bookshelf_nav:{category}",
             lambda: self._build_bookshelf_category_navigation(category, found),
             store=lambda feed: bool(feed.get("navigation")),
+        )
+
+    @cherrypy.expose
+    def bookshelf_groups(self, category: Optional[str] = None):
+        """Homepage-style category browse with per-shelf preview groups."""
+        if category is None:
+            return self._error_feed(
+                "Category required",
+                "A bookshelf category is required.",
+                "/opds/bookshelf_groups",
+                "/opds/",
+                status=400,
+            )
+        return self._bookshelf_category_groups(category)
+
+    def _bookshelf_category_groups(self, category: str):
+        """List shelves in a category with daily spotlight samples (cached)."""
+        found = next((cat for cat in CuratedBookshelves if cat.name == category), None)
+        if not found:
+            return self._error_feed(
+                "Category not found",
+                f"Bookshelf category {category} was not found.",
+                f"/opds/bookshelf_groups?category={category}",
+                "/opds/",
+                status=404,
+            )
+
+        def build():
+            seen = set()
+            day = _daily_seed()
+            shelves = self.fts.curated_shelves(found)
+            if not shelves:
+                return {"groups": []}
+            rotated = [shelves[(day + i) % len(shelves)] for i in range(len(shelves))]
+            groups = []
+            for sid, sname in rotated:
+                try:
+                    result = self._shelf_sample(sid, seen, with_count=True)
+                    if result.get("results"):
+                        groups.append(
+                            {
+                                "metadata": {
+                                    "title": sname,
+                                    "numberOfItems": result["total"],
+                                },
+                                "links": [
+                                    _link("self", f"/opds/bookshelves?id={sid}")
+                                ],
+                                "publications": result["results"],
+                            }
+                        )
+                except Exception as e:
+                    cherrypy.log(
+                        f"Bookshelf sample error {sid}: {e}",
+                        context="OPDS",
+                        severity=logging.WARNING,
+                    )
+
+            return {
+                "metadata": {
+                    "title": "Project Gutenberg",
+                    "numberOfItems": len(found.shelf_names),
+                },
+                "links": [
+                    _link("self", f"/opds/bookshelf_groups?category={category}"),
+                    _link("start", "/opds/"),
+                    _link("up", "/opds/"),
+                ],
+                "groups": groups,
+            }
+
+        return self._cache_feed(
+            f"cat:{category}", build, store=lambda feed: bool(feed.get("groups"))
         )
 
     # LoCC
