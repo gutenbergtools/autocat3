@@ -1065,6 +1065,49 @@ class OPDSFeed:
         )
         return feed
 
+    # Also downloaded
+
+    @cherrypy.expose
+    def also(self, id: int, page: int = 1, limit: int = 25):
+        """Books co-downloaded with a given ebook."""
+        page, limit = _paginate(page, limit)
+        try:
+            result = self.fts.execute(
+                self.fts.query(crosswalk=OPDS_SMALL).also_downloaded(int(id))[
+                    page, limit
+                ]
+            )
+        except Exception as e:
+            cherrypy.log(f"Also downloaded error: {e}")
+            return self._error_feed(
+                "Browse failed",
+                "Unable to load also-downloaded books.",
+                f"/opds/also?id={id}",
+                f"/opds/publications?id={id}",
+                status=500,
+            )
+
+        base = {"id": id, "limit": limit}
+        page_url = _make_page_url("/opds/also", base)
+        feed = {
+            "metadata": {
+                "title": "Readers also downloaded",
+                "numberOfItems": result["total"],
+                "itemsPerPage": result["page_size"],
+                "currentPage": result["page"],
+            },
+            "links": [
+                _link("self", page_url(result["page"])),
+                _link("start", "/opds/"),
+                _link("up", f"/opds/publications?id={id}"),
+            ],
+            "publications": result["results"],
+        }
+        feed["links"].extend(
+            self._pagination_links(page_url, result["page"], result["total_pages"])
+        )
+        return feed
+
     # Publications
 
     @cherrypy.expose

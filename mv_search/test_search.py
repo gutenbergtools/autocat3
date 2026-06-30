@@ -343,6 +343,12 @@ class CrosswalkTests(SearchTestBase):
         self.assertIn("title", first["metadata"])
         self.assertNotIn("description", first["metadata"])
         self.assertEqual(first["links"][0]["rel"], "self")
+        self.assertTrue(
+            any(
+                l.get("rel") == "http://opds-spec.org/acquisition/open-access"
+                for l in first["links"]
+            )
+        )
         self.assertIn("images", first)
         self.assertEqual(len(first["images"]), 2)
         self.assertEqual(first["images"][0]["rel"], "http://opds-spec.org/image")

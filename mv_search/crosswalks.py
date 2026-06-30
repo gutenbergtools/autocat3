@@ -332,21 +332,13 @@ def _opds_acquisition_links(
     }]
 
 
-def _opds_bookshelf_links(bookshelves: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    links = []
-    for b in bookshelves:
-        name = b.get("bookshelf")
-        shelf_id = b.get("id")
-        if not name or shelf_id is None:
-            continue
-        title = name.removeprefix(BOOKSHELF_CATEGORY_PREFIX)
-        links.append({
-            "rel": "related",
-            "href": f"/opds/bookshelves?id={shelf_id}",
-            "type": _OPDS_FEED_TYPE,
-            "title": title,
-        })
-    return links
+def _opds_also_link(book_id) -> Dict[str, str]:
+    return {
+        "rel": "related",
+        "href": f"/opds/also?id={book_id}",
+        "type": _OPDS_FEED_TYPE,
+        "title": "Readers also downloaded",
+    }
 
 
 def _opds_cover_images(formats: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -423,9 +415,12 @@ def crosswalk_opds_small(row) -> Dict[str, Any]:
     publication_metadata = _opds_book_metadata(row)
     _set_publication_contributors(publication_metadata, _build_creators_slim(row))
 
+    links = [_opds_self_link(row.book_id)]
+    links.extend(_opds_acquisition_links(_build_formats(row), row.book_id))
+
     result = {
         "metadata": publication_metadata,
-        "links": [_opds_self_link(row.book_id)],
+        "links": links,
     }
     images = _opds_cover_images(_build_cover_formats(row))
     if images:
@@ -463,7 +458,7 @@ def crosswalk_opds(row) -> Dict[str, Any]:
 
     links = [_opds_self_link(row.book_id)]
     links.extend(_opds_acquisition_links(parts["formats"], row.book_id))
-    links.extend(_opds_bookshelf_links(parts["bookshelves"]))
+    links.append(_opds_also_link(row.book_id))
 
     result = {"metadata": publication_metadata, "links": links}
     images = _opds_cover_images(parts["formats"])
