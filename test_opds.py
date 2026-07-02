@@ -2,15 +2,19 @@
 test_opds.py — HTTP load test for the OPDS 2 feed.
 
 Starts an in-process CherryPy server with production pool/thread limits,
-warms each route, then times REQUESTS_PER_ROUTE GETs using CLIENT_CONCURRENCY
-parallel client threads (defaults: 20/20, matching CherryPy.conf).
+warms routes, then runs REQUESTS_PER_ROUTE GETs per route at CLIENT_CONCURRENCY
+(defaults: 100/20, matching CherryPy.conf).
 
-Run: python3 test_opds.py
+LOAD_MODE:
+  mixed      — all routes interleaved in one concurrent run
+  per_route  — one route at a time
+
+Run: python3 test_opds.py [mixed|per_route]
 """
 
 import os
 import socket
-import statistics
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
@@ -32,9 +36,10 @@ PROD_POOL_SIZE = 20
 PROD_MAX_OVERFLOW = 0
 PROD_POOL_TIMEOUT = 3
 
-REQUESTS_PER_ROUTE = 50
+REQUESTS_PER_ROUTE = 100
 CLIENT_CONCURRENCY = 20
-WARMUP_REQUESTS = 2
+WARMUP_REQUESTS = 5
+LOAD_MODE = "mixed"  # mixed | per_route
 
 SERVER_TUNING = {
     "server.thread_pool": PROD_THREAD_POOL,
@@ -101,61 +106,132 @@ def http_get(base_url, path, timeout=60):
     return requests.get(f"{base_url}{path}", timeout=timeout)
 
 
-def warmup_route(base_url, path):
-    """Prime caches and DB plans before timed requests."""
-    for _ in range(WARMUP_REQUESTS):
-        response = http_get(base_url, path)
-        if response.status_code != 200:
-            raise RuntimeError(f"Warmup failed for {path}: HTTP {response.status_code}")
+def warmup_routes(base_url, routes):
+    for path, _label in routes:
+        for _ in range(WARMUP_REQUESTS):
+            response = http_get(base_url, path)
+            if response.status_code != 200:
+                raise RuntimeError(f"Warmup failed for {path}: HTTP {response.status_code}")
 
 
-def benchmark_route(base_url, path, request_count, client_concurrency):
-    samples = []
-    errors = []
+def percentile_ms(samples, p):
+    ordered = sorted(samples)
+    idx = max(0, min(len(ordered) - 1, int(len(ordered) * p) - 1))
+    return ordered[idx]
 
-    def one_request():
-        start = time.perf_counter()
-        response = http_get(base_url, path)
-        if response.status_code != 200:
-            raise RuntimeError(f"HTTP {response.status_code}")
-        return (time.perf_counter() - start) * 1000
 
+def summarize(samples, error_count, request_count, elapsed_s):
+    count = len(samples)
+    rps = count / elapsed_s if elapsed_s > 0 else 0.0
+    err_pct = 100.0 * error_count / request_count if request_count else 0.0
+    p50_ms = percentile_ms(samples, 0.50) if samples else 0.0
+    p95_ms = percentile_ms(samples, 0.95) if samples else 0.0
+    p99_ms = percentile_ms(samples, 0.99) if samples else 0.0
+    status = "OK" if error_count == 0 else "ERR"
+    return count, err_pct, rps, p50_ms, p95_ms, p99_ms, status
+
+
+def execute_load(base_url, jobs, client_concurrency):
+    samples_by_label = {}
+    errors_by_label = {}
+
+    def one_request(path, label):
+        try:
+            start = time.perf_counter()
+            response = http_get(base_url, path)
+            if response.status_code != 200:
+                raise RuntimeError(f"HTTP {response.status_code}")
+            return label, (time.perf_counter() - start) * 1000, None
+        except Exception as exc:
+            return label, None, str(exc)
+
+    batch_start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=client_concurrency) as pool:
-        futures = [pool.submit(one_request) for _ in range(request_count)]
+        futures = [pool.submit(one_request, path, label) for path, label in jobs]
         for future in as_completed(futures):
-            try:
-                samples.append(future.result())
-            except Exception as exc:
-                errors.append(str(exc))
-
-    avg_ms = statistics.mean(samples) if samples else 0.0
-    if samples:
-        ordered = sorted(samples)
-        p95_ms = ordered[max(0, int(len(ordered) * 0.95) - 1)]
-    else:
-        p95_ms = 0.0
-    status = "OK" if not errors else errors[0]
-    return len(samples), avg_ms, p95_ms, status
+            label, ms, err = future.result()
+            if err:
+                errors_by_label.setdefault(label, []).append(err)
+            else:
+                samples_by_label.setdefault(label, []).append(ms)
+    elapsed_s = time.perf_counter() - batch_start
+    return samples_by_label, errors_by_label, elapsed_s
 
 
-def run_load():
+def interleaved_jobs(routes, requests_per_route):
+    n = len(routes)
+    return [routes[i % n] for i in range(n * requests_per_route)]
+
+
+def print_report(title, labels, samples_by_label, errors_by_label, elapsed_s, per_route_count, total_jobs=None, elapsed_by_label=None):
+    width = 105
+    job_count = total_jobs or per_route_count * len(labels)
+    print("=" * width)
+    print(f"OPDS load test — {title} ({job_count} requests, concurrency {CLIENT_CONCURRENCY})")
+    print("=" * width)
+    print(
+        f"{'Route':<22} | {'Reqs':>5} | {'Err%':>5} | {'RPS':>6} | "
+        f"{'P50 ms':>7} | {'P95 ms':>7} | {'P99 ms':>7} | Status"
+    )
+    print("=" * width)
+    all_samples, total_errors = [], 0
+    for label in labels:
+        samples = samples_by_label.get(label, [])
+        errors = errors_by_label.get(label, [])
+        total_errors += len(errors)
+        all_samples.extend(samples)
+        route_elapsed = (elapsed_by_label or {}).get(label, elapsed_s)
+        stats = summarize(samples, len(errors), per_route_count, route_elapsed)
+        count, err_pct, rps, p50, p95, p99, status = stats
+        print(
+            f"{label:<22} | {count:>5} | {err_pct:>5.1f} | {rps:>6.1f} | "
+            f"{p50:>7.1f} | {p95:>7.1f} | {p99:>7.1f} | {status}"
+        )
+    if total_jobs:
+        stats = summarize(all_samples, total_errors, total_jobs, elapsed_s)
+        count, err_pct, rps, p50, p95, p99, status = stats
+        print("-" * width)
+        print(
+            f"{'TOTAL':<22} | {count:>5} | {err_pct:>5.1f} | {rps:>6.1f} | "
+            f"{p50:>7.1f} | {p95:>7.1f} | {p99:>7.1f} | {status}"
+        )
+    print("=" * width)
+
+
+def run_mixed(base_url):
+    warmup_routes(base_url, LOAD_ROUTES)
+    jobs = interleaved_jobs(LOAD_ROUTES, REQUESTS_PER_ROUTE)
+    samples, errors, elapsed = execute_load(base_url, jobs, CLIENT_CONCURRENCY)
+    labels = [label for _path, label in LOAD_ROUTES]
+    print_report("mixed load", labels, samples, errors, elapsed, REQUESTS_PER_ROUTE, len(jobs))
+
+
+def run_per_route(base_url):
+    labels, samples, errors, elapsed_by_label = [], {}, {}, {}
+    for path, label in LOAD_ROUTES:
+        warmup_routes(base_url, ((path, label),))
+        route_samples, route_errors, elapsed = execute_load(
+            base_url, [(path, label)] * REQUESTS_PER_ROUTE, CLIENT_CONCURRENCY
+        )
+        labels.append(label)
+        samples[label] = route_samples.get(label, [])
+        errors[label] = route_errors.get(label, [])
+        elapsed_by_label[label] = elapsed
+    print_report(
+        "per-route load", labels, samples, errors, 0.0, REQUESTS_PER_ROUTE,
+        elapsed_by_label=elapsed_by_label,
+    )
+
+
+def run_load(mode=LOAD_MODE):
+    if mode not in ("mixed", "per_route"):
+        raise SystemExit(f"Unknown LOAD_MODE {mode!r}; use mixed or per_route")
     with opds_test_server() as base_url:
-        print("=" * 90)
-        print(f"{'Route':<22} | {'Reqs':>5} | {'Avg ms':>8} | {'P95 ms':>8} | Status")
-        print("=" * 90)
-        for path, label in LOAD_ROUTES:
-            warmup_route(base_url, path)
-            count, avg_ms, p95_ms, status = benchmark_route(
-                base_url,
-                path,
-                REQUESTS_PER_ROUTE,
-                CLIENT_CONCURRENCY,
-            )
-            print(
-                f"{label:<22} | {count:>5} | {avg_ms:>8.1f} | {p95_ms:>8.1f} | {status}"
-            )
-        print("=" * 90)
+        if mode == "mixed":
+            run_mixed(base_url)
+        else:
+            run_per_route(base_url)
 
 
 if __name__ == "__main__":
-    run_load()
+    run_load(sys.argv[1] if len(sys.argv) > 1 else LOAD_MODE)
