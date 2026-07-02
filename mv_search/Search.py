@@ -56,7 +56,8 @@ _SELECT = """book_id, title, downloads, CAST(release_date AS text) AS release_da
 
 _SELECT_OPDS_SMALL = """book_id, title, lang_codes,
     creator_ids, creator_names, creator_roles,
-    format_filenames, format_filetypes, format_mediatypes"""
+    format_filenames, format_filetypes, format_hr_filetypes,
+    format_mediatypes, format_extents"""
 
 _SUBQUERY = """book_id, title, downloads, CAST(release_date AS text) AS release_date,
     copyrighted, lang_codes, is_audio,
@@ -87,6 +88,7 @@ class SearchQuery:
         self._page_size = 25
         self._crosswalk = Crosswalk.PG
         self._param_counter = 0
+        self._also_downloaded_for = None  # type: Optional[int]
 
     def __getitem__(self, key: Union[int, Tuple]) -> "SearchQuery":
         """Set pagination: q[3] for page 3, q[2, 50] for page 2 with 50 results."""
@@ -365,6 +367,11 @@ class SearchQuery:
             int(bid),
         )
 
+    def also_downloaded(self, book_id: int) -> "SearchQuery":
+        """Books co-downloaded with the given ebook (scores.also_downloads)."""
+        self._also_downloaded_for = int(book_id)
+        return self
+
     def where(self, sql: str, **params) -> "SearchQuery":
         """Add raw SQL filter condition. BE CAREFUL WHEN USING!"""
         for k in params.keys():
@@ -440,11 +447,31 @@ class SearchQuery:
 
     def build(self, *, with_count: bool = False) -> Tuple[str, Dict]:
         params = self._params()
-        order = self._order_sql(params)
         limit, offset = self._page_size, (self._page - 1) * self._page_size
         total_col = ", COUNT(*) OVER() AS total_count" if with_count else ""
         select_cols = self._result_select()
 
+        if self._also_downloaded_for is not None:
+            params["__also_dl_for"] = self._also_downloaded_for
+            sql = (
+                f"SELECT {select_cols}{total_col} FROM ("
+                " SELECT r.fk_books AS pk, sum(r.cnt) AS dl"
+                " FROM (SELECT id FROM scores.also_downloads"
+                " WHERE fk_books = :__also_dl_for) sessions"
+                " CROSS JOIN LATERAL ("
+                " SELECT fk_books, count(*)::bigint AS cnt"
+                " FROM scores.also_downloads"
+                " WHERE id = sessions.id"
+                " AND fk_books != :__also_dl_for"
+                " GROUP BY fk_books"
+                " ) r GROUP BY r.fk_books"
+                ") d JOIN mv_books_dc ON book_id = d.pk"
+                " ORDER BY d.dl DESC"
+                f" LIMIT {limit} OFFSET {offset}"
+            )
+            return sql, params
+
+        order = self._order_sql(params)
         search_sql, filter_sql = self._where_parts()
 
         if search_sql and filter_sql:
@@ -472,11 +499,31 @@ class SearchQuery:
 
     def build_count(self) -> Tuple[str, Dict]:
         params = self._params()
+        if self._also_downloaded_for is not None:
+            params["__also_dl_for"] = self._also_downloaded_for
+            return (
+                "SELECT COUNT(*) FROM ("
+                " SELECT r.fk_books AS pk"
+                " FROM (SELECT id FROM scores.also_downloads"
+                " WHERE fk_books = :__also_dl_for) sessions"
+                " CROSS JOIN LATERAL ("
+                " SELECT fk_books"
+                " FROM scores.also_downloads"
+                " WHERE id = sessions.id"
+                " AND fk_books != :__also_dl_for"
+                " GROUP BY fk_books"
+                " ) r GROUP BY r.fk_books"
+                ") d"
+            ), params
+
         search_sql, filter_sql = self._where_parts()
 
         if search_sql and filter_sql:
             return (
-                f"SELECT COUNT(*) FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql}",
+                "SELECT COUNT(*) FROM (SELECT book_id, lang_codes, downloads, copyrighted,"
+                " is_audio, max_author_birthyear, min_author_birthyear,"
+                " max_author_deathyear, min_author_deathyear, release_date"
+                f" FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql}",
                 params,
             )
         elif search_sql:

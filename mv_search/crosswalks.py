@@ -18,6 +18,7 @@ LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
 # Readium Web Publication Manifest subject schemes
 SCHEME_LCC = "http://purl.org/dc/terms/LCC"
 SCHEME_GUTENBERG_SUBJECT = "https://www.gutenberg.org/ebooks/subject/"
+SCHEME_GUTENBERG_BOOKSHELF = "https://www.gutenberg.org/ebooks/bookshelf/"
 
 _OPDS_FEED_TYPE = "application/opds+json"
 _OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
@@ -72,7 +73,7 @@ def _build_creators(row) -> List[Dict[str, Any]]:
         creators.append({
             "id": cid,
             "name": name,
-            "role": role or "Author",
+            "role": role,
             "born_floor": bf,
             "born_ceil": bc,
             "died_floor": df,
@@ -117,7 +118,7 @@ def _build_creators_slim(row) -> List[Dict[str, Any]]:
     roles = list(row.creator_roles) if row.creator_roles else []
     ids = list(row.creator_ids) if row.creator_ids else []
     return [
-        {"id": cid, "name": name, "role": role or "Author"}
+        {"id": cid, "name": name, "role": role}
         for name, role, cid in zip_longest(names, roles, ids, fillvalue=None)
         if name
     ]
@@ -163,24 +164,62 @@ def _opds_accessibility() -> Dict[str, Any]:
     }
 
 
-def _opds_primary_author(
-    creators: List[Dict[str, Any]], *, with_search_link: bool = False
-) -> Optional[Dict[str, Any]]:
-    authors = [
-        c
-        for c in creators
-        if c.get("role", "").lower() in ("author", "aut", "creator", "cre", "")
-    ]
-    if not authors or not authors[0].get("name"):
-        return None
-    person = authors[0]
-    author = {"name": person["name"], "sortAs": person["name"]}
+# Readium Web Publication Manifest contributor fields.
+# creator_roles in mv_books_dc uses full MARC relator labels (e.g. "Author",
+# "Illustrator"). Roles without a direct WPM field map to "contributor".
+_OPDS_ROLE_FIELDS = {
+    "author": "author",
+    "creator": "author",
+    "dubious author": "author",
+    "translator": "translator",
+    "editor": "editor",
+    "artist": "artist",
+    "illustrator": "illustrator",
+    "letterer": "letterer",
+    "penciler": "penciler",
+    "colorist": "colorist",
+    "inker": "inker",
+}
+
+
+def _opds_role_field(role: Optional[str]) -> str:
+    """Map a mv_books_dc creator_roles label to a WPM metadata field."""
+    if not role:
+        return "contributor"
+    return _OPDS_ROLE_FIELDS.get(role.strip().lower(), "contributor")
+
+
+def _build_opds_contributor_entry(
+    person: Dict[str, Any], *, with_search_link: bool = False
+) -> Dict[str, Any]:
+    contributor = {"name": person["name"], "sortAs": person["name"]}
     if with_search_link and person.get("id"):
-        author["identifier"] = f"https://www.gutenberg.org/ebooks/author/{person['id']}"
-        author["links"] = [
+        contributor["identifier"] = (
+            f"https://www.gutenberg.org/ebooks/author/{person['id']}"
+        )
+        contributor["links"] = [
             {"href": f"/opds/search?author_id={person['id']}", "type": _OPDS_FEED_TYPE}
         ]
-    return author
+    return contributor
+
+
+def _set_publication_contributors(
+    publication_metadata: Dict[str, Any],
+    creators: List[Dict[str, Any]],
+    *,
+    with_search_link: bool = False,
+) -> None:
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for person in creators:
+        if not person.get("name"):
+            continue
+        field = _opds_role_field(person.get("role"))
+        grouped.setdefault(field, []).append(
+            _build_opds_contributor_entry(person, with_search_link=with_search_link)
+        )
+
+    for field, entries in grouped.items():
+        publication_metadata[field] = entries[0] if len(entries) == 1 else entries
 
 
 def _opds_description(row, creators, formatter: ContributorFormat) -> Optional[str]:
@@ -207,6 +246,26 @@ def _opds_description(row, creators, formatter: ContributorFormat) -> Optional[s
     return "<p>" + "</p><p>".join(html.escape(p) for p in desc_parts) + "</p>"
 
 
+def _opds_bookshelf_subject_metadata(
+    bookshelves: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    subject_objs = []
+    for b in bookshelves:
+        name = b.get("bookshelf")
+        shelf_id = b.get("id")
+        if not name or shelf_id is None:
+            continue
+        subject_objs.append({
+            "name": name.removeprefix(BOOKSHELF_CATEGORY_PREFIX),
+            "scheme": SCHEME_GUTENBERG_BOOKSHELF,
+            "code": str(shelf_id),
+            "links": [
+                {"href": f"/opds/bookshelves?id={shelf_id}", "type": _OPDS_FEED_TYPE}
+            ],
+        })
+    return subject_objs
+
+
 def _opds_subject_metadata(
     raw_subjects: List[Dict[str, Any]], locc_codes: List[str]
 ) -> List[Dict[str, Any]]:
@@ -231,7 +290,7 @@ def _opds_subject_metadata(
             "sortAs": code,
             "scheme": SCHEME_LCC,
             "code": code,
-            "links": [{"href": f"/opds/loccs?parent={code}", "type": _OPDS_FEED_TYPE}],
+            "links": [{"href": f"/opds/search?locc={code}", "type": _OPDS_FEED_TYPE}],
         })
     return subject_objs
 
@@ -273,21 +332,13 @@ def _opds_acquisition_links(
     }]
 
 
-def _opds_bookshelf_links(bookshelves: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    links = []
-    for b in bookshelves:
-        name = b.get("bookshelf")
-        shelf_id = b.get("id")
-        if not name or shelf_id is None:
-            continue
-        title = name.removeprefix(BOOKSHELF_CATEGORY_PREFIX)
-        links.append({
-            "rel": "related",
-            "href": f"/opds/bookshelves?id={shelf_id}",
-            "type": _OPDS_FEED_TYPE,
-            "title": title,
-        })
-    return links
+def _opds_also_link(book_id) -> Dict[str, str]:
+    return {
+        "rel": "related",
+        "href": f"/opds/also?id={book_id}",
+        "type": _OPDS_FEED_TYPE,
+        "title": "Readers also downloaded",
+    }
 
 
 def _opds_cover_images(formats: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -361,14 +412,15 @@ def crosswalk_pg(row) -> Dict[str, Any]:
 @format_dict_result
 def crosswalk_opds_small(row) -> Dict[str, Any]:
     """Compact OPDS publication for catalog/search/browse lists."""
-    metadata = _opds_book_metadata(row)
-    author = _opds_primary_author(_build_creators_slim(row))
-    if author:
-        metadata["author"] = author
+    publication_metadata = _opds_book_metadata(row)
+    _set_publication_contributors(publication_metadata, _build_creators_slim(row))
+
+    links = [_opds_self_link(row.book_id)]
+    links.extend(_opds_acquisition_links(_build_formats(row), row.book_id))
 
     result = {
-        "metadata": metadata,
-        "links": [_opds_self_link(row.book_id)],
+        "metadata": publication_metadata,
+        "links": links,
     }
     images = _opds_cover_images(_build_cover_formats(row))
     if images:
@@ -380,32 +432,35 @@ def crosswalk_opds_small(row) -> Dict[str, Any]:
 def crosswalk_opds(row) -> Dict[str, Any]:
     """Full OPDS publication for /opds/publications detail."""
     parts = _opds_row_parts(row)
-    metadata = _opds_book_metadata(row)
-    metadata["accessibility"] = _opds_accessibility()
+    publication_metadata = _opds_book_metadata(row)
+    publication_metadata["accessibility"] = _opds_accessibility()
 
-    author = _opds_primary_author(parts["creators"], with_search_link=True)
-    if author:
-        metadata["author"] = author
+    _set_publication_contributors(
+        publication_metadata, parts["creators"], with_search_link=True
+    )
 
     if row.release_date:
-        metadata["published"] = row.release_date
+        publication_metadata["published"] = row.release_date
 
     description = _opds_description(row, parts["creators"], parts["formatter"])
     if description:
-        metadata["description"] = description
+        publication_metadata["description"] = description
 
-    subject_objs = _opds_subject_metadata(parts["raw_subjects"], parts["locc_codes"])
+    subject_objs = (
+        _opds_bookshelf_subject_metadata(parts["bookshelves"])
+        + _opds_subject_metadata(parts["raw_subjects"], parts["locc_codes"])
+    )
     if subject_objs:
-        metadata["subject"] = subject_objs
+        publication_metadata["subject"] = subject_objs
 
     if row.publisher:
-        metadata["publisher"] = row.publisher
+        publication_metadata["publisher"] = row.publisher
 
     links = [_opds_self_link(row.book_id)]
     links.extend(_opds_acquisition_links(parts["formats"], row.book_id))
-    links.extend(_opds_bookshelf_links(parts["bookshelves"]))
+    links.append(_opds_also_link(row.book_id))
 
-    result = {"metadata": metadata, "links": links}
+    result = {"metadata": publication_metadata, "links": links}
     images = _opds_cover_images(parts["formats"])
     if images:
         result["images"] = images
