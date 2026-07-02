@@ -300,59 +300,86 @@ class CombinedFilterTests(SearchTestBase):
                 self._run(query)
 
 
+_KNOWN_ETEXT = 1342
+_OPDS_ACQ = "http://opds-spec.org/acquisition/open-access"
+
+
 class CrosswalkTests(SearchTestBase):
+    def _etest(self, crosswalk):
+        data = self.s.execute(self.s.query(crosswalk).etext(_KNOWN_ETEXT)[1, 1])
+        self.assertEqual(data["total"], 1, data)
+        return data["results"][0]
+
+    def _author(self, metadata):
+        author = metadata["author"]
+        return author if isinstance(author, dict) else author[0]
+
     def test_crosswalk_pg(self):
-        data = self.s.execute(self.s.query(Crosswalk.PG).search("Shakespeare")[1, 5])
-        self.assertGreater(data["total"], 0)
-        first = data["results"][0]
-        self.assertIn("ebook_no", first)
-        self.assertIn("files", first)
-        self.assertIn("contributors", first)
-        self.assertTrue(first["contributors"])
-        contributor = first["contributors"][0]
-        self.assertIn("name", contributor)
-        self.assertIn("born_floor", contributor)
-        self.assertIn("died_floor", contributor)
-        fmt = first.get("format")
-        self.assertTrue(callable(fmt))
-        self.assertTrue(fmt())
-        self.assertTrue(fmt(pretty=True))
-        self.assertTrue(fmt(pretty=True, dates=False))
-        self.assertTrue(fmt(all=True))
-        self.assertTrue(fmt(all=True, pretty=True))
-        self.assertTrue(fmt(all=True, strunk_join=True))
-        self.assertTrue(fmt(all=True, strunk_join=True, pretty=True))
+        first = self._etest(Crosswalk.PG)
+        self.assertEqual(first["ebook_no"], _KNOWN_ETEXT)
+        self.assertTrue(first["title"])
+        c = first["contributors"][0]
+        for key in ("id", "name", "role", "born_floor", "died_floor"):
+            self.assertIn(key, c)
+        lang = first["language"][0]
+        self.assertIn("code", lang)
+        self.assertIn("name", lang)
+        f = first["files"][0]
+        for key in ("filename", "type", "size"):
+            self.assertIn(key, f)
+        for key in (
+            "subjects",
+            "bookshelves",
+            "release_date",
+            "downloads_last_30_days",
+            "cover_url",
+            "format",
+        ):
+            self.assertIn(key, first)
+        fmt = first["format"]
+        self.assertTrue(callable(fmt) and fmt(all=True, pretty=True))
 
     def test_crosswalk_opds(self):
-        data = self.s.execute(self.s.query(Crosswalk.OPDS).search("Shakespeare")[1, 5])
-        self.assertGreater(data["total"], 0)
-        first = data["results"][0]
-        self.assertIn("metadata", first)
-        self.assertIn("links", first)
-        self.assertIn("title", first["metadata"])
-        self.assertIn("description", first["metadata"])
+        pub = self._etest(Crosswalk.OPDS)
+        md, links = pub["metadata"], pub["links"]
+        self.assertEqual(md["@type"], "http://schema.org/Book")
+        self.assertEqual(md["identifier"], f"https://www.gutenberg.org/ebooks/{_KNOWN_ETEXT}")
+        self.assertTrue(md["title"])
+        self.assertTrue(md["language"])
+        for key in ("accessibility", "description", "subject", "published"):
+            self.assertIn(key, md)
+        self.assertIn("links", self._author(md))
+        self.assertEqual(links[0], {
+            "rel": "self",
+            "href": f"/opds/publications?id={_KNOWN_ETEXT}",
+            "type": "application/opds-publication+json",
+        })
+        self.assertTrue(any(l.get("rel") == _OPDS_ACQ for l in links))
+        self.assertTrue(any("/opds/also?" in l.get("href", "") for l in links))
+        self.assertEqual(len(pub["images"]), 2)
 
     def test_crosswalk_opds_small(self):
-        data = self.s.execute(
-            self.s.query(Crosswalk.OPDS_SMALL).search("Shakespeare")[1, 5]
-        )
-        self.assertGreater(data["total"], 0)
-        first = data["results"][0]
-        self.assertIn("metadata", first)
-        self.assertIn("links", first)
-        self.assertIn("title", first["metadata"])
-        self.assertNotIn("description", first["metadata"])
-        self.assertEqual(first["links"][0]["rel"], "self")
-        self.assertTrue(
-            any(
-                l.get("rel") == "http://opds-spec.org/acquisition/open-access"
-                for l in first["links"]
-            )
-        )
-        self.assertIn("images", first)
-        self.assertEqual(len(first["images"]), 2)
-        self.assertEqual(first["images"][0]["rel"], "http://opds-spec.org/image")
-        self.assertEqual(first["images"][1]["rel"], "http://opds-spec.org/image/thumbnail")
+        pub = self._etest(Crosswalk.OPDS_SMALL)
+        md, links = pub["metadata"], pub["links"]
+        self.assertEqual(md["@type"], "http://schema.org/Book")
+        self.assertEqual(md["identifier"], f"https://www.gutenberg.org/ebooks/{_KNOWN_ETEXT}")
+        self.assertTrue(md["title"])
+        self.assertTrue(md["language"])
+        author = self._author(md)
+        self.assertIn("name", author)
+        self.assertIn("sortAs", author)
+        for key in ("description", "accessibility", "published", "subject"):
+            self.assertNotIn(key, md)
+        self.assertNotIn("identifier", author)
+        self.assertNotIn("links", author)
+        self.assertEqual(links[0], {
+            "rel": "self",
+            "href": f"/opds/publications?id={_KNOWN_ETEXT}",
+            "type": "application/opds-publication+json",
+        })
+        self.assertTrue(any(l.get("rel") == _OPDS_ACQ for l in links))
+        self.assertFalse(any("/opds/also?" in l.get("href", "") for l in links))
+        self.assertEqual(len(pub["images"]), 2)
 
 
 class OpdsContributorTests(unittest.TestCase):
@@ -379,6 +406,7 @@ class OpdsContributorTests(unittest.TestCase):
         )
         self.assertNotIn("author", metadata)
         self.assertEqual(len(metadata["translator"]), 2)
+        self.assertIn("identifier", metadata["translator"][0])
         self.assertIn("links", metadata["translator"][0])
 
     def test_narrator_maps_to_contributor(self):
