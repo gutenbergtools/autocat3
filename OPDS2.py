@@ -251,7 +251,7 @@ class OPDSFeed:
     @property
     def fts(self):
         if self._fts is None:
-            self._fts = FullTextSearch(cherrypy.engine.pool.pool)
+            self._fts = FullTextSearch(cherrypy.engine.pool.engine)
         return self._fts
 
     # Query Helpers
