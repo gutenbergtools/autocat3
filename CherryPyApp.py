@@ -39,6 +39,7 @@ from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, Book
 from BibrecPage import BibrecPage
 from AdvSearchPage import AdvSearchPage
 import CoverPages
+import EbookCount
 import QRCodePage
 import MetricsPage
 import Sitemap
@@ -259,6 +260,9 @@ def main():
 
     d.connect('cover', r'/covers/{size:small|medium}/{order:latest|popular|random}/{count}',
                controller=CoverPages.CoverPages())
+
+    d.connect('ebook_count', r'/ebook_count/',
+               controller=EbookCount.EbookCount())
 
     d.connect('qrcode', r'/qrcode/',
                controller=QRCodePage.QRCodePage())
