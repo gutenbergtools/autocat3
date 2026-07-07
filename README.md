@@ -1,8 +1,8 @@
 # autocat3_original
 
-**autocat3** is a Python/CherryPy application that serves dynamic content for [Project Gutenberg](https://www.gutenberg.org). 
+**autocat3** is a python-based application used for supporting [Project Gutenberg](gutenberg.org).
 
-CherryPy is used as the web framwork which is easy to develop.
+CherryPy is used as the web framework which is easy to develop.
 
 It mainly implements the search functionality and rate limiter. Also return results pages based on templates.
 
