@@ -402,25 +402,27 @@ class OPDSFeed:
             ),
         ]
         if query:
-            sort_links.extend(
-                [
-                    _facet(
-                        url_fn(query, lang, "relevance", ""),
-                        "Relevance",
-                        sort == "relevance",
-                    ),
-                    _facet(
-                        url_fn(query, lang, "title", "asc"),
-                        "Title (A-Z)",
-                        sort == "title",
-                    ),
-                    _facet(
-                        url_fn(query, lang, "author", "asc"),
-                        "Author (A-Z)",
-                        sort == "author",
-                    ),
-                ]
+            sort_links.append(
+                _facet(
+                    url_fn(query, lang, "relevance", ""),
+                    "Relevance",
+                    sort == "relevance",
+                )
             )
+        sort_links.extend(
+            [
+                _facet(
+                    url_fn(query, lang, "title", "asc"),
+                    "Title (A-Z)",
+                    sort == "title",
+                ),
+                _facet(
+                    url_fn(query, lang, "author", "asc"),
+                    "Author (A-Z)",
+                    sort == "author",
+                ),
+            ]
+        )
         sort_links.append(
             _facet(
                 url_fn(query, lang, "random", ""),
