@@ -106,3 +106,6 @@ venv.bak/
 # for devmode
 gutenberg/
 pics/
+
+# local container config
+autocat3.conf

@@ -1,0 +1,7 @@
+.venv
+.git
+.idea
+__pycache__
+*.pyc
+*.log
+autocat3.conf
