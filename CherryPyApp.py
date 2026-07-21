@@ -19,8 +19,6 @@ from __future__ import unicode_literals
 import logging
 import logging.handlers # rotating file handler
 import os
-import time
-import traceback
 
 import cherrypy
 from cherrypy.process import plugins
@@ -78,126 +76,10 @@ class MyRoutesDispatcher(cherrypy.dispatch.RoutesDispatcher):
         cherrypy.dispatch.RoutesDispatcher.connect(self, name, route, controller, **kwargs)
 
 
-def main():
-    """ Main function. """
-
-    # default config
-    cherrypy.config.update({
-        'uid': 0,
-        'gid': 0,
-        'server_name': 'localhost',
-        'genshi.template_dir': os.path.join(install_dir, 'templates'),
-        'daemonize': False,
-        'pidfile': None,
-        'host': 'localhost',
-        'file_host': 'localhost',
-        'devmode': False,
-        })
-
-    cherrypy.config.update(CHERRYPY_CONFIG)
-    extra_config = ''
-    for config_filename in LOCAL_CONFIG:
-        try:
-            cherrypy.config.update(config_filename)
-            extra_config = config_filename
-            break
-        except IOError:
-            pass
-
-    # Rotating Logs
-    # CherryPy will already open log files if present in config
-    error_file = access_file = ''
-    # read the logger file locations from config file.
-    if not cherrypy.log.error_file:
-        error_file = cherrypy.config.get('logger.error_file', '')
-    if not cherrypy.log.access_file:
-        access_file = cherrypy.config.get('logger.access_file', '')
-
-    # disable log file handlers
-    cherrypy.log.error_file = ""
-    cherrypy.log.access_file = ""
-
-    # set up python logging
-    max_bytes = getattr(cherrypy.log, "rot_max_bytes", 100 * 1024 * 1024)
-    backup_count = getattr(cherrypy.log, "rot_backup_count", 2)
-
-    if error_file:
-        h = logging.handlers.RotatingFileHandler(error_file, 'a', max_bytes, backup_count, 'utf-8')
-        h.setLevel(logging.WARNING)
-        h.setFormatter(cherrypy._cplogging.logfmt)
-        cherrypy.log.error_log.addHandler(h)
-
-    if access_file:
-        h = logging.handlers.RotatingFileHandler(access_file, 'a', max_bytes, backup_count, 'utf-8')
-        h.setLevel(logging.INFO)
-        h.setFormatter(cherrypy._cplogging.logfmt)
-        cherrypy.log.access_log.addHandler(h)
-
-
-
-    if not cherrypy.config['daemonize']:
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(cherrypy._cplogging.logfmt)
-        cherrypy.log.error_log.addHandler(ch)
-
-    # continue app init
-    #
-
-    cherrypy.log('*' * 80, context='ENGINE', severity=logging.INFO)
-    cherrypy.log("Using config file '%s'." % CHERRYPY_CONFIG,
-                  context='ENGINE', severity=logging.INFO)
-    if extra_config:
-        cherrypy.log('extra_config: %s' % extra_config, context='ENGINE', severity=logging.INFO)
-
-    # after cherrypy.config is parsed
-    Formatters.init()
-    cherrypy.log("Continuing App Init", context='ENGINE', severity=logging.INFO)
-
-    cherrypy.log("Continuing App Init", context='ENGINE', severity=logging.INFO)
-    cherrypy.tools.I18nTool = i18n_tool.I18nTool()
-
-    cherrypy.log("Continuing App Init", context='ENGINE', severity=logging.INFO)
-
-
-    cherrypy.config['all_hosts'] = (
-        cherrypy.config['host'], cherrypy.config['file_host'])
-    
-    cherrypy.config.update({'error_page.404': error_page_404})
-
-    if hasattr(cherrypy.engine, 'signal_handler'):
-        cherrypy.engine.signal_handler.subscribe()
-
-    GutenbergDatabase.options.update(cherrypy.config)
-    cherrypy.engine.pool = plugins.ConnectionPool(
-        cherrypy.engine, params=GutenbergDatabase.get_connection_params(cherrypy.config))
-    cherrypy.engine.pool.subscribe()
-
-    plugins.Timer(cherrypy.engine).subscribe()
-
-    cherrypy.log("Daemonizing", context='ENGINE', severity=logging.INFO)
-
-    if cherrypy.config['daemonize']:
-        plugins.Daemonizer(cherrypy.engine).subscribe()
-
-    uid = cherrypy.config['uid']
-    gid = cherrypy.config['gid']
-    if uid > 0 or gid > 0:
-        plugins.DropPrivileges(cherrypy.engine, uid=uid, gid=gid, umask=0o22).subscribe()
-
-    if cherrypy.config['pidfile']:
-        pid = plugins.PIDFile(cherrypy.engine, cherrypy.config['pidfile'])
-        # Write pidfile after privileges are dropped(prio == 77)
-        # or we will not be able to remove it.
-        cherrypy.engine.subscribe('start', pid.start, 78)
-        cherrypy.engine.subscribe('exit', pid.exit, 78)
-
-
+def get_app():
     cherrypy.log("Setting up routes", context='ENGINE', severity=logging.INFO)
 
     # setup 'routes' dispatcher
-    #
-    # d = cherrypy.dispatch.RoutesDispatcher(full_result=True)
     d = MyRoutesDispatcher(full_result=True)
     cherrypy.routes_mapper = d.mapper
 
@@ -323,9 +205,6 @@ def main():
         d.connect('msdrive_callback', r'/ebooks/send/msdrive/',
                    controller=msdrive)
 
-    # start http server
-    #
-
     cherrypy.log("Mounting root", context='ENGINE', severity=logging.INFO)
 
     app = cherrypy.tree.mount(root=None, config=CHERRYPY_CONFIG)
@@ -337,6 +216,134 @@ def main():
                                   'tools.staticdir.dir': install_dir + "/gutenberg"}})
         app.merge({'/pics': {'tools.staticdir.on': True,
                              'tools.staticdir.dir': install_dir + "/pics"}})
+
+    return app
+
+
+def configure():
+    # default config
+    cherrypy.config.update({
+        'server_name': 'localhost',
+        'genshi.template_dir': os.path.join(install_dir, 'templates'),
+        'host': 'localhost',
+        'file_host': 'localhost',
+        'devmode': False,
+        })
+
+    cherrypy.config.update(CHERRYPY_CONFIG)
+    extra_config = ''
+    for config_filename in LOCAL_CONFIG:
+        try:
+            cherrypy.config.update(config_filename)
+            extra_config = config_filename
+            break
+        except IOError:
+            pass
+
+    cherrypy.config['all_hosts'] = (
+        cherrypy.config['host'], cherrypy.config['file_host'])
+
+    cherrypy.config.update({'error_page.404': error_page_404})
+
+    cherrypy.tools.I18nTool = i18n_tool.I18nTool()
+
+    Formatters.init()
+
+    # configure database
+    GutenbergDatabase.options.update(cherrypy.config)
+    cherrypy.engine.pool = plugins.ConnectionPool(
+        cherrypy.engine, params=GutenbergDatabase.get_connection_params(cherrypy.config))
+    cherrypy.engine.pool.subscribe()
+
+    # configure timers
+    plugins.Timer(cherrypy.engine).subscribe()
+
+    return extra_config
+
+
+def main():
+    """ Main function. """
+
+    # CherryPy HTTP server config
+    cherrypy.config.update({
+        'uid': 0,
+        'gid': 0,
+        'daemonize': False,
+        'pidfile': None,
+        'devmode': False,
+        })
+
+    extra_config = configure()
+
+    # Rotating Logs
+    # CherryPy will already open log files if present in config
+    error_file = access_file = ''
+    # read the logger file locations from config file.
+    if not cherrypy.log.error_file:
+        error_file = cherrypy.config.get('logger.error_file', '')
+    if not cherrypy.log.access_file:
+        access_file = cherrypy.config.get('logger.access_file', '')
+
+    # disable log file handlers
+    cherrypy.log.error_file = ""
+    cherrypy.log.access_file = ""
+
+    # set up python logging
+    max_bytes = getattr(cherrypy.log, "rot_max_bytes", 100 * 1024 * 1024)
+    backup_count = getattr(cherrypy.log, "rot_backup_count", 2)
+
+    if error_file:
+        h = logging.handlers.RotatingFileHandler(error_file, 'a', max_bytes, backup_count, 'utf-8')
+        h.setLevel(logging.WARNING)
+        h.setFormatter(cherrypy._cplogging.logfmt)
+        cherrypy.log.error_log.addHandler(h)
+
+    if access_file:
+        h = logging.handlers.RotatingFileHandler(access_file, 'a', max_bytes, backup_count, 'utf-8')
+        h.setLevel(logging.INFO)
+        h.setFormatter(cherrypy._cplogging.logfmt)
+        cherrypy.log.access_log.addHandler(h)
+
+    if not cherrypy.config['daemonize']:
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(cherrypy._cplogging.logfmt)
+        cherrypy.log.error_log.addHandler(ch)
+
+    # continue app init
+    #
+
+    cherrypy.log('*' * 80, context='ENGINE', severity=logging.INFO)
+    cherrypy.log("Using config file '%s'." % CHERRYPY_CONFIG,
+                  context='ENGINE', severity=logging.INFO)
+    if extra_config:
+        cherrypy.log('extra_config: %s' % extra_config, context='ENGINE', severity=logging.INFO)
+
+    # after cherrypy.config is parsed
+    if hasattr(cherrypy.engine, 'signal_handler'):
+        cherrypy.engine.signal_handler.subscribe()
+
+    # start http server
+    #
+
+    cherrypy.log("Daemonizing", context='ENGINE', severity=logging.INFO)
+
+    if cherrypy.config['daemonize']:
+        plugins.Daemonizer(cherrypy.engine).subscribe()
+
+    uid = cherrypy.config['uid']
+    gid = cherrypy.config['gid']
+    if uid > 0 or gid > 0:
+        plugins.DropPrivileges(cherrypy.engine, uid=uid, gid=gid, umask=0o22).subscribe()
+
+    if cherrypy.config['pidfile']:
+        pid = plugins.PIDFile(cherrypy.engine, cherrypy.config['pidfile'])
+        # Write pidfile after privileges are dropped(prio == 77)
+        # or we will not be able to remove it.
+        cherrypy.engine.subscribe('start', pid.start, 78)
+        cherrypy.engine.subscribe('exit', pid.exit, 78)
+
+    app = get_app()
 
     return app
 
