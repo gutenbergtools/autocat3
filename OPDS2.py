@@ -21,7 +21,7 @@ from mv_search.constants import (
     SearchType,
     SortDirection,
 )
-from mv_search.crosswalks import _gutenberg_url
+from mv_search.crosswalks import _catalog_url
 from mv_search.Search import FullTextSearch
 
 OPDS = Crosswalk.OPDS
@@ -76,7 +76,7 @@ def _url(path: str, params: Optional[Dict] = None) -> str:
         clean = {k: v for k, v in params.items() if v not in ("", None)}
         if clean:
             path = f"{path}?{urlencode(clean, doseq=True)}"
-    return _gutenberg_url(path)
+    return _catalog_url(path)
 
 
 def _json_error_page(status, message, traceback, version):

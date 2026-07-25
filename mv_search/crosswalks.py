@@ -49,14 +49,37 @@ def _rights_text(copyrighted: Optional[int]) -> str:
     )
 
 
-def _gutenberg_url(path: str) -> str:
-    """Build full Gutenberg URL from a path, preserving absolute URLs."""
+def _abs_url(base: str, path: str) -> str:
     if not path:
         return ""
     if path.startswith(("http://", "https://")):
         return path
-    base = cherrypy.config.get("document_root", "https://www.gutenberg.org").rstrip("/")
-    return f"{base}{path if path.startswith('/') else '/' + path}"
+    return f"{base.rstrip('/')}{path if path.startswith('/') else '/' + path}"
+
+
+def _gutenberg_url(path: str) -> str:
+    """Absolute URL for files/covers (always file_host, usually gutenberg.org)."""
+    host = cherrypy.config.get("file_host", "www.gutenberg.org")
+    if host.startswith(("http://", "https://")):
+        base = host
+    else:
+        base = f"https://{host}"
+    return _abs_url(base, path)
+
+
+def _catalog_url(path: str) -> str:
+    """Absolute URL for OPDS routes (this server: localhost in dev, prod host in prod)."""
+    try:
+        base = cherrypy.request.base
+    except AttributeError:
+        base = ""
+    if not base:
+        host = cherrypy.config.get("host", "www.gutenberg.org")
+        if host.startswith(("http://", "https://")):
+            base = host
+        else:
+            base = f"https://{host}"
+    return _abs_url(base, path)
 
 
 def _build_creators(row) -> List[Dict[str, Any]]:
@@ -202,7 +225,7 @@ def _build_opds_contributor_entry(
         )
         contributor["links"] = [
             {
-                "href": _gutenberg_url(f"/opds/search?author_id={person['id']}"),
+                "href": _catalog_url(f"/opds/search?author_id={person['id']}"),
                 "type": _OPDS_FEED_TYPE,
             }
         ]
@@ -267,7 +290,7 @@ def _opds_bookshelf_subject_metadata(
             "code": str(shelf_id),
             "links": [
                 {
-                    "href": _gutenberg_url(f"/opds/bookshelves?id={shelf_id}"),
+                    "href": _catalog_url(f"/opds/bookshelves?id={shelf_id}"),
                     "type": _OPDS_FEED_TYPE,
                 }
             ],
@@ -288,7 +311,7 @@ def _opds_subject_metadata(
             subj["code"] = str(s["id"])
             subj["links"] = [
                 {
-                    "href": _gutenberg_url(f"/opds/subjects?id={s['id']}"),
+                    "href": _catalog_url(f"/opds/subjects?id={s['id']}"),
                     "type": _OPDS_FEED_TYPE,
                 }
             ]
@@ -304,7 +327,7 @@ def _opds_subject_metadata(
             "code": code,
             "links": [
                 {
-                    "href": _gutenberg_url(f"/opds/search?locc={code}"),
+                    "href": _catalog_url(f"/opds/search?locc={code}"),
                     "type": _OPDS_FEED_TYPE,
                 }
             ],
@@ -315,7 +338,7 @@ def _opds_subject_metadata(
 def _opds_self_link(book_id) -> Dict[str, str]:
     return {
         "rel": "self",
-        "href": _gutenberg_url(f"/opds/publications?id={book_id}"),
+        "href": _catalog_url(f"/opds/publications?id={book_id}"),
         "type": _OPDS_PUBLICATION_TYPE,
     }
 
@@ -352,7 +375,7 @@ def _opds_acquisition_links(
 def _opds_also_link(book_id) -> Dict[str, str]:
     return {
         "rel": "related",
-        "href": _gutenberg_url(f"/opds/also?id={book_id}"),
+        "href": _catalog_url(f"/opds/also?id={book_id}"),
         "type": _OPDS_FEED_TYPE,
         "title": "Readers also downloaded",
     }
