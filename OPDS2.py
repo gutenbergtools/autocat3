@@ -21,6 +21,7 @@ from mv_search.constants import (
     SearchType,
     SortDirection,
 )
+from mv_search.crosswalks import _gutenberg_url
 from mv_search.Search import FullTextSearch
 
 OPDS = Crosswalk.OPDS
@@ -69,6 +70,15 @@ SEARCH_TEMPLATE = "/opds/search{?query,title,author}"
 
 
 # Helpers
+def _url(path: str, params: Optional[Dict] = None) -> str:
+    """Build an absolute catalog URL, optionally with query params."""
+    if params:
+        clean = {k: v for k, v in params.items() if v not in ("", None)}
+        if clean:
+            path = f"{path}?{urlencode(clean, doseq=True)}"
+    return _gutenberg_url(path)
+
+
 def _json_error_page(status, message, traceback, version):
     cherrypy.response.status = status
     cherrypy.response.headers["Content-Type"] = OPDS_TYPE
@@ -89,7 +99,7 @@ def _json_error_page(status, message, traceback, version):
 
 def _link(rel: str, href: str, **extras) -> Dict:
     """Create an OPDS link dict."""
-    return {"rel": rel, "href": href, "type": OPDS_TYPE, **extras}
+    return {"rel": rel, "href": _url(href), "type": OPDS_TYPE, **extras}
 
 
 OPDS_GZIP_MIME_TYPES = [
@@ -120,7 +130,7 @@ OPDS_MOUNT_CONFIG = {
 
 def _nav(href: str, title: str) -> Dict:
     """Create a navigation item."""
-    return {"href": href, "title": title, "type": OPDS_TYPE, "rel": "subsection"}
+    return {"href": _url(href), "title": title, "type": OPDS_TYPE, "rel": "subsection"}
 
 
 def _navigation_group() -> Dict:
@@ -136,16 +146,10 @@ def _navigation_group() -> Dict:
 
 def _facet(href: str, title: str, active: bool) -> Dict:
     """Create a facet link. Includes 'rel': 'self' only if active."""
-    link = {"href": href, "type": OPDS_TYPE, "title": title}
+    link = {"href": _url(href), "type": OPDS_TYPE, "title": title}
     if active:
         link["rel"] = "self"
     return link
-
-
-def _url(path: str, params: Dict) -> str:
-    """Build URL with query string, omitting empty values."""
-    clean = {k: v for k, v in params.items() if v not in ("", None)}
-    return f"{path}?{urlencode(clean, doseq=True)}" if clean else path
 
 
 def _make_page_url(endpoint: str, base: Dict, query: str = "") -> Callable[[int], str]:

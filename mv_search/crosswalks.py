@@ -8,6 +8,8 @@ import html
 from typing import Any, Dict, List, Optional
 from itertools import zip_longest
 
+import cherrypy
+
 from .constants import BOOKSHELF_CATEGORY_PREFIX, Crosswalk, Language, LoCCMainClass
 from .formatters import format_dict_result, ContributorFormat
 
@@ -53,7 +55,8 @@ def _gutenberg_url(path: str) -> str:
         return ""
     if path.startswith(("http://", "https://")):
         return path
-    return f"https://www.gutenberg.org/{path.lstrip('/')}"
+    base = cherrypy.config.get("document_root", "https://www.gutenberg.org").rstrip("/")
+    return f"{base}{path if path.startswith('/') else '/' + path}"
 
 
 def _build_creators(row) -> List[Dict[str, Any]]:
@@ -149,7 +152,7 @@ def _build_formats(row) -> List[Dict[str, Any]]:
 def _opds_book_metadata(row) -> Dict[str, Any]:
     return {
         "@type": "http://schema.org/Book",
-        "identifier": f"https://www.gutenberg.org/ebooks/{row.book_id}",
+        "identifier": _gutenberg_url(f"/ebooks/{row.book_id}"),
         "title": row.title,
         "language": (list(row.lang_codes) if row.lang_codes else ["en"])[0] or "en",
     }
@@ -194,11 +197,14 @@ def _build_opds_contributor_entry(
 ) -> Dict[str, Any]:
     contributor = {"name": person["name"], "sortAs": person["name"]}
     if with_search_link and person.get("id"):
-        contributor["identifier"] = (
-            f"https://www.gutenberg.org/ebooks/author/{person['id']}"
+        contributor["identifier"] = _gutenberg_url(
+            f"/ebooks/author/{person['id']}"
         )
         contributor["links"] = [
-            {"href": f"/opds/search?author_id={person['id']}", "type": _OPDS_FEED_TYPE}
+            {
+                "href": _gutenberg_url(f"/opds/search?author_id={person['id']}"),
+                "type": _OPDS_FEED_TYPE,
+            }
         ]
     return contributor
 
@@ -260,7 +266,10 @@ def _opds_bookshelf_subject_metadata(
             "scheme": SCHEME_GUTENBERG_BOOKSHELF,
             "code": str(shelf_id),
             "links": [
-                {"href": f"/opds/bookshelves?id={shelf_id}", "type": _OPDS_FEED_TYPE}
+                {
+                    "href": _gutenberg_url(f"/opds/bookshelves?id={shelf_id}"),
+                    "type": _OPDS_FEED_TYPE,
+                }
             ],
         })
     return subject_objs
@@ -278,7 +287,10 @@ def _opds_subject_metadata(
             subj["scheme"] = SCHEME_GUTENBERG_SUBJECT
             subj["code"] = str(s["id"])
             subj["links"] = [
-                {"href": f"/opds/subjects?id={s['id']}", "type": _OPDS_FEED_TYPE}
+                {
+                    "href": _gutenberg_url(f"/opds/subjects?id={s['id']}"),
+                    "type": _OPDS_FEED_TYPE,
+                }
             ]
         subject_objs.append(subj)
     for code in locc_codes:
@@ -290,7 +302,12 @@ def _opds_subject_metadata(
             "sortAs": code,
             "scheme": SCHEME_LCC,
             "code": code,
-            "links": [{"href": f"/opds/search?locc={code}", "type": _OPDS_FEED_TYPE}],
+            "links": [
+                {
+                    "href": _gutenberg_url(f"/opds/search?locc={code}"),
+                    "type": _OPDS_FEED_TYPE,
+                }
+            ],
         })
     return subject_objs
 
@@ -298,7 +315,7 @@ def _opds_subject_metadata(
 def _opds_self_link(book_id) -> Dict[str, str]:
     return {
         "rel": "self",
-        "href": f"/opds/publications?id={book_id}",
+        "href": _gutenberg_url(f"/opds/publications?id={book_id}"),
         "type": _OPDS_PUBLICATION_TYPE,
     }
 
@@ -327,7 +344,7 @@ def _opds_acquisition_links(
             return [link]
     return [{
         "rel": "http://opds-spec.org/acquisition/open-access",
-        "href": f"https://www.gutenberg.org/ebooks/{book_id}",
+        "href": _gutenberg_url(f"/ebooks/{book_id}"),
         "type": "text/html",
     }]
 
@@ -335,7 +352,7 @@ def _opds_acquisition_links(
 def _opds_also_link(book_id) -> Dict[str, str]:
     return {
         "rel": "related",
-        "href": f"/opds/also?id={book_id}",
+        "href": _gutenberg_url(f"/opds/also?id={book_id}"),
         "type": _OPDS_FEED_TYPE,
         "title": "Readers also downloaded",
     }
