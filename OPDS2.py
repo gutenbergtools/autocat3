@@ -201,6 +201,7 @@ def _search_scope(
     bookshelf_id: Optional[int],
 ):
     """Apply search-route filters (not lang or subject_id)."""
+    q.text_only()
     if query.strip():
         q.search(query, search_type=SearchType.HYBRID)
     if title.strip():
@@ -255,8 +256,18 @@ class OPDSFeed:
         return self._fts
 
     # Query Helpers
+    def _query(self, crosswalk=None):
+        """OPDS catalog queries always exclude audiobooks."""
+        q = (
+            self.fts.query(crosswalk=crosswalk)
+            if crosswalk is not None
+            else self.fts.query()
+        )
+        return q.text_only()
+
     def _filter(self, q, lang: str):
         """Apply common filters to query."""
+        q.text_only()
         if lang:
             q.lang(lang)
         return q
@@ -290,7 +301,7 @@ class OPDSFeed:
 
     def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
         """Top-downloaded sample for a shelf, excluding already-shown books."""
-        q = self.fts.query(crosswalk=OPDS_SMALL).bookshelf_id(shelf_id)
+        q = self._query(OPDS_SMALL).bookshelf_id(shelf_id)
         if seen:
             q.where("book_id <> ALL(:seen_ids)", seen_ids=list(seen))
         result = self.fts.execute(
@@ -305,7 +316,7 @@ class OPDSFeed:
     def _category_count(self, cat) -> int:
         """Count distinct books across all of a category's sub-shelves."""
         try:
-            q = self.fts.query().where(
+            q = self._query().where(
                 "EXISTS (SELECT 1 FROM mn_books_bookshelves mbb "
                 "WHERE mbb.fk_books = book_id "
                 "AND mbb.fk_bookshelves = ANY(:shelf_ids))",
@@ -321,7 +332,7 @@ class OPDSFeed:
             sub = self.fts.get_locc_children(code)
             if sub:
                 return len(sub)
-            return self.fts.count(self.fts.query().locc(code))
+            return self.fts.count(self._query().locc(code))
         except Exception as e:
             cherrypy.log(
                 f"LoCC nav count error ({code}): {e}", severity=logging.WARNING
@@ -545,7 +556,7 @@ class OPDSFeed:
 
         def _recently_added():
             result = self.fts.execute(
-                self.fts.query(crosswalk=OPDS_SMALL).order_by(
+                self._query(OPDS_SMALL).order_by(
                     OrderBy.RELEASE_DATE, SortDirection.DESC
                 )[1, SAMPLE_LIMIT],
             )
@@ -564,7 +575,7 @@ class OPDSFeed:
 
         def _most_popular():
             result = self.fts.execute(
-                self.fts.query(crosswalk=OPDS_SMALL).order_by(OrderBy.DOWNLOADS)[
+                self._query(OPDS_SMALL).order_by(OrderBy.DOWNLOADS)[
                     1, SAMPLE_LIMIT
                 ],
             )
@@ -697,7 +708,7 @@ class OPDSFeed:
         for sid, sname in self.fts.curated_shelves(cat):
             nav_item = _nav(f"/opds/bookshelves?id={sid}", sname)
             try:
-                count = self.fts.count(self.fts.query().bookshelf_id(sid))
+                count = self.fts.count(self._query().bookshelf_id(sid))
                 if count:
                     nav_item["properties"] = {"numberOfItems": count}
             except Exception as e:
@@ -738,7 +749,7 @@ class OPDSFeed:
                 break
 
         try:
-            q = self.fts.query(crosswalk=OPDS_SMALL).bookshelf_id(shelf_id)
+            q = self._query(OPDS_SMALL).bookshelf_id(shelf_id)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -762,7 +773,7 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/bookshelves", base)
 
         facet_counts = self.fts.get_opds_facets(
-            lambda q: q.bookshelf_id(shelf_id), lang=lang
+            lambda q: q.text_only().bookshelf_id(shelf_id), lang=lang
         )
 
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
@@ -963,7 +974,7 @@ class OPDSFeed:
     ):
         """Browse books in a LoCC leaf."""
         try:
-            q = self.fts.query(crosswalk=OPDS_SMALL).locc(parent)
+            q = self._query(OPDS_SMALL).locc(parent)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -987,7 +998,9 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/loccs", base)
         facet_url = _make_facet_url("/opds/loccs", base)
 
-        facet_counts = self.fts.get_opds_facets(lambda q: q.locc(parent), lang=lang)
+        facet_counts = self.fts.get_opds_facets(
+            lambda q: q.text_only().locc(parent), lang=lang
+        )
 
         feed = {
             "metadata": {
@@ -1078,7 +1091,7 @@ class OPDSFeed:
     ):
         """Browse books for a subject."""
         try:
-            q = self.fts.query(crosswalk=OPDS_SMALL).subject_id(subject_id)
+            q = self._query(OPDS_SMALL).subject_id(subject_id)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
             result = self.fts.execute(q[page, limit])
@@ -1103,7 +1116,7 @@ class OPDSFeed:
         facet_url = _make_facet_url("/opds/subjects", base)
 
         facet_counts = self.fts.get_opds_facets(
-            lambda q: q.subject_id(subject_id),
+            lambda q: q.text_only().subject_id(subject_id),
             lang=lang,
             include_subjects=False,
         )
@@ -1144,7 +1157,7 @@ class OPDSFeed:
         page, limit = _paginate(page, limit)
         try:
             result = self.fts.execute(
-                self.fts.query(crosswalk=OPDS_SMALL).also_downloaded(int(id))[
+                self._query(OPDS_SMALL).also_downloaded(int(id))[
                     page, limit
                 ]
             )
@@ -1186,7 +1199,7 @@ class OPDSFeed:
         """Single publication by Gutenberg ebook number."""
         try:
             result = self.fts.execute(
-                self.fts.query(crosswalk=OPDS).etext(int(id))[1, 1]
+                self._query(OPDS).etext(int(id))[1, 1]
             )
         except Exception as e:
             cherrypy.log(f"Publication error: {e}")
@@ -1230,7 +1243,7 @@ class OPDSFeed:
                 scope, lang=lang, subject_id=subject_id
             )
 
-            q = self.fts.query(crosswalk=OPDS_SMALL)
+            q = self._query(OPDS_SMALL)
             scope(q)
             if lang:
                 q.lang(lang)
