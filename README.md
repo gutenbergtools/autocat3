@@ -35,24 +35,20 @@ pip install pipenv
 
 ```bash
 sudo useradd -r -m -d /var/lib/autocat -s /bin/bash autocat
-sudo mkdir -p /var/lib/autocat/autocat3
 sudo mkdir -p /var/lib/autocat/log
 sudo mkdir -p /var/run/autocat
-sudo chown -R autocat:autocat /var/lib/autocat
-sudo chown -R autocat:autocat /var/run/autocat
 ```
 
 ### 3. Clone the repository
 
 ```bash
-git clone https://github.com/zachjesus/autocat3.git /tmp/autocat3
-sudo cp -r /tmp/autocat3/* /var/lib/autocat/autocat3/
-sudo chown -R autocat:autocat /var/lib/autocat
+sudo su - autocat
+git clone https://github.com/gutenbergtools/autocat3.git
 ```
 
 ### 4. Install dependencies
 
-pipenv reads the `Pipfile` and auto-detects Python 3.6 from pyenv. Setting `PIPENV_VENV_IN_PROJECT` puts the virtualenv in `.venv/` inside the project directory so the systemd service can find it.
+pipenv reads the `Pipfile` and auto-detects Python 3.9 from pyenv. Setting `PIPENV_VENV_IN_PROJECT` puts the virtualenv in `.venv/` inside the project directory so the systemd service can find it.
 
 ```bash
 cd /var/lib/autocat/autocat3
@@ -65,40 +61,7 @@ Verify:
 sudo -u autocat /var/lib/autocat/autocat3/.venv/bin/python --version
 ```
 
-### 5. Create the materialized view
-
-Until this is merged officially, the scripts live in [gutenbergtools/pgdb PR #15](https://github.com/gutenbergtools/pgdb/pull/15).
-Clone the repo, check out that PR, and run the scripts against your `gutenberg`
-database. pg_trgm is now managed by its own scripts, so they must be run in
-order, and a few require the `postgres` superuser.
-
-```bash
-git clone https://github.com/gutenbergtools/pgdb.git
-cd pgdb
-git fetch origin pull/15/head:full-mv-patch
-git checkout full-mv-patch
-```
-
-Run these in order:
-
-```bash
-# 1. Prep: drop objects depending on the old (unpackaged) pg_trgm — run as gutenberg
-psql -U gutenberg -d gutenberg -f 15_prep_pg_trgm_install.sql
-
-# 2. Drop leftover unpackaged pg_trgm artifacts — MUST run as the postgres superuser
-psql -U postgres -d gutenberg -f 16_drop_pg_trgm_artifacts.sql
-
-# 3. Install the pg_trgm extension and recreate its indexes — MUST run as postgres
-psql -U postgres -d gutenberg -f 17_install_pg_trgm_extension.sql
-
-# 4. Create the materialized view — run as the same user you will use for pguser
-psql -U gutenberg -d gutenberg -f 18_materialized_view.sql
-```
-
-To avoid permission errors, create the materialized view (step 4) as the same
-user you will be using for `pguser` in the next step.
-
-### 6. Configure
+### 5. Configure
 
 Edit `/etc/autocat3.conf` (or `~/.autocat3` under the autocat user) to override defaults from `CherryPy.conf`. At minimum, set your database credentials and hosts:
 
@@ -120,7 +83,7 @@ mv_refresh_hour: 17
 
 Other information on configuring Autocat3 can be found in configuring.txt
 
-### 7. Install the systemd service
+### 6. Install the systemd service
 
 The service runs the app using the venv's Python directly:
 
