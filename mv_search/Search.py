@@ -43,6 +43,7 @@ _ORDER_COLUMNS = {
     OrderBy.TITLE: ("title", SortDirection.ASC, None),
     OrderBy.AUTHOR: ("creator_names[1]", SortDirection.ASC, "LAST"),
     OrderBy.RELEASE_DATE: ("CAST(release_date AS date)", SortDirection.DESC, "LAST"),
+    OrderBy.FILEMTIME: ("filemtime", SortDirection.DESC, "LAST"),
     OrderBy.RANDOM: ("RANDOM()", None, None),
 }
 
@@ -273,7 +274,15 @@ class SearchQuery:
             """,
             str(date),
         )
-        
+
+    def modified_after(self, date: str) -> "SearchQuery":
+        return self.filter(
+            """
+            CAST(filemtime AS date) >= CAST({} AS date)
+            """,
+            str(date),
+        )
+
     def locc(self, code: Union[LoCCMainClass, str]) -> "SearchQuery":
         if isinstance(code, LoCCMainClass):
             code = code.code

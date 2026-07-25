@@ -63,9 +63,9 @@ VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
 OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
 # Only the user-facing search fields are advertised to clients. /opds/search
-# also accepts lang, sort, sort_order, locc, author_id, subject_id
-# and bookshelf_id for internal facet/scope carry-over, but those are kept out
-# of the template so clients don't surface them as search inputs.
+# also accepts lang, sort, sort_order, locc, author_id, subject_id,
+# bookshelf_id, and modified_since for internal/secret facet/scope carry-over, but those
+# are kept out of the template so clients don't surface them as search inputs.
 SEARCH_TEMPLATE = "/opds/search{?query,title,author}"
 
 
@@ -1232,6 +1232,7 @@ class OPDSFeed:
         author_id: Optional[int] = None,
         subject_id: Optional[int] = None,
         bookshelf_id: Optional[int] = None,
+        modified_since: str = "",
     ):
         """Full-text search."""
         page, limit = _paginate(page, limit)
@@ -1240,9 +1241,14 @@ class OPDSFeed:
         bookshelf_id = _optional_int(bookshelf_id)
 
         try:
-            scope = lambda q: _search_scope(
-                q, query, title, author, locc, author_id, bookshelf_id
-            )
+            def scope(q):
+                _search_scope(
+                    q, query, title, author, locc, author_id, bookshelf_id
+                )
+                if modified_since:
+                    q.modified_after(modified_since)
+                return q
+
             facet_counts = self.fts.get_opds_facets(
                 scope, lang=lang, subject_id=subject_id
             )
@@ -1276,6 +1282,7 @@ class OPDSFeed:
             "author_id": author_id,
             "subject_id": subject_id,
             "bookshelf_id": bookshelf_id,
+            "modified_since": modified_since,
         }
         page_url = _make_page_url("/opds/search", base, query)
         facet_url = _make_facet_url("/opds/search", base)
@@ -1289,6 +1296,7 @@ class OPDSFeed:
             "locc": locc,
             "author_id": author_id,
             "bookshelf_id": bookshelf_id,
+            "modified_since": modified_since,
         }
         facets = self._facets(
             facet_url, query, lang, sort, sort_order,

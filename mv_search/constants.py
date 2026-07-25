@@ -52,6 +52,7 @@ class OrderBy(str, Enum):
     TITLE = "title"
     AUTHOR = "author"
     RELEASE_DATE = "release_date"
+    FILEMTIME = "filemtime"
     RANDOM = "random"
 
 
