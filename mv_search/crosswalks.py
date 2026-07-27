@@ -68,17 +68,12 @@ def _gutenberg_url(path: str) -> str:
 
 
 def _catalog_url(path: str) -> str:
-    """Absolute URL for OPDS routes (this server: localhost in dev, prod host in prod)."""
-    try:
-        base = cherrypy.request.base
-    except AttributeError:
-        base = ""
-    if not base:
-        host = cherrypy.config.get("host", "www.gutenberg.org")
-        if host.startswith(("http://", "https://")):
-            base = host
-        else:
-            base = f"https://{host}"
+    """Absolute URL for OPDS routes (catalog host from config)."""
+    host = cherrypy.config.get("host", "www.gutenberg.org")
+    if host.startswith(("http://", "https://")):
+        base = host
+    else:
+        base = f"https://{host}"
     return _abs_url(base, path)
 
 
