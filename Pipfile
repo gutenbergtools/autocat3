@@ -41,3 +41,4 @@ urllib3 = ">=2.6.3"
 idna = "*"
 lxml = "*"
 libgutenberg = "==0.11.0"
+gunicorn = {extras = ["gthread"], version = "*"}
