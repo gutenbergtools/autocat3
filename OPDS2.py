@@ -108,13 +108,16 @@ OPDS_GZIP_MIME_TYPES = [
     "application/opds-publication+json",
 ]
 
+# Path config for the main app (merge as-is).
 OPDS_MOUNT_CONFIG = {
-    "/": {
+    "/opds": {
         "tools.response_headers.on": True,
         "tools.json_in.on": True,
         "tools.json_out.on": True,
         "tools.gzip.on": True,
         "tools.gzip.mime_types": OPDS_GZIP_MIME_TYPES,
+        "tools.I18nTool.on": False,
+        "tools.sessions.on": False,
         "error_page.404": _json_error_page,
         "error_page.500": _json_error_page,
         "error_page.default": _json_error_page,
@@ -542,7 +545,7 @@ class OPDSFeed:
 
     # Index
     @cherrypy.expose
-    def index(self):
+    def index(self, **_):
         """Root catalog."""
         return self._cache_feed(
             "index", self._build_index, store=lambda feed: bool(feed.get("groups"))
@@ -660,6 +663,7 @@ class OPDSFeed:
         lang: str = "",
         sort: str = "",
         sort_order: str = "",
+        **_,
     ):
         """Bookshelf navigation."""
         page, limit = _paginate(page, limit)
@@ -830,7 +834,7 @@ class OPDSFeed:
         )
 
     @cherrypy.expose
-    def bookshelf_groups(self, category: Optional[str] = None):
+    def bookshelf_groups(self, category: Optional[str] = None, **_):
         """Homepage-style category browse with per-shelf preview groups."""
         if category is None:
             return self._error_feed(
@@ -913,6 +917,7 @@ class OPDSFeed:
         lang: str = "",
         sort: str = "",
         sort_order: str = "",
+        **_,
     ):
         """LoCC hierarchical navigation."""
         parent = (parent or "").strip().upper()
@@ -1068,6 +1073,7 @@ class OPDSFeed:
         lang: str = "",
         sort: str = "",
         sort_order: str = "",
+        **_,
     ):
         """Subject navigation."""
         page, limit = _paginate(page, limit)
@@ -1156,7 +1162,7 @@ class OPDSFeed:
     # Also downloaded
 
     @cherrypy.expose
-    def also(self, id: int, page: int = 1, limit: int = 25):
+    def also(self, id: int, page: int = 1, limit: int = 25, **_):
         """Books co-downloaded with a given ebook."""
         page, limit = _paginate(page, limit)
         try:
@@ -1199,7 +1205,7 @@ class OPDSFeed:
     # Publications
 
     @cherrypy.expose
-    def publications(self, id: int):
+    def publications(self, id: int, **_):
         """Single publication by Gutenberg ebook number."""
         try:
             result = self.fts.execute(
@@ -1233,6 +1239,7 @@ class OPDSFeed:
         subject_id: Optional[int] = None,
         bookshelf_id: Optional[int] = None,
         modified_since: str = "",
+        **_,
     ):
         """Full-text search."""
         page, limit = _paginate(page, limit)
@@ -1361,7 +1368,7 @@ if __name__ == "__main__":
             cherrypy.response.body = b""
             cherrypy.request.handler = None
 
-    cherrypy.tree.mount(OPDSFeed(), "/opds", OPDS_MOUNT_CONFIG)
+    cherrypy.tree.mount(OPDSFeed(), "/opds", {"/": OPDS_MOUNT_CONFIG["/opds"]})
     try:
         cherrypy.engine.start()
         cherrypy.engine.block()

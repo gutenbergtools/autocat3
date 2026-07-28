@@ -94,7 +94,7 @@ def opds_test_server(host="127.0.0.1"):
         params=GutenbergDatabase.get_connection_params(cherrypy.config),
     )
     cherrypy.engine.pool.subscribe()
-    cherrypy.tree.mount(OPDSFeed(), "/opds", OPDS_MOUNT_CONFIG)
+    cherrypy.tree.mount(OPDSFeed(), "/opds", {"/": OPDS_MOUNT_CONFIG["/opds"]})
     cherrypy.engine.start()
     try:
         yield f"http://{host}:{port}"

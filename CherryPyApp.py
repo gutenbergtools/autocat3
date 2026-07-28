@@ -44,7 +44,7 @@ import MetricsPage
 import Sitemap
 import Formatters
 from errors import ErrorPage
-from OPDS2 import OPDSFeed, OPDS_MOUNT_CONFIG, _json_error_page
+from OPDS2 import OPDSFeed, OPDS_MOUNT_CONFIG
 
 import Timer
 
@@ -321,6 +321,13 @@ def main():
         d.connect('msdrive_callback', r'/ebooks/send/msdrive/',
                    controller=msdrive)
 
+    # OPDS 2.0
+    opds = OPDSFeed()
+    d.connect('opds', r'/opds/', controller=opds, action='index')
+    for action in ('search', 'bookshelves', 'bookshelf_groups', 'loccs',
+                   'subjects', 'also', 'publications'):
+        d.connect('opds_' + action, '/opds/' + action, controller=opds, action=action)
+
     # start http server
     #
 
@@ -335,9 +342,8 @@ def main():
                                   'tools.staticdir.dir': install_dir + "/gutenberg"}})
         app.merge({'/pics': {'tools.staticdir.on': True,
                              'tools.staticdir.dir': install_dir + "/pics"}})
-    # Mount OPDS feed at /opds
-    cherrypy.log("Mounting OPDS feed", context='ENGINE', severity=logging.INFO)
-    cherrypy.tree.mount(OPDSFeed(), '/opds', OPDS_MOUNT_CONFIG)
+
+    app.merge(OPDS_MOUNT_CONFIG)
 
     return app
 
