@@ -26,7 +26,7 @@ Gutenberg metadata much faster than by scraping.
     from libgutenberg.MediaTypes import mediatypes as mt
     from libgutenberg import GutenbergGlobals as gg
 
-    os.description = "Free eBook digitized and proofread by volunteers."
+    os.description = os.title + ". Free eBook digitized and proofread by volunteers."
 
     def help_page (s = ''):
         s = s.replace (' ', '_')
