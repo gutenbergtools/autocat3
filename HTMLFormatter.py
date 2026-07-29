@@ -29,7 +29,7 @@ import BaseFormatter
 from i18n_tool import ugettext as _
 
 # filetypes ignored on desktop site
-NO_DESKTOP_FILETYPES = {'plucker', 'qioo', 'rdf', 'rst', 'rst.gen', 'rst.master', 'tei', 
+NO_DESKTOP_FILETYPES = {'plucker', 'qioo', 'rdf', 'rst', 'rst.gen', 'rst.master', 'tei',
     'cover.medium', 'cover.small', 'pageimages', 'kindle.noimages'}
 
 # filetypes which are usually handed over to a separate app on mobile devices
@@ -37,24 +37,24 @@ HANDOVER_TYPES = (mt.epub, mt.mobi, mt.pdf)
 
 # self-contained files we can send to dropbox
 CLOUD_TYPES = (mt.epub, mt.mobi, mt.pdf)
-STD_PDF_MATCH = re.compile (r'files/\d+/\d+-pdf.pdf$')
+STD_PDF_MATCH = re.compile(r'files/\d+/\d+-pdf.pdf$')
 
-class XMLishFormatter (BaseFormatter.BaseFormatter):
+class XMLishFormatter(BaseFormatter.BaseFormatter):
     """ Produce XMLish output. """
 
-    def __init__ (self):
-        super (XMLishFormatter, self).__init__ ()
+    def __init__(self):
+        super(XMLishFormatter, self).__init__()
 
 
-    def fix_dc (self, dc, os):
+    def fix_dc(self, dc, os):
         """ Tweak dc. """
-        def has_std_path (file_obj):
+        def has_std_path(file_obj):
             ''' so cloudstorage links can be elided when the url is non-standard'''
             if file_obj.filetype == 'pdf':
-                return STD_PDF_MATCH.search (file_obj.url)
+                return STD_PDF_MATCH.search(file_obj.url)
             return True
 
-        super (XMLishFormatter, self).fix_dc (dc, os)
+        super(XMLishFormatter, self).fix_dc(dc, os)
 
         dedupable = {}
         for file_ in dc.files:
@@ -64,17 +64,17 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
         for ft in ['epub', 'pdf', 'html']:
             if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
                 # because of timestamps, identical files may vary by a bit or 2
-                if abs (dedupable[ft + '.images'].extent - dedupable[ft + '.noimages'].extent) < 3:
+                if abs(dedupable[ft + '.images'].extent - dedupable[ft + '.noimages'].extent) < 3:
                     do_dedupe = True
         if do_dedupe:
             for ft in ['epub', 'pdf', 'html']:
                 if ft + '.images' in dedupable and ft + '.noimages' in dedupable:
                     dc.files.remove(dedupable[ft + '.noimages'])
-                
+
         for file_ in dc.files:
-            type_ = six.text_type (file_.mediatypes[0])
-            m = type_.partition (';')[0]
-            if m in CLOUD_TYPES and has_std_path (file_):
+            type_ = six.text_type(file_.mediatypes[0])
+            m = type_.partition(';')[0]
+            if m in CLOUD_TYPES and has_std_path(file_):
                 file_.dropbox_url = os.url(
                     'dropbox_send', id=dc.project_gutenberg_id, filetype=file_.filetype,
                     protocol='https')
@@ -86,20 +86,20 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
                     protocol='https')
 
             # these are used as relative links
-            if file_.generated and not file_.filetype.startswith ('cover.'):
+            if file_.generated and not file_.filetype.startswith('cover.'):
                 file_.filename = "ebooks/%d.%s" % (dc.project_gutenberg_id, file_.filetype)
 
 
-    def format (self, page, os):
+    def format(self, page, os):
         """ Format to HTML. """
 
         for e in os.entries:
-            if isinstance (e, BaseSearcher.DC):
-                self.fix_dc (e, os)
+            if isinstance(e, BaseSearcher.DC):
+                self.fix_dc(e, os)
 
         # loop again because fix:dc appends things
         for e in os.entries:
-            if isinstance (e, BaseSearcher.Cat):
+            if isinstance(e, BaseSearcher.Cat):
                 if e.url:
                     e.icon2 = e.icon2 or 'next'
                 else:
@@ -108,42 +108,36 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
         if os.title_icon:
             os.class_ += 'icon_' + os.title_icon
 
-        os.entries.sort (key = operator.attrgetter ('order'))
+        os.entries.sort(key = operator.attrgetter('order'))
 
-        return self.render (page, os)
+        return self.render(page, os)
 
 
-class HTMLFormatter (XMLishFormatter):
+class HTMLFormatter(XMLishFormatter):
     """ Produce HTML output. """
 
     CONTENT_TYPE = 'text/html; charset=UTF-8'
-    DOCTYPE      = 'html5'
+    DOCTYPE = 'html5'
 
-    def __init__ (self):
-        super (HTMLFormatter, self).__init__ ()
-
-
-    def get_serializer (self):
-        # return BaseFormatter.XHTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
-        return genshi.output.HTMLSerializer (doctype = self.DOCTYPE, strip_whitespace = False)
+    def __init__(self):
+        super (HTMLFormatter, self).__init__()
 
 
-    def fix_dc (self, dc, os):
+    def get_serializer(self):
+        return genshi.output.HTMLSerializer(doctype=self.DOCTYPE, strip_whitespace=False)
+
+
+    def fix_dc(self, dc, os):
         """ Add some info to dc for easier templating.
 
         Also make sure that dc `walks like a cat´. """
 
-        super (HTMLFormatter, self).fix_dc (dc, os)
+        super(HTMLFormatter, self).fix_dc(dc, os)
 
-        #for author in dc.authors:
-        #    author.authors_page_url = (
-        #        "/browse/authors/%s#a%d" % (author.name[:1].lower (), author.id))
         if dc.new_filesystem:
             dc.base_dir = "/files/%d/" % dc.project_gutenberg_id
-            # dc.mirror_dir = gg.archive_dir (dc.project_gutenberg_id)
         else:
             dc.base_dir = None
-            # dc.mirror_dir = None
 
         dc.magnetlink = None
 
