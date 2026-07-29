@@ -395,7 +395,7 @@ class OpenSearch(object):
         self.user_dialog = ('', '')
         self.opensearch_support = 0 # 0 = none, 1 = full, 2 = fake(Stanza, Aldiko, ...)
         self.books_in_archive = babel.numbers.format_number(
-            books_in_archive, locale = str(cherrypy.response.i18n.locale))
+            books_in_archive, locale=str(cherrypy.response.i18n.locale))
         self.breadcrumbs  = [
             (_('Project Gutenberg'), _('Go to the Main page.'), '/'),
             (__('1 free eBook', '{count} free eBooks', books_in_archive).format(
@@ -498,7 +498,7 @@ class OpenSearch(object):
             'random': _("Random"),
             }
 
-        self.snippet_image_url = self.url('/pics/logo-144x144.png', host=self.file_host)
+        self.snippet_image_url = self.url('/pics/logo-144x144.png', host=self.file_host, protocol="https")
         self.og_type = 'website'
         self.class_ = ClassAttr()
         self.title_icon = 'search'
@@ -559,14 +559,14 @@ class OpenSearch(object):
         self.show_prev_page_link = self.start_index > 1
         self.show_next_page_link = (self.end_index < self.total_results)
 
-        self.desktop_search = self.url('search', format = None)
+        self.desktop_search = self.url('search', protocol='https')
 
         self.base_url = self.url(host = self.file_host, protocol='https')
 
         # for google, fb etc.
-        self.canonical_url = self.url_carry(host = self.file_host, format = None)
+        self.canonical_url = self.url_carry(host=self.file_host, protocol='https')
 
-        self.desktop_url = self.url_carry(host = self.desktop_host, format = None)
+        self.desktop_url = self.url_carry(host=self.desktop_host, protocol='https')
 
         self.osd_url = self.qualify('/catalog/osd-books.xml')
 

@@ -75,12 +75,15 @@ class XMLishFormatter (BaseFormatter.BaseFormatter):
             type_ = six.text_type (file_.mediatypes[0])
             m = type_.partition (';')[0]
             if m in CLOUD_TYPES and has_std_path (file_):
-                file_.dropbox_url = os.url (
-                    'dropbox_send', id = dc.project_gutenberg_id, filetype = file_.filetype)
-                file_.gdrive_url = os.url (
-                    'gdrive_send', id = dc.project_gutenberg_id, filetype = file_.filetype)
-                file_.msdrive_url = os.url (
-                    'msdrive_send', id = dc.project_gutenberg_id, filetype = file_.filetype)
+                file_.dropbox_url = os.url(
+                    'dropbox_send', id=dc.project_gutenberg_id, filetype=file_.filetype,
+                    protocol='https')
+                file_.gdrive_url = os.url(
+                    'gdrive_send', id=dc.project_gutenberg_id, filetype=file_.filetype,
+                    protocol='https')
+                file_.msdrive_url = os.url(
+                    'msdrive_send', id = dc.project_gutenberg_id, filetype=file_.filetype,
+                    protocol='https')
 
             # these are used as relative links
             if file_.generated and not file_.filetype.startswith ('cover.'):
