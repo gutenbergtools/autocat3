@@ -860,9 +860,9 @@ def sql_get(query, **params):
         c  = conn.cursor()
         c.execute(query, params)
         row = c.fetchone()
-        if row:
-            return row[0]
-        return None
+        return_value = row[0] if row else None
+        conn.close()
+        return return_value
     except DatabaseError as what:
         cherrypy.log("SQL Error: %s\n" % what,
                       context = 'REQUEST', severity = logging.ERROR)
@@ -925,7 +925,9 @@ class SQLSearcher(object):
         conn = cherrypy.engine.pool.connect()
         c  = conn.cursor()
         query, params = sql.build()
-        return c.mogrify(query, params).decode('utf-8')
+        return_value = c.mogrify(query, params).decode('utf-8')
+        conn.close()
+        return return_value
 
 
     @staticmethod
@@ -941,7 +943,9 @@ class SQLSearcher(object):
 
             c.execute(query, params)
 
-            return [xl(c, row) for row in c.fetchall()]
+            return_value = [xl(c, row) for row in c.fetchall()]
+            conn.close()
+            return return_value
         except DatabaseError as what:
             cherrypy.log("SQL Error: %s\n" % what,
                           context = 'REQUEST', severity = logging.ERROR)
