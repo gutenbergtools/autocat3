@@ -412,7 +412,6 @@ class OpenSearch(object):
         self.user_agent = cherrypy.request.headers.get('User-Agent', '')
 
         cherrypy.request.os = self
-        s = cherrypy.session
         k = cherrypy.request.params
 
         host = cherrypy.request.headers.get('X-Forwarded-Host', cherrypy.config['host'])
@@ -440,12 +439,11 @@ class OpenSearch(object):
         # search_terms: this is used to carry the last query
         # to display in the search input box
 
-        self.search_terms = self.query or s.get('search_terms', '')
+        self.search_terms = self.query or ''
 
-        self.sort_order = k.get('sort_order') or s.get('sort_order') or USER_SORT_ORDERS[0]
+        self.sort_order = k.get('sort_order') or USER_SORT_ORDERS[0]
         if self.sort_order not in USER_SORT_ORDERS:
             raise cherrypy.HTTPError(400, 'Bad Request. Unknown sort order.')
-        s['sort_order'] = self.sort_order
 
         try:
             self.id = int(k.get('id') or '0')
@@ -505,7 +503,7 @@ class OpenSearch(object):
         self.sort_orders = []
         self.alternate_sort_orders = []
 
-        lang = self.lang = s.get('_lang_', 'en_US')
+        lang = self.lang = str(cherrypy.response.i18n.locale) or 'en_US'
         if len(lang) == 2:
             lang = self.lang = self.lang_to_default_locale.get(lang, 'en_US')
         lang2 = self.lang[:2]
@@ -555,10 +553,6 @@ class OpenSearch(object):
         self.desktop_url = self.url_carry(host=self.desktop_host, protocol='https')
 
         self.osd_url = self.qualify('/catalog/osd-books.xml')
-
-        s = cherrypy.session
-        # write this late so pages can change it
-        s['search_terms'] = self.search_terms
 
 
     def url(self, *args, **params):

@@ -259,11 +259,8 @@ def load_translation(languages, dirname, domain, default):
 
 def get_lang (mo_dir, default, domain):
     """Main function which will be invoked during the request by `I18nTool`.
-    If the SessionTool is on and has a lang key, this language get the
-    highest priority. Default language get the lowest priority.
-    The `Lang` object will be saved as `cherrypy.response.i18n` and the
-    language string will also saved as `cherrypy.session['_lang_']` (if
-    SessionTool is on).
+    Default language get the lowest priority.
+    The `Lang` object will be saved as `cherrypy.response.i18n`.
 
     :parameters:
         mo_dir : String
@@ -278,12 +275,6 @@ def get_lang (mo_dir, default, domain):
 
     lang = cherrypy.request.params.get ('lang', None)
 
-    if not lang:
-        try:
-            lang = cherrypy.session['_lang_']
-        except (AttributeError, KeyError):
-            pass
-
     if lang:
         lang = lang.replace ('-', '_')
         langs = (lang, )
@@ -293,11 +284,6 @@ def get_lang (mo_dir, default, domain):
 
     loc = load_translation (langs, mo_dir, domain, default)
     cherrypy.response.i18n = loc
-
-    try:
-        cherrypy.session['_lang_'] = str (loc.locale)
-    except AttributeError:
-        pass
 
 
 def set_lang ():

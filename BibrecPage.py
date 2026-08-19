@@ -110,11 +110,6 @@ class BibrecPage (Page.Page):
 
         os.entries.append (dc)
 
-        s = cherrypy.session
-        last_visited = s.get ('last_visited', [])
-        last_visited.append (os.id)
-        s['last_visited'] = last_visited
-
         # can we find some meaningful breadcrumbs ?
         for a in dc.authors:
             if a.marcrel in ('aut', 'cre'):

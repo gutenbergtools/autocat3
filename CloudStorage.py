@@ -192,6 +192,7 @@ class CloudStorage (object):
     def get_or_create_session (self):
         """ Retrieve an ongoing cloud session or create a new one. """
 
+        cherrypy.session.acquire_lock()
         session_name = self.session_class.name_prefix + '_session'
         session = cherrypy.session.get (session_name, self.session_class ())
         cherrypy.session[session_name] = session
