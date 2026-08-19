@@ -42,7 +42,7 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 config = cherrypy.config
 
 urlgen = routes.URLGenerator (cherrypy.routes_mapper, {
-    'HTTP_HOST': config['file_host'],
+    'HTTP_HOST': config['host'],
     'HTTPS': config['host_https']
 })
 
@@ -71,7 +71,7 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
         prefix = self.name_prefix
 
         client_id     = config[prefix + '_client_id']
-        redirect_uri  = urlgen (prefix + '_callback', host = config['file_host'])
+        redirect_uri  = urlgen (prefix + '_callback', host = config['host'])
 
         super (CloudOAuth2Session, self).__init__ (
             client_id = client_id,
