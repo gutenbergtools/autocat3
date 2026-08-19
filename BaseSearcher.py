@@ -392,7 +392,6 @@ class OpenSearch(object):
         self.items_per_page = 1
         self.total_results = -1
         self.page_mode = 'screen'
-        self.user_dialog = ('', '')
         self.opensearch_support = 0 # 0 = none, 1 = full, 2 = fake(Stanza, Aldiko, ...)
         self.books_in_archive = babel.numbers.format_number(
             books_in_archive, locale=str(cherrypy.response.i18n.locale))
@@ -524,19 +523,6 @@ class OpenSearch(object):
         self.viewport = "width=device-width" # , initial-scale=1.0"
         self.touch_icon = '/gutenberg/apple-icon.png'
         self.touch_icon_precomposed = None # not yet used
-
-        if 'user_dialog' in s:
-            self.user_dialog = s['user_dialog']
-            del s['user_dialog']
-
-        msg = k.get('msg')
-        if msg is not None:
-            if msg == 'welcome_stranger':
-                self.user_dialog = (
-                    _("Welcome to Project Gutenberg. "
-                      "You'll find here {count} eBooks completely free of charge.")
-                    .format(count = self.books_in_archive),
-                    _('Welcome'))
 
 
     def finalize(self):

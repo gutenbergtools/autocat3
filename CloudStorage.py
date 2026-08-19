@@ -28,7 +28,6 @@ import requests_oauthlib
 from requests import RequestException
 from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 
-from i18n_tool import ugettext as _
 import BaseSearcher
 
 # pylint: disable=R0921
@@ -159,9 +158,6 @@ class CloudStorage (object):
         name = self.name
 
         if 'not_approved' in kwargs or 'error' in kwargs:
-            self._dialog (
-                _('Sorry. The file could not be sent to {name}.').format (name = name),
-                _('Error'))
             self.redirect_done (session)
 
         try:
@@ -175,9 +171,6 @@ class CloudStorage (object):
 
             log ("File %s sent to %s" % (
                 session.ebook.get_source_url (), name))
-            self._dialog (
-                _('The file has been sent to {name}.').format (name = name),
-                _('Sent to {name}').format (name = name))
             self.redirect_done (session)
 
         except (OAuth2Error, ) as what:
@@ -244,12 +237,6 @@ class CloudStorage (object):
         error_log (msg)
         self.delete_session ()
         raise cherrypy.HTTPError (401, msg)
-
-
-    @staticmethod
-    def _dialog (message, title):
-        """ Open a user-visible dialog on the next page. """
-        cherrypy.session['user_dialog'] = (message, title)
 
 
 class EbookMetaData (object):
