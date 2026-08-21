@@ -35,9 +35,6 @@ Gutenberg metadata much faster than by scraping.
         return _('Information about {topic}.').format (topic = _(s))
     def _ (s):
         return s
-    i = 0
-
-    maintainer = 'is-catalog-maintainer' in cherrypy.request.cookie
   ?>
 
   <xi:include href="site-layout.html" />
@@ -352,10 +349,7 @@ Gutenberg metadata much faster than by scraping.
 			<td py:when="marc.code=='245'" itemprop="headline">
 			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
 			</td>
-			<td py:when="marc.code=='240'" itemprop="alternativeHeadline">
-			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
-			</td>
-			<td py:when="marc.code=='246'" itemprop="alternativeHeadline">
+			<td py:when="marc.code in ['240', '246']" itemprop="alternativeHeadline">
 			  ${ Markup (gg.insert_breaks(gg.xmlspecialchars(marc.text), self_closing=False)) }
 			</td>
 			<td py:otherwise="">
