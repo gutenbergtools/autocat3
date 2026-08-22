@@ -82,6 +82,7 @@ from __future__ import unicode_literals
 import gettext
 
 import cherrypy
+from cherrypy.lib import set_vary_header
 import six
 from babel.core import Locale, UnknownLocaleError
 from babel.support import Translations, LazyProxy
@@ -308,6 +309,9 @@ def set_lang ():
         if hasattr (cherrypy.response, 'i18n'):
             cherrypy.response.headers['Content-Language'] = str (
                 cherrypy.response.i18n.locale)
+
+    # tell proxies the content varies based on language
+    set_vary_header(cherrypy.response, 'Accept-Language')
 
 
 class I18nTool (cherrypy.Tool):
