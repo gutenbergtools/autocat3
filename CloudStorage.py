@@ -141,6 +141,8 @@ class CloudStorage (object):
         self.host = cherrypy.config['host']
         self.urlgen = urlgen
 
+    # Enable sessions for this page and force no-caching by proxies
+    @cherrypy.config(**{'tools.sessions.on': True, 'tools.expires.secs': 0, 'tools.expires.force': True})
     def index (self, **kwargs):
         """ Output the page. """
 
