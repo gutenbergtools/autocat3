@@ -118,14 +118,14 @@ class BibrecPage (Page.Page):
         # can we find some meaningful breadcrumbs ?
         for a in dc.authors:
             if a.marcrel in ('aut', 'cre'):
-                book_cnt = BaseSearcher.sql_get (
+                book_cnt = BaseSearcher.sql_get(
                     "select count (*) from mn_books_authors where fk_authors = %(aid)s", aid = a.id)
                 if book_cnt > 1:
-                    os.breadcrumbs.append ((
-                        __('One by {author}', '{count} by {author}', book_cnt).format (
-                                count = book_cnt, author = dc.make_pretty_name (a.name)),
+                    os.breadcrumbs.append((
+                        __('One by {author}', '{count} by {author}', book_cnt).format(
+                                count=book_cnt, author=dc.make_pretty_name (a.name)),
                         _('Find more eBooks by the same author.'),
-                         os.url ('author', id = a.id)
+                         os.url('author', id=a.id, protocol='https')
                         ))
 
 
@@ -133,7 +133,7 @@ class BibrecPage (Page.Page):
             cat = BaseSearcher.Cat ()
             cat.title = _('Readers also downloaded')
             cat.rel = 'related'
-            cat.url = os.url ('also', id = os.id)
+            cat.url = os.url('also', id=os.id, protocol='https')
             cat.class_ += 'navlink grayed noprint'
             cat.icon = 'suggestion'
             cat.order = 30
@@ -148,7 +148,7 @@ class BibrecPage (Page.Page):
                     shelf_name = shelf_name[len('Category: '):]
                 cat.title = shelf_name
                 cat.rel = 'related'
-                cat.url = os.url ('bookshelf', id = bookshelf.id)
+                cat.url = os.url('bookshelf', id = bookshelf.id, protocol='https')
                 cat.class_ += 'navlink grayed'
                 cat.icon = 'bookshelf'
                 cat.order = 33
