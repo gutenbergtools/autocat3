@@ -72,41 +72,6 @@
 
   </py:def>
 
-  <py:def function="credits">
-    <div id="credits">
-      <div class="h1"
-	   title="Credits">Credits</div>
-
-      <a href="https://www.ibiblio.org" rel="nofollow"
-	 title="Project Gutenberg is hosted by ibiblio.">
-	<span class ="icon icon_hosted" />
-      </a>
-
-      <p>This web site uses only free software.</p>
-
-      <a href="https://httpd.apache.org/" rel="nofollow"
-	 title="Powered by Apache">
-	<span class="icon icon_apache" />
-      </a>
-
-      <a href="https://www.python.org" rel="nofollow"
-	 title="Powered by Python">
-	<span class="icon icon_python" />
-      </a>
-
-      <a href="https://www.postgresql.org" rel="nofollow"
-	 title="Powered by PostgreSQL">
-	<span class="icon icon_postgres" />
-      </a>
-    </div>
-  </py:def>
-
-  <py:def function="copyright">
-    <div class="copyright" i18n:comment="The copyright notice on the footer of every page.">
-      © 2020 Project Gutenberg Literary Archive Foundation — All Rights Reserved.
-    </div>
-  </py:def>
-
   <py:def function="site_footer">
     <div class="footer"  role="contentinfo" i18n:comment="On the footer of every page.">
     <xi:include href="footer.html" />
@@ -137,20 +102,6 @@
 	 href="${os.url_carry (start_index = os.next_page_index)}">Next</a>
       </py:if>
     </span>
-  </py:def>
-
-  <py:def function="paypal">
-    <form class="paypal-button"
-	  action="https://www.paypal.com/cgi-bin/webscr" method="post">
-      <div>
-	<!--! xml:lang avoids extraction for translation -->
-	<input xml:lang="en" type="hidden" name="cmd" value="_s-xclick" />
-	<input xml:lang="en" type="hidden" name="hosted_button_id" value="XKAL6BZL3YPSN" />
-	<input type="image" alt="paypal icon" name="submit"
-	       src="/pics/paypal/${os.paypal_lang}.gif"
-	       title="Send us money through PayPal." />
-      </div>
-    </form>
   </py:def>
 
 </html>
