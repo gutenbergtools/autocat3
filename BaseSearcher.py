@@ -523,10 +523,6 @@ class OpenSearch(object):
         self.touch_icon = '/gutenberg/apple-icon.png'
         self.touch_icon_precomposed = None # not yet used
 
-        if 'user_dialog' in s:
-            self.user_dialog = s['user_dialog']
-            del s['user_dialog']
-
         msg = k.get('msg')
         if msg is not None:
             if msg == 'welcome_stranger':
