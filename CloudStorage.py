@@ -43,7 +43,7 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 config = cherrypy.config
 
 urlgen = routes.URLGenerator (cherrypy.routes_mapper, {
-    'HTTP_HOST': config['file_host'],
+    'HTTP_HOST': config['host'],
     'HTTPS': config['host_https']
 })
 
@@ -72,7 +72,7 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
         prefix = self.name_prefix
 
         client_id     = config[prefix + '_client_id']
-        redirect_uri  = urlgen (prefix + '_callback', host = config['file_host'])
+        redirect_uri  = urlgen (prefix + '_callback', host = config['host'])
 
         super (CloudOAuth2Session, self).__init__ (
             client_id = client_id,
@@ -142,6 +142,8 @@ class CloudStorage (object):
         self.host = cherrypy.config['host']
         self.urlgen = urlgen
 
+    # Enable sessions for this page and force no-caching by proxies
+    @cherrypy.config(**{'tools.sessions.on': True, 'tools.expires.secs': 0, 'tools.expires.force': True})
     def index (self, **kwargs):
         """ Output the page. """
 
@@ -199,6 +201,7 @@ class CloudStorage (object):
     def get_or_create_session (self):
         """ Retrieve an ongoing cloud session or create a new one. """
 
+        cherrypy.session.acquire_lock()
         session_name = self.session_class.name_prefix + '_session'
         session = cherrypy.session.get (session_name, self.session_class ())
         cherrypy.session[session_name] = session

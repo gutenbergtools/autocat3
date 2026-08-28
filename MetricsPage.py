@@ -18,6 +18,8 @@ from Page import Page
 class MetricsPage (Page):
     """ prometheus-exporter style metrics """
 
+    # Enable sessions for this page so we can get stats from them
+    @cherrypy.config(**{'tools.sessions.on': True})
     def index (self, **dummy_kwargs):
         """ return metrics. """
 
