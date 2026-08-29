@@ -154,7 +154,7 @@ class HTMLFormatter(XMLishFormatter):
                     txt_file.hidden = True
                     showncount -= 1
                 txt_file = file_
-                file_.hr_filetype = 'Plain Text (accessible)'
+                file_.hr_filetype = 'Plain Text'
             elif file_.compression == 'zip':
                 if file_.archive_path.startswith('cache/epub'):
                     file_.hr_filetype = 'Download HTML (zip)'
@@ -183,7 +183,7 @@ class HTMLFormatter(XMLishFormatter):
                     file_.hidden = True
                 else:
                     txt_file = file_
-                    file_.hr_filetype = 'Plain Text (accessible)'
+                    file_.hr_filetype = 'Plain Text'
             if not file_.hidden:
                 showncount += 1
 
