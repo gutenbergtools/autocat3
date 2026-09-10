@@ -1,5 +1,5 @@
 """
-crosswalks.py — Zachary Rosario
+publications.py — Zachary Rosario
 
 Row-to-dict transforms for PG and OPDS 2.0 output formats.
 """

@@ -185,7 +185,7 @@ class CuratedBookshelves(Enum):
 
     Shelves are referenced by their display label only; the matching
     `bookshelves` row is "Category: <label>" and its primary key is resolved
-    from the database on first use (see FullTextSearch.curated_shelves). The
+    from the database on first use (see Catalog.curated_shelves). The
     ids are stable for a given dataset but are not hard-coded here so a
     rebuild can't silently point a label at the wrong shelf.
     """

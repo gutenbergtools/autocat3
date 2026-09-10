@@ -12,7 +12,7 @@ import json
 
 import cherrypy
 
-from mv_search.constants import (
+from opds_catalog.constants import (
     Crosswalk,
     CuratedBookshelves,
     Language,
@@ -21,8 +21,8 @@ from mv_search.constants import (
     SearchType,
     SortDirection,
 )
-from mv_search.crosswalks import _catalog_url
-from mv_search.Search import FullTextSearch
+from opds_catalog.publications import _catalog_url
+from opds_catalog.catalog import Catalog
 
 OPDS = Crosswalk.OPDS
 OPDS_SMALL = Crosswalk.OPDS_SMALL
@@ -259,7 +259,7 @@ class OPDSFeed:
     @property
     def fts(self):
         if self._fts is None:
-            self._fts = FullTextSearch(cherrypy.engine.pool.engine)
+            self._fts = Catalog(cherrypy.engine.pool.engine)
         return self._fts
 
     # Query Helpers

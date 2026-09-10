@@ -1,7 +1,7 @@
 """
-test_search.py — integration tests for the mv_books_dc search module.
+test_catalog.py — integration tests for the OPDS catalog data layer.
 
-Run: python3 -m unittest mv_search.test_search -v
+Run: python3 -m unittest opds_catalog.test_catalog -v
 """
 
 import os
@@ -19,20 +19,20 @@ from .constants import (
     SearchField,
     SearchType,
 )
-from .Search import FullTextSearch
-from .crosswalks import _set_publication_contributors
+from .catalog import Catalog
+from .publications import _set_publication_contributors
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_CONF = os.path.join(ROOT, "test.conf")
 
 
-def _make_search() -> FullTextSearch:
+def _make_search() -> Catalog:
     cherrypy.config.update(TEST_CONF)
     c = cherrypy.config
     engine = create_engine(
         f"postgresql://{c['pguser']}@{c['pghost']}:{c['pgport']}/{c['pgdatabase']}"
     )
-    return FullTextSearch(engine)
+    return Catalog(engine)
 
 
 class SearchTestBase(unittest.TestCase):

@@ -1,5 +1,5 @@
 """
-Search.py — Zachary Rosario
+catalog.py — Zachary Rosario
 
 Query builder and search interface for the mv_books_dc materialized view.
 """
@@ -22,11 +22,11 @@ from .constants import (
     SearchType,
     SortDirection,
 )
-from .crosswalks import CROSSWALK_MAP
+from .publications import CROSSWALK_MAP
 
 __all__ = [
-    "FullTextSearch",
-    "SearchQuery",
+    "Catalog",
+    "CatalogQuery",
 ]
 
 _FIELD_COLS = {
@@ -75,11 +75,11 @@ _SUBQUERY = """book_id, title, downloads, CAST(release_date AS text) AS release_
 
 
 # =============================================================================
-# SearchQuery
+# CatalogQuery
 # =============================================================================
 
 
-class SearchQuery:
+class CatalogQuery:
     def __init__(self):
         self._search = []  # type: List[Tuple[str, Dict, str]]
         self._filters = []  # type: List[Tuple[str, Dict]]
@@ -91,7 +91,7 @@ class SearchQuery:
         self._param_counter = 0
         self._also_downloaded_for = None  # type: Optional[int]
 
-    def __getitem__(self, key: Union[int, Tuple]) -> "SearchQuery":
+    def __getitem__(self, key: Union[int, Tuple]) -> "CatalogQuery":
         """Set pagination: q[3] for page 3, q[2, 50] for page 2 with 50 results."""
         if isinstance(key, tuple):
             self._page = max(1, int(key[0]))
@@ -100,13 +100,13 @@ class SearchQuery:
             self._page = max(1, int(key))
         return self
 
-    def crosswalk(self, cw: Crosswalk) -> "SearchQuery":
+    def crosswalk(self, cw: Crosswalk) -> "CatalogQuery":
         self._crosswalk = cw
         return self
 
     def order_by(
         self, order: OrderBy, direction: Optional[SortDirection] = None
-    ) -> "SearchQuery":
+    ) -> "CatalogQuery":
         self._order = order
         self._sort_dir = direction
         return self
@@ -116,7 +116,7 @@ class SearchQuery:
         self._param_counter += 1
         return pname, {pname: value}
 
-    def filter(self, sql_template: str, *values: object) -> "SearchQuery":
+    def filter(self, sql_template: str, *values: object) -> "CatalogQuery":
         params = {}  # type: Dict
         placeholders = []  # type: List[str]
         for v in values:
@@ -132,7 +132,7 @@ class SearchQuery:
         txt: str,
         field: SearchField = SearchField.BOOK,
         search_type: SearchType = SearchType.FTS,
-    ) -> "SearchQuery":
+    ) -> "CatalogQuery":
         txt = (txt or "").strip()
         if not txt:
             return self
@@ -167,7 +167,7 @@ class SearchQuery:
 
     # Filter Methods
 
-    def etext(self, nr: int) -> "SearchQuery":
+    def etext(self, nr: int) -> "CatalogQuery":
         return self.filter(
             """
             book_id = {}
@@ -175,7 +175,7 @@ class SearchQuery:
             int(nr),
         )
 
-    def etexts(self, nrs: List[int]) -> "SearchQuery":
+    def etexts(self, nrs: List[int]) -> "CatalogQuery":
         return self.filter(
             """
             book_id = ANY({})
@@ -183,7 +183,7 @@ class SearchQuery:
             [int(n) for n in nrs],
         )
 
-    def downloads_gte(self, n: int) -> "SearchQuery":
+    def downloads_gte(self, n: int) -> "CatalogQuery":
         return self.filter(
             """
             downloads >= {}
@@ -191,7 +191,7 @@ class SearchQuery:
             int(n),
         )
 
-    def downloads_lte(self, n: int) -> "SearchQuery":
+    def downloads_lte(self, n: int) -> "CatalogQuery":
         return self.filter(
             """
             downloads <= {}
@@ -199,15 +199,15 @@ class SearchQuery:
             int(n),
         )
 
-    def public_domain(self) -> "SearchQuery":
+    def public_domain(self) -> "CatalogQuery":
         self._filters.append(("copyrighted = 0", {}))
         return self
 
-    def copyrighted(self) -> "SearchQuery":
+    def copyrighted(self) -> "CatalogQuery":
         self._filters.append(("copyrighted = 1", {}))
         return self
 
-    def lang(self, code: Union[Language, str]) -> "SearchQuery":
+    def lang(self, code: Union[Language, str]) -> "CatalogQuery":
         if isinstance(code, Language):
             code_val = code.code
         else:
@@ -219,15 +219,15 @@ class SearchQuery:
             code_val,
         )
 
-    def text_only(self) -> "SearchQuery":
+    def text_only(self) -> "CatalogQuery":
         self._filters.append(("is_audio = false", {}))
         return self
 
-    def audiobook(self) -> "SearchQuery":
+    def audiobook(self) -> "CatalogQuery":
         self._filters.append(("is_audio = true", {}))
         return self
 
-    def author_born_after(self, year: int) -> "SearchQuery":
+    def author_born_after(self, year: int) -> "CatalogQuery":
         return self.filter(
             """
             max_author_birthyear >= {}
@@ -235,7 +235,7 @@ class SearchQuery:
             int(year),
         )
 
-    def author_born_before(self, year: int) -> "SearchQuery":
+    def author_born_before(self, year: int) -> "CatalogQuery":
         return self.filter(
             """
             min_author_birthyear <= {}
@@ -243,7 +243,7 @@ class SearchQuery:
             int(year),
         )
 
-    def author_died_after(self, year: int) -> "SearchQuery":
+    def author_died_after(self, year: int) -> "CatalogQuery":
         return self.filter(
             """
             max_author_deathyear >= {}
@@ -251,7 +251,7 @@ class SearchQuery:
             int(year),
         )
 
-    def author_died_before(self, year: int) -> "SearchQuery":
+    def author_died_before(self, year: int) -> "CatalogQuery":
         return self.filter(
             """
             min_author_deathyear <= {}
@@ -259,7 +259,7 @@ class SearchQuery:
             int(year),
         )
 
-    def released_after(self, date: str) -> "SearchQuery":
+    def released_after(self, date: str) -> "CatalogQuery":
         return self.filter(
             """
             CAST(release_date AS date) >= CAST({} AS date)
@@ -267,7 +267,7 @@ class SearchQuery:
             str(date),
         )
 
-    def released_before(self, date: str) -> "SearchQuery":
+    def released_before(self, date: str) -> "CatalogQuery":
         return self.filter(
             """
             CAST(release_date AS date) <= CAST({} AS date)
@@ -275,7 +275,7 @@ class SearchQuery:
             str(date),
         )
 
-    def modified_after(self, date: str) -> "SearchQuery":
+    def modified_after(self, date: str) -> "CatalogQuery":
         return self.filter(
             """
             CAST(filemtime AS date) >= CAST({} AS date)
@@ -283,7 +283,7 @@ class SearchQuery:
             str(date),
         )
 
-    def locc(self, code: Union[LoCCMainClass, str]) -> "SearchQuery":
+    def locc(self, code: Union[LoCCMainClass, str]) -> "CatalogQuery":
         if isinstance(code, LoCCMainClass):
             code = code.code
         else:
@@ -302,7 +302,7 @@ class SearchQuery:
             code,
         )
 
-    def contributor_role(self, role: str) -> "SearchQuery":
+    def contributor_role(self, role: str) -> "CatalogQuery":
         return self.filter(
             """
             EXISTS (
@@ -316,7 +316,7 @@ class SearchQuery:
             role,
         )
 
-    def file_type(self, ft: Union[FileType, str]) -> "SearchQuery":
+    def file_type(self, ft: Union[FileType, str]) -> "CatalogQuery":
         if isinstance(ft, FileType):
             ft_value = ft.value
         else:
@@ -337,7 +337,7 @@ class SearchQuery:
             ft_value,
         )
 
-    def author_id(self, aid: int) -> "SearchQuery":
+    def author_id(self, aid: int) -> "CatalogQuery":
         return self.filter(
             """
             EXISTS (
@@ -350,7 +350,7 @@ class SearchQuery:
             int(aid),
         )
 
-    def subject_id(self, sid: int) -> "SearchQuery":
+    def subject_id(self, sid: int) -> "CatalogQuery":
         return self.filter(
             """
             EXISTS (
@@ -363,7 +363,7 @@ class SearchQuery:
             int(sid),
         )
 
-    def bookshelf_id(self, bid: int) -> "SearchQuery":
+    def bookshelf_id(self, bid: int) -> "CatalogQuery":
         return self.filter(
             """
             EXISTS (
@@ -376,12 +376,12 @@ class SearchQuery:
             int(bid),
         )
 
-    def also_downloaded(self, book_id: int) -> "SearchQuery":
+    def also_downloaded(self, book_id: int) -> "CatalogQuery":
         """Books co-downloaded with the given ebook (scores.also_downloads)."""
         self._also_downloaded_for = int(book_id)
         return self
 
-    def where(self, sql: str, **params) -> "SearchQuery":
+    def where(self, sql: str, **params) -> "CatalogQuery":
         """Add raw SQL filter condition. BE CAREFUL WHEN USING!"""
         for k in params.keys():
             if k.startswith("__p"):
@@ -543,11 +543,11 @@ class SearchQuery:
 
 
 # =============================================================================
-# FullTextSearch
+# Catalog
 # =============================================================================
 
 
-class FullTextSearch:
+class Catalog:
     """Main search interface."""
 
     def __init__(self, engine):
@@ -555,16 +555,16 @@ class FullTextSearch:
         self.Session = sessionmaker(bind=self.engine)
         self._bookshelf_ids = None
 
-    def query(self, crosswalk: Crosswalk = Crosswalk.PG) -> "SearchQuery":
+    def query(self, crosswalk: Crosswalk = Crosswalk.PG) -> "CatalogQuery":
         """Create a new query builder."""
-        q = SearchQuery()
+        q = CatalogQuery()
         q._crosswalk = crosswalk
         return q
 
     def _transform(self, row, cw: Crosswalk) -> Dict:
         return CROSSWALK_MAP[cw](row)
 
-    def execute(self, q: "SearchQuery", with_count: bool = True) -> Dict:
+    def execute(self, q: "CatalogQuery", with_count: bool = True) -> Dict:
         """Execute query and return paginated results.
 
         with_count=False skips the window total ('total' comes back None);
@@ -593,7 +593,7 @@ class FullTextSearch:
             "total_pages": total_pages,
         }
 
-    def count(self, q: "SearchQuery") -> int:
+    def count(self, q: "CatalogQuery") -> int:
         """Count results without fetching."""
         with self.Session() as session:
             sql, params = q.build_count()
@@ -706,8 +706,8 @@ class FullTextSearch:
 
     def get_facets_for_query(
         self,
-        subject_q: "SearchQuery",
-        language_q: Optional["SearchQuery"] = None,
+        subject_q: "CatalogQuery",
+        language_q: Optional["CatalogQuery"] = None,
         *,
         subject_limit: Optional[int] = None,
         language_limit: Optional[int] = None,
@@ -839,7 +839,7 @@ class FullTextSearch:
 
     def get_opds_facets(
         self,
-        scope_fn: Callable[["SearchQuery"], "SearchQuery"],
+        scope_fn: Callable[["CatalogQuery"], "CatalogQuery"],
         lang: str = "",
         subject_id: Optional[int] = None,
         *,
