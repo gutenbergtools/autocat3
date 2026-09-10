@@ -1,7 +1,8 @@
 """
 catalog.py — Zachary Rosario
 
-Query builder and search interface for the mv_books_dc materialized view.
+Query builder and database access for the OPDS feed, backed by the
+mv_books_dc materialized view.
 """
 
 import logging
@@ -14,12 +15,9 @@ from .constants import (
     BOOKSHELF_CATEGORY_PREFIX,
     Crosswalk,
     CuratedBookshelves,
-    FileType,
-    Language,
     LoCCMainClass,
     OrderBy,
     SearchField,
-    SearchType,
     SortDirection,
 )
 from .publications import CROSSWALK_MAP
@@ -29,6 +27,7 @@ __all__ = [
     "CatalogQuery",
 ]
 
+# (tsvector expression, plain text expression) per searchable field
 _FIELD_COLS = {
     SearchField.BOOK: ("tsvec", "book_text"),
     SearchField.TITLE: ("to_tsvector('english', title)", "title"),
@@ -51,27 +50,14 @@ _SELECT = """book_id, title, downloads, CAST(release_date AS text) AS release_da
     creator_ids, creator_names, creator_roles,
     creator_born_floor, creator_born_ceil, creator_died_floor, creator_died_ceil,
     subject_ids, subject_names, bookshelf_ids, bookshelf_names,
-    locc_codes, is_audio, dcmitypes, publisher, summary, credits,
-    reading_level, coverpage, format_filenames, format_filetypes,
+    locc_codes, dcmitypes, publisher, summary,
+    reading_level, format_filenames, format_filetypes,
     format_hr_filetypes, format_mediatypes, format_extents"""
 
 _SELECT_OPDS_SMALL = """book_id, title, lang_codes,
     creator_ids, creator_names, creator_roles,
     format_filenames, format_filetypes, format_hr_filetypes,
     format_mediatypes, format_extents"""
-
-_SUBQUERY = """book_id, title, downloads, CAST(release_date AS text) AS release_date,
-    copyrighted, lang_codes, is_audio,
-    creator_ids, creator_names, creator_roles,
-    creator_born_floor, creator_born_ceil, creator_died_floor, creator_died_ceil,
-    subject_ids, subject_names, bookshelf_ids, bookshelf_names,
-    dcmitypes, publisher, summary, credits, reading_level,
-    coverpage, format_filenames, format_filetypes, format_hr_filetypes,
-    format_mediatypes, format_extents,
-    max_author_birthyear, min_author_birthyear,
-    max_author_deathyear, min_author_deathyear,
-    locc_codes,
-    tsvec, book_text"""
 
 
 # =============================================================================
@@ -80,14 +66,22 @@ _SUBQUERY = """book_id, title, downloads, CAST(release_date AS text) AS release_
 
 
 class CatalogQuery:
-    def __init__(self):
-        self._search = []  # type: List[Tuple[str, Dict, str]]
+    """Chainable query against mv_books_dc.
+
+    Text search is "hybrid": full-text (websearch_to_tsquery) first, falling
+    back to trigram word similarity when the FTS query returns nothing.
+    """
+
+    def __init__(self, crosswalk: Crosswalk = Crosswalk.OPDS):
+        # (sql, params, rank_col, text_col)
+        self._search = []  # type: List[Tuple[str, Dict, str, str]]
+        self._fuzzy = False
         self._filters = []  # type: List[Tuple[str, Dict]]
         self._order = OrderBy.DOWNLOADS
         self._sort_dir = None  # type: Optional[SortDirection]
         self._page = 1
         self._page_size = 25
-        self._crosswalk = Crosswalk.PG
+        self._crosswalk = crosswalk
         self._param_counter = 0
         self._also_downloaded_for = None  # type: Optional[int]
 
@@ -98,10 +92,6 @@ class CatalogQuery:
             self._page_size = max(1, min(100, int(key[1])))
         else:
             self._page = max(1, int(key))
-        return self
-
-    def crosswalk(self, cw: Crosswalk) -> "CatalogQuery":
-        self._crosswalk = cw
         return self
 
     def order_by(
@@ -117,6 +107,7 @@ class CatalogQuery:
         return pname, {pname: value}
 
     def filter(self, sql_template: str, *values: object) -> "CatalogQuery":
+        """Add a filter; each {} in the template becomes a bound parameter."""
         params = {}  # type: Dict
         placeholders = []  # type: List[str]
         for v in values:
@@ -127,168 +118,40 @@ class CatalogQuery:
         self._filters.append((sql, params))
         return self
 
-    def search(
-        self,
-        txt: str,
-        field: SearchField = SearchField.BOOK,
-        search_type: SearchType = SearchType.FTS,
-    ) -> "CatalogQuery":
+    def search(self, txt: str, field: SearchField = SearchField.BOOK) -> "CatalogQuery":
         txt = (txt or "").strip()
         if not txt:
             return self
-
         fts_col, text_col = _FIELD_COLS[field]
         pname, p = self._new_param(txt)
-
-        if search_type == SearchType.FUZZY:
-            self._search.append((f":{pname} <% {text_col}", p, text_col))
-        elif search_type == SearchType.HYBRID:
-            sql = f"{fts_col} @@ websearch_to_tsquery('english', :{pname})"
-            self._search.append((sql, p, fts_col, SearchType.HYBRID, text_col))
-        else:
-            sql = f"{fts_col} @@ websearch_to_tsquery('english', :{pname})"
-            self._search.append((sql, p, fts_col))
+        sql = f"{fts_col} @@ websearch_to_tsquery('english', :{pname})"
+        self._search.append((sql, p, fts_col, text_col))
         return self
 
-    def _is_hybrid(self) -> bool:
-        return any(len(s) > 3 and s[3] == SearchType.HYBRID for s in self._search)
+    def _can_fallback(self) -> bool:
+        return bool(self._search) and not self._fuzzy
 
     def _use_fuzzy(self) -> None:
-        """Switch hybrid clauses from tsvector to trigram search."""
-        updated = []
-        for s in self._search:
-            if len(s) > 3 and s[3] == SearchType.HYBRID:
-                _, p, _, _, text_col = s
-                pname = next(iter(p))
-                updated.append((f":{pname} <% {text_col}", p, text_col))
-            else:
-                updated.append(s)
-        self._search = updated
+        """Switch search clauses from tsvector to trigram search."""
+        self._search = [
+            (f":{next(iter(p))} <% {text_col}", p, text_col, text_col)
+            for _, p, _, text_col in self._search
+        ]
+        self._fuzzy = True
 
-    # Filter Methods
+    # Filters
 
     def etext(self, nr: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            book_id = {}
-            """,
-            int(nr),
-        )
+        return self.filter("book_id = {}", int(nr))
 
-    def etexts(self, nrs: List[int]) -> "CatalogQuery":
-        return self.filter(
-            """
-            book_id = ANY({})
-            """,
-            [int(n) for n in nrs],
-        )
-
-    def downloads_gte(self, n: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            downloads >= {}
-            """,
-            int(n),
-        )
-
-    def downloads_lte(self, n: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            downloads <= {}
-            """,
-            int(n),
-        )
-
-    def public_domain(self) -> "CatalogQuery":
-        self._filters.append(("copyrighted = 0", {}))
-        return self
-
-    def copyrighted(self) -> "CatalogQuery":
-        self._filters.append(("copyrighted = 1", {}))
-        return self
-
-    def lang(self, code: Union[Language, str]) -> "CatalogQuery":
-        if isinstance(code, Language):
-            code_val = code.code
-        else:
-            code_val = code.lower()
-        return self.filter(
-            """
-            lang_codes @> ARRAY[CAST({} AS text)]
-            """,
-            code_val,
-        )
-
-    def text_only(self) -> "CatalogQuery":
-        self._filters.append(("is_audio = false", {}))
-        return self
-
-    def audiobook(self) -> "CatalogQuery":
-        self._filters.append(("is_audio = true", {}))
-        return self
-
-    def author_born_after(self, year: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            max_author_birthyear >= {}
-            """,
-            int(year),
-        )
-
-    def author_born_before(self, year: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            min_author_birthyear <= {}
-            """,
-            int(year),
-        )
-
-    def author_died_after(self, year: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            max_author_deathyear >= {}
-            """,
-            int(year),
-        )
-
-    def author_died_before(self, year: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            min_author_deathyear <= {}
-            """,
-            int(year),
-        )
-
-    def released_after(self, date: str) -> "CatalogQuery":
-        return self.filter(
-            """
-            CAST(release_date AS date) >= CAST({} AS date)
-            """,
-            str(date),
-        )
-
-    def released_before(self, date: str) -> "CatalogQuery":
-        return self.filter(
-            """
-            CAST(release_date AS date) <= CAST({} AS date)
-            """,
-            str(date),
-        )
+    def lang(self, code: str) -> "CatalogQuery":
+        return self.filter("lang_codes @> ARRAY[CAST({} AS text)]", code.lower())
 
     def modified_after(self, date: str) -> "CatalogQuery":
-        return self.filter(
-            """
-            CAST(filemtime AS date) >= CAST({} AS date)
-            """,
-            str(date),
-        )
+        return self.filter("CAST(filemtime AS date) >= CAST({} AS date)", str(date))
 
     def locc(self, code: Union[LoCCMainClass, str]) -> "CatalogQuery":
-        if isinstance(code, LoCCMainClass):
-            code = code.code
-        else:
-            code = str(code).upper()
-
+        code = code.code if isinstance(code, LoCCMainClass) else str(code).upper()
         return self.filter(
             """
             EXISTS (
@@ -300,41 +163,6 @@ class CatalogQuery:
             )
             """,
             code,
-        )
-
-    def contributor_role(self, role: str) -> "CatalogQuery":
-        return self.filter(
-            """
-            EXISTS (
-                SELECT 1
-                FROM mn_books_authors mba
-                JOIN roles r ON mba.fk_roles = r.pk
-                WHERE mba.fk_books = book_id
-                  AND r.role = {}
-            )
-            """,
-            role,
-        )
-
-    def file_type(self, ft: Union[FileType, str]) -> "CatalogQuery":
-        if isinstance(ft, FileType):
-            ft_value = ft.value
-        else:
-            ft_value = str(ft)
-
-        return self.filter(
-            """
-            EXISTS (
-                SELECT 1
-                FROM files f
-                JOIN filetypes ft ON f.fk_filetypes = ft.pk
-                WHERE f.fk_books = book_id
-                  AND f.obsoleted = 0
-                  AND f.diskstatus = 0
-                  AND ft.mediatype = {}
-            )
-            """,
-            ft_value,
         )
 
     def author_id(self, aid: int) -> "CatalogQuery":
@@ -391,11 +219,11 @@ class CatalogQuery:
         self._filters.append((sql, params))
         return self
 
-    # === SQL Building ===
+    # SQL building
 
     def _params(self) -> Dict[str, object]:
         params = {}
-        for _, p, *_ in self._search:
+        for _, p, _, _ in self._search:
             params.update(p)
         for _, p in self._filters:
             params.update(p)
@@ -403,10 +231,10 @@ class CatalogQuery:
 
     def _order_sql(self, params: Dict) -> str:
         if self._order == OrderBy.RELEVANCE and self._search:
-            sql, p, col = self._search[-1][:3]
+            _, p, col, _ = self._search[-1]
             val = next(iter(p.values())) if p else ""
             params["rank_q"] = str(val).replace("%", "")
-            if "<%" in sql:
+            if self._fuzzy:
                 return f"word_similarity(:rank_q, {col}) DESC, downloads DESC"
             return f"ts_rank_cd({col}, websearch_to_tsquery('english', :rank_q)) DESC, downloads DESC"
 
@@ -484,8 +312,9 @@ class CatalogQuery:
         search_sql, filter_sql = self._where_parts()
 
         if search_sql and filter_sql:
+            # Search first (index scan), then filters over the matched rows.
             sql = (
-                f"SELECT {select_cols}{total_col} FROM (SELECT {_SUBQUERY} FROM mv_books_dc WHERE {search_sql}) t "
+                f"SELECT {select_cols}{total_col} FROM (SELECT * FROM mv_books_dc WHERE {search_sql}) t "
                 f"WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
             )
         elif search_sql:
@@ -529,10 +358,8 @@ class CatalogQuery:
 
         if search_sql and filter_sql:
             return (
-                "SELECT COUNT(*) FROM (SELECT book_id, lang_codes, downloads, copyrighted,"
-                " is_audio, max_author_birthyear, min_author_birthyear,"
-                " max_author_deathyear, min_author_deathyear, release_date"
-                f" FROM mv_books_dc WHERE {search_sql}) t WHERE {filter_sql}",
+                f"SELECT COUNT(*) FROM (SELECT * FROM mv_books_dc WHERE {search_sql}) t"
+                f" WHERE {filter_sql}",
                 params,
             )
         elif search_sql:
@@ -548,23 +375,17 @@ class CatalogQuery:
 
 
 class Catalog:
-    """Main search interface."""
+    """Database access for the OPDS feed."""
 
     def __init__(self, engine):
         self.engine = engine
         self.Session = sessionmaker(bind=self.engine)
         self._bookshelf_ids = None
 
-    def query(self, crosswalk: Crosswalk = Crosswalk.PG) -> "CatalogQuery":
-        """Create a new query builder."""
-        q = CatalogQuery()
-        q._crosswalk = crosswalk
-        return q
+    def query(self, crosswalk: Crosswalk = Crosswalk.OPDS) -> CatalogQuery:
+        return CatalogQuery(crosswalk)
 
-    def _transform(self, row, cw: Crosswalk) -> Dict:
-        return CROSSWALK_MAP[cw](row)
-
-    def execute(self, q: "CatalogQuery", with_count: bool = True) -> Dict:
+    def execute(self, q: CatalogQuery, with_count: bool = True) -> Dict:
         """Execute query and return paginated results.
 
         with_count=False skips the window total ('total' comes back None);
@@ -573,7 +394,7 @@ class Catalog:
         with self.Session() as session:
             sql, params = q.build(with_count=with_count)
             rows = session.execute(text(sql), params).fetchall()
-            if q._is_hybrid() and not rows:
+            if q._can_fallback() and not rows:
                 q._use_fuzzy()
                 sql, params = q.build(with_count=with_count)
                 rows = session.execute(text(sql), params).fetchall()
@@ -585,27 +406,23 @@ class Catalog:
             total = None
             total_pages = 1
 
+        crosswalk = CROSSWALK_MAP[q._crosswalk]
         return {
-            "results": [self._transform(r, q._crosswalk) for r in rows],
+            "results": [crosswalk(r) for r in rows],
             "page": q._page,
             "page_size": q._page_size,
             "total": total,
             "total_pages": total_pages,
         }
 
-    def count(self, q: "CatalogQuery") -> int:
+    def count(self, q: CatalogQuery) -> int:
         """Count results without fetching."""
         with self.Session() as session:
             sql, params = q.build_count()
             return session.execute(text(sql), params).scalar() or 0
 
     def bookshelf_ids(self) -> Dict[str, int]:
-        """Map of bookshelf name -> primary key, loaded once and cached.
-
-        Bookshelf rows are static for a given dataset, so curated shelves can
-        reference shelves by name and resolve to ids here instead of carrying
-        hard-coded primary keys.
-        """
+        """Map of bookshelf name -> primary key, loaded once and cached."""
         if self._bookshelf_ids is None:
             with self.Session() as session:
                 rows = session.execute(
@@ -627,40 +444,8 @@ class Catalog:
                 resolved.append((pk, label))
         return resolved
 
-    def list_bookshelves(self) -> List[Dict]:
-        """
-        List all bookshelves with book counts.
-
-        Returns:
-            List of dicts with 'id', 'name', and 'book_count' keys
-        """
-        sql = """
-            SELECT
-                bs.pk AS id,
-                bs.bookshelf AS name,
-                COUNT(mbbs.fk_books) AS book_count
-            FROM bookshelves bs
-            LEFT JOIN mn_books_bookshelves mbbs
-                ON bs.pk = mbbs.fk_bookshelves
-            GROUP BY
-                bs.pk,
-                bs.bookshelf
-            ORDER BY
-                bs.bookshelf
-        """
-        with self.Session() as session:
-            rows = session.execute(text(sql)).fetchall()
-            return [
-                {"id": r.id, "name": r.name, "book_count": r.book_count} for r in rows
-            ]
-
     def list_subjects(self) -> List[Dict]:
-        """
-        List all subjects with book counts.
-
-        Returns:
-            List of dicts with 'id', 'name', and 'book_count' keys
-        """
+        """All subjects with at least one book: {'id', 'name', 'book_count'}."""
         sql = """
             SELECT
                 s.pk AS id,
@@ -685,29 +470,16 @@ class Catalog:
             ]
 
     def get_subject_name(self, subject_id: int) -> Optional[str]:
-        """
-        Get a single subject's name by ID (fast lookup).
-
-        Args:
-            subject_id: Subject primary key
-
-        Returns:
-            Subject name or None if not found
-        """
-        sql = """
-            SELECT
-                subject
-            FROM subjects
-            WHERE pk = :id
-        """
         with self.Session() as session:
-            result = session.execute(text(sql), {"id": subject_id}).scalar()
-            return result
+            return session.execute(
+                text("SELECT subject FROM subjects WHERE pk = :id"),
+                {"id": subject_id},
+            ).scalar()
 
     def get_facets_for_query(
         self,
-        subject_q: "CatalogQuery",
-        language_q: Optional["CatalogQuery"] = None,
+        subject_q: CatalogQuery,
+        language_q: Optional[CatalogQuery] = None,
         *,
         subject_limit: Optional[int] = None,
         language_limit: Optional[int] = None,
@@ -839,7 +611,7 @@ class Catalog:
 
     def get_opds_facets(
         self,
-        scope_fn: Callable[["CatalogQuery"], "CatalogQuery"],
+        scope_fn: Callable[[CatalogQuery], CatalogQuery],
         lang: str = "",
         subject_id: Optional[int] = None,
         *,
@@ -889,17 +661,16 @@ class Catalog:
             return {"subjects": None, "languages": None}
 
     def get_locc_children(self, parent: Union[LoCCMainClass, str]) -> List[Dict]:
-        """Return LoCC children for parent."""
+        """Return LoCC children for parent (main classes when parent is empty)."""
         if isinstance(parent, LoCCMainClass):
             parent_code = parent.code
         else:
             parent_code = (parent or "").strip().upper()
 
         if not parent_code:
-            sorted_classes = sorted(LoCCMainClass, key=lambda x: x.code)
             return [
                 {"code": item.code, "label": item.label}
-                for item in sorted_classes
+                for item in sorted(LoCCMainClass, key=lambda x: x.code)
             ]
 
         if len(parent_code) != 1:

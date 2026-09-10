@@ -1,7 +1,8 @@
 """
-test_catalog.py — integration tests for the OPDS catalog data layer.
+test_catalog.py — tests for the OPDS catalog data layer.
 
 Run: python3 -m unittest opds_catalog.test_catalog -v
+Database-backed tests read connection settings from test.conf.
 """
 
 import os
@@ -10,23 +11,18 @@ import unittest
 import cherrypy
 from sqlalchemy import create_engine
 
-from .constants import (
-    Crosswalk,
-    FileType,
-    Language,
-    LoCCMainClass,
-    OrderBy,
-    SearchField,
-    SearchType,
-)
 from .catalog import Catalog
-from .publications import _set_publication_contributors
+from .constants import Crosswalk, Language, LoCCMainClass, OrderBy
+from .publications import _set_publication_contributors, format_creators
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_CONF = os.path.join(ROOT, "test.conf")
 
+_KNOWN_ETEXT = 1342
+_OPDS_ACQ = "http://opds-spec.org/acquisition/open-access"
 
-def _make_search() -> Catalog:
+
+def _make_catalog() -> Catalog:
     cherrypy.config.update(TEST_CONF)
     c = cherrypy.config
     engine = create_engine(
@@ -35,13 +31,13 @@ def _make_search() -> Catalog:
     return Catalog(engine)
 
 
-class SearchTestBase(unittest.TestCase):
+class CatalogTestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.s = _make_search()
+        cls.c = _make_catalog()
 
     def _run(self, query, expect_results=True):
-        data = self.s.execute(query)
+        data = self.c.execute(query)
         if expect_results:
             self.assertGreater(data["total"], 0, data)
             self.assertTrue(data["results"])
@@ -50,79 +46,18 @@ class SearchTestBase(unittest.TestCase):
         return data
 
 
-class SearchTypeTests(SearchTestBase):
-    def test_search_types(self):
+class SearchTests(CatalogTestBase):
+    def test_search(self):
         cases = (
-            ("FTS BOOK", self.s.query().search("Shakespeare")[1, 10], True),
+            ("exact", self.c.query().search("Shakespeare")[1, 10]),
+            ("typo falls back to fuzzy", self.c.query().search("Frankenstien")[1, 10]),
             (
-                "FUZZY BOOK",
-                self.s.query().search("Frankenstien", search_type=SearchType.FUZZY)[
-                    1, 10
-                ],
-                True,
+                "author + subject",
+                self.c.query().search("Shakespeare").search("Tragedy")[1, 10],
             ),
             (
-                "HYBRID BOOK (exact)",
-                self.s.query().search("Shakespeare", search_type=SearchType.HYBRID)[
-                    1, 10
-                ],
-                True,
-            ),
-            (
-                "HYBRID BOOK (typo)",
-                self.s.query().search("Frankenstien", search_type=SearchType.HYBRID)[
-                    1, 10
-                ],
-                True,
-            ),
-            ("FTS typo (no hit)", self.s.query().search("Frankenstien")[1, 10], False),
-        )
-        for name, query, expect in cases:
-            with self.subTest(name=name):
-                self._run(query, expect_results=expect)
-
-
-class FieldScopedSearchTests(SearchTestBase):
-    def test_field_scoped(self):
-        cases = (
-            ("FTS TITLE", self.s.query().search("Hamlet", field=SearchField.TITLE)[1, 10]),
-            (
-                "FTS AUTHOR",
-                self.s.query().search("Shakespeare", field=SearchField.AUTHOR)[1, 10],
-            ),
-            (
-                "FUZZY TITLE",
-                self.s.query().search(
-                    "Hamlett", field=SearchField.TITLE, search_type=SearchType.FUZZY
-                )[1, 10],
-            ),
-            (
-                "FUZZY AUTHOR",
-                self.s.query().search(
-                    "Shakspeare",
-                    field=SearchField.AUTHOR,
-                    search_type=SearchType.FUZZY,
-                )[1, 10],
-            ),
-            (
-                "HYBRID TITLE (exact)",
-                self.s.query().search(
-                    "Hamlet", field=SearchField.TITLE, search_type=SearchType.HYBRID
-                )[1, 10],
-            ),
-            (
-                "HYBRID AUTHOR (typo)",
-                self.s.query().search(
-                    "Shakspeare",
-                    field=SearchField.AUTHOR,
-                    search_type=SearchType.HYBRID,
-                )[1, 10],
-            ),
-            (
-                "TITLE + AUTHOR (AND)",
-                self.s.query()
-                .search("Romeo", field=SearchField.TITLE)
-                .search("Shakespeare", field=SearchField.AUTHOR)[1, 10],
+                "title + bookshelf",
+                self.c.query().search("Adventure").search("Children")[1, 10],
             ),
         )
         for name, query in cases:
@@ -130,104 +65,29 @@ class FieldScopedSearchTests(SearchTestBase):
                 self._run(query)
 
 
-class PrimaryKeyFilterTests(SearchTestBase):
-    def test_primary_key_filters(self):
+class FilterTests(CatalogTestBase):
+    def test_filters(self):
         cases = (
-            ("etext()", self.s.query().etext(1342)[1, 10]),
-            ("etexts()", self.s.query().etexts([1342, 84, 11])[1, 10]),
-        )
-        for name, query in cases:
-            with self.subTest(name=name):
-                self._run(query)
-
-
-class BTreeFilterTests(SearchTestBase):
-    def test_btree_filters(self):
-        cases = (
-            ("downloads_gte()", self.s.query().downloads_gte(10000)[1, 10]),
-            ("downloads_lte()", self.s.query().downloads_lte(100)[1, 10]),
-            ("public_domain()", self.s.query().public_domain()[1, 10]),
-            ("copyrighted()", self.s.query().copyrighted()[1, 10]),
-            ("text_only()", self.s.query().text_only()[1, 10]),
-            ("audiobook()", self.s.query().audiobook()[1, 10]),
-            ("author_born_after()", self.s.query().author_born_after(1900)[1, 10]),
-            ("author_born_before()", self.s.query().author_born_before(1700)[1, 10]),
-        )
-        for name, query in cases:
-            with self.subTest(name=name):
-                self._run(query)
-
-
-class DateFilterTests(SearchTestBase):
-    def test_date_filters(self):
-        cases = (
-            ("released_after()", self.s.query().released_after("2020-01-01")[1, 10]),
-            ("released_before()", self.s.query().released_before("2000-01-01")[1, 10]),
-        )
-        for name, query in cases:
-            with self.subTest(name=name):
-                self._run(query)
-
-
-class GinFilterTests(SearchTestBase):
-    def test_gin_filters(self):
-        cases = (
-            ("lang()", self.s.query().lang(Language.DE)[1, 10]),
-            ("locc()", self.s.query().locc(LoCCMainClass.P)[1, 10]),
-            ("contributor_role()", self.s.query().contributor_role("Illustrator")[1, 10]),
-            ("file_type() EPUB", self.s.query().file_type(FileType.EPUB)[1, 10]),
-            ("file_type() PDF", self.s.query().file_type(FileType.PDF)[1, 10]),
-            ("file_type() TXT", self.s.query().file_type(FileType.TXT)[1, 10]),
+            ("etext()", self.c.query().etext(_KNOWN_ETEXT)[1, 10]),
+            ("lang()", self.c.query().lang(Language.DE.code)[1, 10]),
+            ("locc()", self.c.query().locc(LoCCMainClass.P)[1, 10]),
+            ("author_id()", self.c.query().author_id(53)[1, 10]),
+            ("subject_id()", self.c.query().subject_id(1)[1, 10]),
+            ("bookshelf_id()", self.c.query().bookshelf_id(68)[1, 10]),
+            ("also_downloaded()", self.c.query().also_downloaded(_KNOWN_ETEXT)[1, 10]),
             (
-                "file_type() KINDLE",
-                self.s.query().search("Computers").file_type(FileType.KINDLE)[1, 10],
-            ),
-            ("author_id()", self.s.query().author_id(53)[1, 10]),
-            ("subject_id()", self.s.query().subject_id(1)[1, 10]),
-            ("bookshelf_id()", self.s.query().bookshelf_id(68)[1, 10]),
-            ("author_died_after()", self.s.query().author_died_after(1950)[1, 10]),
-            ("author_died_before()", self.s.query().author_died_before(1800)[1, 10]),
-        )
-        for name, query in cases:
-            with self.subTest(name=name):
-                self._run(query)
-
-
-class ChainedSearchTests(SearchTestBase):
-    def test_chained_searches(self):
-        cases = (
-            (
-                "FTS AUTHOR + FTS SUBJECT",
-                self.s.query().search("Shakespeare").search("Tragedy")[1, 10],
-            ),
-            (
-                "FTS TITLE + FTS BOOKSHELF",
-                self.s.query().search("Adventure").search("Children")[1, 10],
-            ),
-            (
-                "FUZZY AUTHOR + FTS TITLE",
-                self.s.query()
-                .search("Shakspeare", search_type=SearchType.FUZZY)
-                .search("Hamlet")[1, 10],
-            ),
-        )
-        for name, query in cases:
-            with self.subTest(name=name):
-                self._run(query)
-
-
-class CustomSqlTests(SearchTestBase):
-    def test_custom_sql(self):
-        cases = (
-            (
-                "where() - multi-author",
-                self.s.query().where(
+                "where()",
+                self.c.query().where(
                     "COALESCE(array_length(creator_ids, 1), 0) > :n", n=2
                 )[1, 10],
             ),
             (
-                "where() - has credits",
-                self.s.query().where("COALESCE(array_length(credits, 1), 0) > 0")[1, 10],
+                "search + lang",
+                self.c.query().search("Adventure").lang("en")[1, 10],
+            ),
+            (
+                "locc + search",
+                self.c.query().locc(LoCCMainClass.P).search("Mystery")[1, 10],
             ),
         )
         for name, query in cases:
@@ -235,109 +95,44 @@ class CustomSqlTests(SearchTestBase):
                 self._run(query)
 
 
-class OrderingTests(SearchTestBase):
+class OrderingTests(CatalogTestBase):
     def test_ordering(self):
-        cases = (
-            (
-                "order_by(DOWNLOADS)",
-                self.s.query().search("Novel").order_by(OrderBy.DOWNLOADS)[1, 10],
-            ),
-            ("order_by(TITLE)", self.s.query().search("Novel").order_by(OrderBy.TITLE)[1, 10]),
-            (
-                "order_by(AUTHOR)",
-                self.s.query().search("Novel").order_by(OrderBy.AUTHOR)[1, 10],
-            ),
-            (
-                "order_by(RELEVANCE)",
-                self.s.query().search("Novel").order_by(OrderBy.RELEVANCE)[1, 10],
-            ),
-            (
-                "order_by(RELEASE_DATE)",
-                self.s.query().search("Novel").order_by(OrderBy.RELEASE_DATE)[1, 10],
-            ),
-            (
-                "order_by(RANDOM)",
-                self.s.query().search("Novel").order_by(OrderBy.RANDOM)[1, 10],
-            ),
-        )
-        for name, query in cases:
-            with self.subTest(name=name):
-                self._run(query)
+        for order in (
+            OrderBy.DOWNLOADS,
+            OrderBy.TITLE,
+            OrderBy.AUTHOR,
+            OrderBy.RELEVANCE,
+            OrderBy.RELEASE_DATE,
+            OrderBy.RANDOM,
+        ):
+            with self.subTest(order=order.value):
+                self._run(self.c.query().search("Novel").order_by(order)[1, 10])
 
 
-class CombinedFilterTests(SearchTestBase):
-    def test_combined_filters(self):
-        cases = (
-            (
-                "FTS + lang + public_domain",
-                self.s.query().search("Adventure").lang(Language.EN).public_domain()[1, 10],
-            ),
-            (
-                "FTS + file_type",
-                self.s.query().search("Novel").file_type(FileType.EPUB)[1, 10],
-            ),
-            (
-                "FUZZY TITLE + downloads_gte",
-                self.s.query()
-                .search("Shakspeare", search_type=SearchType.FUZZY)
-                .downloads_gte(1000)[1, 10],
-            ),
-            (
-                "author_id + file_type",
-                self.s.query().author_id(53).file_type(FileType.TXT)[1, 10],
-            ),
-            (
-                "FTS BOOKSHELF + lang",
-                self.s.query().search("Mystery").lang(Language.EN)[1, 10],
-            ),
-            (
-                "locc + public_domain",
-                self.s.query().locc(LoCCMainClass.P).public_domain()[1, 10],
-            ),
-        )
-        for name, query in cases:
-            with self.subTest(name=name):
-                self._run(query)
+class PaginationTests(CatalogTestBase):
+    def test_pagination(self):
+        pages = []
+        for page in (1, 2, 3):
+            with self.subTest(page=page):
+                data = self._run(self.c.query().search("Novel")[page, 5])
+                pages.append({r["metadata"]["title"] for r in data["results"]})
+        self.assertTrue(all(pages))
+        self.assertNotEqual(pages[0], pages[1])
+        self.assertNotEqual(pages[1], pages[2])
+
+    def test_count(self):
+        self.assertGreater(self.c.count(self.c.query().search("Shakespeare")), 0)
 
 
-_KNOWN_ETEXT = 1342
-_OPDS_ACQ = "http://opds-spec.org/acquisition/open-access"
-
-
-class CrosswalkTests(SearchTestBase):
+class CrosswalkTests(CatalogTestBase):
     def _etest(self, crosswalk):
-        data = self.s.execute(self.s.query(crosswalk).etext(_KNOWN_ETEXT)[1, 1])
+        data = self.c.execute(self.c.query(crosswalk).etext(_KNOWN_ETEXT)[1, 1])
         self.assertEqual(data["total"], 1, data)
         return data["results"][0]
 
     def _author(self, metadata):
         author = metadata["author"]
         return author if isinstance(author, dict) else author[0]
-
-    def test_crosswalk_pg(self):
-        first = self._etest(Crosswalk.PG)
-        self.assertEqual(first["ebook_no"], _KNOWN_ETEXT)
-        self.assertTrue(first["title"])
-        c = first["contributors"][0]
-        for key in ("id", "name", "role", "born_floor", "died_floor"):
-            self.assertIn(key, c)
-        lang = first["language"][0]
-        self.assertIn("code", lang)
-        self.assertIn("name", lang)
-        f = first["files"][0]
-        for key in ("filename", "type", "size"):
-            self.assertIn(key, f)
-        for key in (
-            "subjects",
-            "bookshelves",
-            "release_date",
-            "downloads_last_30_days",
-            "cover_url",
-            "format",
-        ):
-            self.assertIn(key, first)
-        fmt = first["format"]
-        self.assertTrue(callable(fmt) and fmt(all=True, pretty=True))
 
     def test_crosswalk_opds(self):
         pub = self._etest(Crosswalk.OPDS)
@@ -348,38 +143,73 @@ class CrosswalkTests(SearchTestBase):
         self.assertTrue(md["language"])
         for key in ("accessibility", "description", "subject", "published"):
             self.assertIn(key, md)
+        self.assertTrue(md["description"].startswith("Creators: "))
+        self.assertNotIn("<p>", md["description"])
         self.assertIn("links", self._author(md))
-        self.assertEqual(links[0], {
-            "rel": "self",
-            "href": f"/opds/publications?id={_KNOWN_ETEXT}",
-            "type": "application/opds-publication+json",
-        })
-        self.assertTrue(any(l.get("rel") == _OPDS_ACQ for l in links))
+        self.assertEqual(links[0]["rel"], "self")
+        self.assertTrue(links[0]["href"].endswith(f"/opds/publications?id={_KNOWN_ETEXT}"))
+        acq = [l for l in links if l.get("rel") == _OPDS_ACQ]
+        self.assertEqual(len(acq), 1)
+        self.assertEqual(acq[0]["type"], "application/epub+zip")
         self.assertTrue(any("/opds/also?" in l.get("href", "") for l in links))
         self.assertEqual(len(pub["images"]), 2)
+        self.assertTrue(
+            pub["images"][0]["href"].endswith(
+                f"/cache/epub/{_KNOWN_ETEXT}/pg{_KNOWN_ETEXT}.cover.medium.jpg"
+            )
+        )
 
     def test_crosswalk_opds_small(self):
         pub = self._etest(Crosswalk.OPDS_SMALL)
         md, links = pub["metadata"], pub["links"]
         self.assertEqual(md["@type"], "http://schema.org/Book")
-        self.assertEqual(md["identifier"], f"https://www.gutenberg.org/ebooks/{_KNOWN_ETEXT}")
         self.assertTrue(md["title"])
-        self.assertTrue(md["language"])
         author = self._author(md)
         self.assertIn("name", author)
         self.assertIn("sortAs", author)
         for key in ("description", "accessibility", "published", "subject"):
             self.assertNotIn(key, md)
-        self.assertNotIn("identifier", author)
         self.assertNotIn("links", author)
-        self.assertEqual(links[0], {
-            "rel": "self",
-            "href": f"/opds/publications?id={_KNOWN_ETEXT}",
-            "type": "application/opds-publication+json",
-        })
+        self.assertEqual(links[0]["rel"], "self")
         self.assertTrue(any(l.get("rel") == _OPDS_ACQ for l in links))
         self.assertFalse(any("/opds/also?" in l.get("href", "") for l in links))
         self.assertEqual(len(pub["images"]), 2)
+
+
+class FormatCreatorsTests(unittest.TestCase):
+    def test_single_author_with_dates(self):
+        self.assertEqual(
+            format_creators([{
+                "name": "Twain, Mark", "role": "Author",
+                "born_floor": 1835, "born_ceil": 1835,
+                "died_floor": 1910, "died_ceil": 1910,
+            }]),
+            "Mark Twain (1835-1910)",
+        )
+
+    def test_role_and_partial_dates(self):
+        self.assertEqual(
+            format_creators([
+                {"name": "Austen, Jane", "role": "Author",
+                 "born_floor": 1775, "born_ceil": 1775,
+                 "died_floor": 1817, "died_ceil": 1817},
+                {"name": "Doe, Jane", "role": "Editor", "born_floor": 1900},
+            ]),
+            "Jane Austen (1775-1817) and Jane Doe (1900-) [Editor]",
+        )
+
+    def test_oxford_comma_uncertain_and_bce(self):
+        self.assertEqual(
+            format_creators([
+                {"name": "Homer", "role": "Author", "born_floor": -750, "born_ceil": -750},
+                {"name": "Smith, John (Jr.)", "role": "Translator", "died_ceil": 1850},
+                {"name": "Plato", "role": "Author", "born_floor": -428, "born_ceil": -427},
+            ]),
+            "Homer (751 BCE-), John Smith (d. 1850?) [Translator], and Plato (428? BCE-)",
+        )
+
+    def test_skips_empty_names(self):
+        self.assertEqual(format_creators([{"name": ""}, {"name": None}]), "")
 
 
 class OpdsContributorTests(unittest.TestCase):
@@ -416,40 +246,8 @@ class OpdsContributorTests(unittest.TestCase):
         self.assertNotIn("author", metadata)
         self.assertEqual(metadata["contributor"]["name"], "Doe, Jane")
 
-    def test_collaborator_maps_to_contributor(self):
-        metadata = self._metadata_for(
-            {"id": 1, "name": "Smith, John", "role": "Collaborator"},
-        )
-        self.assertNotIn("author", metadata)
-        self.assertEqual(metadata["contributor"]["name"], "Smith, John")
-
     def test_no_creators_omits_author(self):
         self.assertNotIn("author", self._metadata_for())
-
-
-class PaginationTests(SearchTestBase):
-    def test_pagination(self):
-        cases = (
-            ("page 1", self.s.query().search("Novel")[1, 5]),
-            ("page 2", self.s.query().search("Novel")[2, 5]),
-            ("page 3", self.s.query().search("Novel")[3, 5]),
-        )
-        pages = []
-        for name, query in cases:
-            with self.subTest(name=name):
-                data = self._run(query)
-                pages.append({row.get("title") for row in data["results"]})
-        self.assertTrue(pages[0])
-        self.assertTrue(pages[1])
-        self.assertTrue(pages[2])
-        self.assertNotEqual(pages[0], pages[1])
-        self.assertNotEqual(pages[1], pages[2])
-
-
-class CountTests(SearchTestBase):
-    def test_count(self):
-        count = self.s.count(self.s.query().search("Shakespeare"))
-        self.assertGreater(count, 0)
 
 
 if __name__ == "__main__":

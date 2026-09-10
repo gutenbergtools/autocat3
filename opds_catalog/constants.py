@@ -1,15 +1,13 @@
 """
 constants.py — Zachary Rosario
 
-Enums and constants for the mv_books_dc search module.
+Enums and constants for the OPDS catalog data layer.
 """
 
 from enum import Enum
 from typing import Tuple
 
 __all__ = [
-    "FileType",
-    "SearchType",
     "SearchField",
     "OrderBy",
     "SortDirection",
@@ -22,20 +20,6 @@ __all__ = [
 
 # Curated shelves live in the `bookshelves` table as "Category: <label>" rows.
 BOOKSHELF_CATEGORY_PREFIX = "Category: "
-
-
-class FileType(str, Enum):
-    EPUB = "application/epub+zip"
-    KINDLE = "application/x-mobipocket-ebook"
-    PDF = "application/pdf"
-    TXT = "text/plain"
-    HTML = "text/html"
-
-
-class SearchType(str, Enum):
-    FTS = "fts"
-    FUZZY = "fuzzy"
-    HYBRID = "hybrid"
 
 
 class SearchField(str, Enum):
@@ -62,7 +46,6 @@ class SortDirection(str, Enum):
 
 
 class Crosswalk(str, Enum):
-    PG = "pg"
     OPDS = "opds"
     OPDS_SMALL = "opds_small"
 
@@ -185,9 +168,9 @@ class CuratedBookshelves(Enum):
 
     Shelves are referenced by their display label only; the matching
     `bookshelves` row is "Category: <label>" and its primary key is resolved
-    from the database on first use (see Catalog.curated_shelves). The
-    ids are stable for a given dataset but are not hard-coded here so a
-    rebuild can't silently point a label at the wrong shelf.
+    from the database on first use (see Catalog.curated_shelves). The ids are
+    stable for a given dataset but are not hard-coded here so a rebuild can't
+    silently point a label at the wrong shelf.
     """
 
     LITERATURE = (

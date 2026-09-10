@@ -18,7 +18,6 @@ from opds_catalog.constants import (
     Language,
     OrderBy,
     SearchField,
-    SearchType,
     SortDirection,
 )
 from opds_catalog.publications import _catalog_url
@@ -208,13 +207,12 @@ def _search_scope(
     bookshelf_id: Optional[int],
 ):
     """Apply search-route filters (not lang or subject_id)."""
-    q.text_only()
     if query.strip():
-        q.search(query, search_type=SearchType.HYBRID)
+        q.search(query)
     if title.strip():
-        q.search(title, field=SearchField.TITLE, search_type=SearchType.HYBRID)
+        q.search(title, field=SearchField.TITLE)
     if author.strip():
-        q.search(author, field=SearchField.AUTHOR, search_type=SearchType.HYBRID)
+        q.search(author, field=SearchField.AUTHOR)
     if locc:
         q.locc(locc)
     if author_id is not None:
@@ -253,28 +251,22 @@ class OPDSFeed:
     _CACHE_TTL = datetime.timedelta(hours=12)
 
     def __init__(self):
-        self._fts = None
+        self._catalog = None
         self._feed_cache = {}  # key -> (expires, feed)
 
     @property
-    def fts(self):
-        if self._fts is None:
-            self._fts = Catalog(cherrypy.engine.pool.engine)
-        return self._fts
+    def catalog(self):
+        if self._catalog is None:
+            self._catalog = Catalog(cherrypy.engine.pool.engine)
+        return self._catalog
 
     # Query Helpers
-    def _query(self, crosswalk=None):
-        """OPDS catalog queries always exclude audiobooks."""
-        q = (
-            self.fts.query(crosswalk=crosswalk)
-            if crosswalk is not None
-            else self.fts.query()
-        )
-        return q.text_only()
+    def _query(self, crosswalk=OPDS):
+        """Create a catalog query (audiobooks are already excluded by mv_books_dc)."""
+        return self.catalog.query(crosswalk)
 
     def _filter(self, q, lang: str):
         """Apply common filters to query."""
-        q.text_only()
         if lang:
             q.lang(lang)
         return q
@@ -311,7 +303,7 @@ class OPDSFeed:
         q = self._query(OPDS_SMALL).bookshelf_id(shelf_id)
         if seen:
             q.where("book_id <> ALL(:seen_ids)", seen_ids=list(seen))
-        result = self.fts.execute(
+        result = self.catalog.execute(
             q.order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT], with_count=with_count
         )
         for pub in result.get("results", []):
@@ -327,19 +319,19 @@ class OPDSFeed:
                 "EXISTS (SELECT 1 FROM mn_books_bookshelves mbb "
                 "WHERE mbb.fk_books = book_id "
                 "AND mbb.fk_bookshelves = ANY(:shelf_ids))",
-                shelf_ids=[sid for sid, _ in self.fts.curated_shelves(cat)],
+                shelf_ids=[sid for sid, _ in self.catalog.curated_shelves(cat)],
             )
-            return self.fts.count(q)
+            return self.catalog.count(q)
         except Exception:
             return 0
 
     def _locc_nav_item_count(self, code: str) -> Optional[int]:
         """Sub-subject count when a code has children; book count at leaves."""
         try:
-            sub = self.fts.get_locc_children(code)
+            sub = self.catalog.get_locc_children(code)
             if sub:
                 return len(sub)
-            return self.fts.count(self._query().locc(code))
+            return self.catalog.count(self._query().locc(code))
         except Exception as e:
             cherrypy.log(
                 f"LoCC nav count error ({code}): {e}", severity=logging.WARNING
@@ -562,7 +554,7 @@ class OPDSFeed:
                     seen.add(bid)
 
         def _recently_added():
-            result = self.fts.execute(
+            result = self.catalog.execute(
                 self._query(OPDS_SMALL).order_by(
                     OrderBy.RELEASE_DATE, SortDirection.DESC
                 )[1, SAMPLE_LIMIT],
@@ -581,7 +573,7 @@ class OPDSFeed:
                 }
 
         def _most_popular():
-            result = self.fts.execute(
+            result = self.catalog.execute(
                 self._query(OPDS_SMALL).order_by(OrderBy.DOWNLOADS)[
                     1, SAMPLE_LIMIT
                 ],
@@ -601,7 +593,7 @@ class OPDSFeed:
 
         def _category_group(cat):
             """Daily spotlight shelf (rotates by date), top picks, deduped."""
-            shelves = self.fts.curated_shelves(cat)
+            shelves = self.catalog.curated_shelves(cat)
             if not shelves:
                 return
 
@@ -713,10 +705,10 @@ class OPDSFeed:
     ) -> Dict:
         """Build sub-shelf navigation for a curated category."""
         nav = []
-        for sid, sname in self.fts.curated_shelves(cat):
+        for sid, sname in self.catalog.curated_shelves(cat):
             nav_item = _nav(f"/opds/bookshelves?id={sid}", sname)
             try:
-                count = self.fts.count(self._query().bookshelf_id(sid))
+                count = self.catalog.count(self._query().bookshelf_id(sid))
                 if count:
                     nav_item["properties"] = {"numberOfItems": count}
             except Exception as e:
@@ -752,7 +744,7 @@ class OPDSFeed:
         """Browse books in a bookshelf."""
         parent = None
         for cat in CuratedBookshelves:
-            if any(sid == shelf_id for sid, _ in self.fts.curated_shelves(cat)):
+            if any(sid == shelf_id for sid, _ in self.catalog.curated_shelves(cat)):
                 parent = cat.name
                 break
 
@@ -760,7 +752,7 @@ class OPDSFeed:
             q = self._query(OPDS_SMALL).bookshelf_id(shelf_id)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
-            result = self.fts.execute(q[page, limit])
+            result = self.catalog.execute(q[page, limit])
         except Exception as e:
             cherrypy.log(f"Bookshelf error: {e}")
             return self._error_feed(
@@ -780,8 +772,8 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/bookshelves", base)
         facet_url = _make_facet_url("/opds/bookshelves", base)
 
-        facet_counts = self.fts.get_opds_facets(
-            lambda q: q.text_only().bookshelf_id(shelf_id), lang=lang
+        facet_counts = self.catalog.get_opds_facets(
+            lambda q: q.bookshelf_id(shelf_id), lang=lang
         )
 
         up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
@@ -861,7 +853,7 @@ class OPDSFeed:
         def build():
             seen = set()
             day = _daily_seed()
-            shelves = self.fts.curated_shelves(found)
+            shelves = self.catalog.curated_shelves(found)
             if not shelves:
                 return {"groups": []}
             rotated = [shelves[(day + i) % len(shelves)] for i in range(len(shelves))]
@@ -924,7 +916,7 @@ class OPDSFeed:
         page, limit = _paginate(page, limit)
 
         try:
-            children = self.fts.get_locc_children(parent)
+            children = self.catalog.get_locc_children(parent)
         except Exception as e:
             cherrypy.log(f"LoCC error: {e}")
             children = []
@@ -986,7 +978,7 @@ class OPDSFeed:
             q = self._query(OPDS_SMALL).locc(parent)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
-            result = self.fts.execute(q[page, limit])
+            result = self.catalog.execute(q[page, limit])
         except Exception as e:
             cherrypy.log(f"LoCC browse error: {e}")
             return self._error_feed(
@@ -1007,8 +999,8 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/loccs", base)
         facet_url = _make_facet_url("/opds/loccs", base)
 
-        facet_counts = self.fts.get_opds_facets(
-            lambda q: q.text_only().locc(parent), lang=lang
+        facet_counts = self.catalog.get_opds_facets(
+            lambda q: q.locc(parent), lang=lang
         )
 
         feed = {
@@ -1045,7 +1037,7 @@ class OPDSFeed:
 
     def _build_subjects_index(self) -> Dict:
         subjects = sorted(
-            self.fts.list_subjects(), key=lambda x: x["book_count"], reverse=True
+            self.catalog.list_subjects(), key=lambda x: x["book_count"], reverse=True
         )[:100]
         return {
             "metadata": {"title": "Project Gutenberg", "numberOfItems": len(subjects)},
@@ -1104,7 +1096,7 @@ class OPDSFeed:
             q = self._query(OPDS_SMALL).subject_id(subject_id)
             self._filter(q, lang)
             self._sort(q, sort, sort_order)
-            result = self.fts.execute(q[page, limit])
+            result = self.catalog.execute(q[page, limit])
         except Exception as e:
             cherrypy.log(f"Subject error: {e}")
             return self._error_feed(
@@ -1125,8 +1117,8 @@ class OPDSFeed:
         page_url = _make_page_url("/opds/subjects", base)
         facet_url = _make_facet_url("/opds/subjects", base)
 
-        facet_counts = self.fts.get_opds_facets(
-            lambda q: q.text_only().subject_id(subject_id),
+        facet_counts = self.catalog.get_opds_facets(
+            lambda q: q.subject_id(subject_id),
             lang=lang,
             include_subjects=False,
         )
@@ -1166,7 +1158,7 @@ class OPDSFeed:
         """Books co-downloaded with a given ebook."""
         page, limit = _paginate(page, limit)
         try:
-            result = self.fts.execute(
+            result = self.catalog.execute(
                 self._query(OPDS_SMALL).also_downloaded(int(id))[
                     page, limit
                 ]
@@ -1208,7 +1200,7 @@ class OPDSFeed:
     def publications(self, id: int, **_):
         """Single publication by Gutenberg ebook number."""
         try:
-            result = self.fts.execute(
+            result = self.catalog.execute(
                 self._query(OPDS).etext(int(id))[1, 1]
             )
         except Exception as e:
@@ -1256,7 +1248,7 @@ class OPDSFeed:
                     q.modified_after(modified_since)
                 return q
 
-            facet_counts = self.fts.get_opds_facets(
+            facet_counts = self.catalog.get_opds_facets(
                 scope, lang=lang, subject_id=subject_id
             )
 
@@ -1267,7 +1259,7 @@ class OPDSFeed:
             if subject_id is not None:
                 q.subject_id(subject_id)
             self._sort(q, sort, sort_order)
-            result = self.fts.execute(q[page, limit])
+            result = self.catalog.execute(q[page, limit])
         except Exception as e:
             cherrypy.log(f"Search error: {e}")
             return self._error_feed(
