@@ -412,9 +412,6 @@ def _opds_description(row, creators: List[Dict[str, Any]]) -> Optional[str]:
         desc_parts.append(summary)
     if row.reading_level:
         desc_parts.append(f"Reading Level: {row.reading_level}")
-    dcmitype = [t for t in (list(row.dcmitypes) if row.dcmitypes else []) if t]
-    if dcmitype:
-        desc_parts.append(f"Category: {', '.join(dcmitype)}")
     desc_parts.append(f"Rights: {_rights_text(row.copyrighted)}")
     desc_parts.append(f"Downloads: {row.downloads}")
     return "\n\n".join(desc_parts)
