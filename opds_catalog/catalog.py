@@ -444,6 +444,23 @@ class Catalog:
                 resolved.append((pk, label))
         return resolved
 
+    def bookshelf_counts(self, shelf_ids: List[int]) -> Dict[int, int]:
+        """Book count per shelf (books present in mv_books_dc), in one query."""
+        if not shelf_ids:
+            return {}
+        sql = text(
+            """
+            SELECT mbb.fk_bookshelves AS id, COUNT(*) AS n
+            FROM mn_books_bookshelves mbb
+            JOIN mv_books_dc b ON b.book_id = mbb.fk_books
+            WHERE mbb.fk_bookshelves = ANY(:ids)
+            GROUP BY mbb.fk_bookshelves
+            """
+        )
+        with self.Session() as session:
+            rows = session.execute(sql, {"ids": list(shelf_ids)}).fetchall()
+        return {r.id: r.n for r in rows}
+
     def list_subjects(self) -> List[Dict]:
         """All subjects with at least one book: {'id', 'name', 'book_count'}."""
         sql = """

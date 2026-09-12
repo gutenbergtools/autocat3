@@ -5,6 +5,7 @@ OPDS 2.0 JSON feed for the Project Gutenberg catalog.
 """
 
 import datetime
+import threading
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 import logging
@@ -253,6 +254,25 @@ class OPDSFeed:
     def __init__(self):
         self._catalog = None
         self._feed_cache = {}  # key -> (expires, feed)
+        # Priority > 50 so the ConnectionPool plugin has started first.
+        cherrypy.engine.subscribe("start", self._warm_cache, priority=90)
+
+    def _warm_cache(self):
+        """Pre-build the cached browse feeds in the background so the first
+        visitor after a (re)start doesn't pay for them."""
+
+        def run():
+            try:
+                self.index()
+                self.bookshelves()
+                for cat in CuratedBookshelves:
+                    self._bookshelf_category_nav(cat.name)
+                    self._bookshelf_category_groups(cat.name)
+                cherrypy.log("OPDS cache warmed", context="OPDS")
+            except Exception as e:
+                cherrypy.log(f"OPDS warm-up error: {e}", severity=logging.WARNING)
+
+        threading.Thread(target=run, name="opds-warm", daemon=True).start()
 
     @property
     def catalog(self):
@@ -704,18 +724,17 @@ class OPDSFeed:
         self, category: str, cat: CuratedBookshelves
     ) -> Dict:
         """Build sub-shelf navigation for a curated category."""
+        shelves = self.catalog.curated_shelves(cat)
+        try:
+            counts = self.catalog.bookshelf_counts([sid for sid, _ in shelves])
+        except Exception as e:
+            cherrypy.log(f"Bookshelf nav count error: {e}", severity=logging.WARNING)
+            counts = {}
         nav = []
-        for sid, sname in self.catalog.curated_shelves(cat):
+        for sid, sname in shelves:
             nav_item = _nav(f"/opds/bookshelves?id={sid}", sname)
-            try:
-                count = self.catalog.count(self._query().bookshelf_id(sid))
-                if count:
-                    nav_item["properties"] = {"numberOfItems": count}
-            except Exception as e:
-                cherrypy.log(
-                    f"Bookshelf nav count error ({sid}): {e}",
-                    severity=logging.WARNING,
-                )
+            if counts.get(sid):
+                nav_item["properties"] = {"numberOfItems": counts[sid]}
             nav.append(nav_item)
 
         return {
@@ -857,16 +876,19 @@ class OPDSFeed:
             if not shelves:
                 return {"groups": []}
             rotated = [shelves[(day + i) % len(shelves)] for i in range(len(shelves))]
+            # One grouped count for all shelves instead of a COUNT(*) OVER()
+            # window in each sample query (which forced a full scan per shelf).
+            counts = self.catalog.bookshelf_counts([sid for sid, _ in shelves])
             groups = []
             for sid, sname in rotated:
                 try:
-                    result = self._shelf_sample(sid, seen, with_count=True)
+                    result = self._shelf_sample(sid, seen, with_count=False)
                     if result.get("results"):
                         groups.append(
                             {
                                 "metadata": {
                                     "title": sname,
-                                    "numberOfItems": result["total"],
+                                    "numberOfItems": counts.get(sid, 0),
                                 },
                                 "links": [
                                     _link("self", f"/opds/bookshelves?id={sid}")
