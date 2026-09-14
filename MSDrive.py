@@ -44,7 +44,7 @@ class MSDrive(CloudStorage.CloudStorage):
 
     def upload_file(self, session, response):
         """ Upload a file to microsoft onedrive. """
-        filename = self.fix_filename(session.ebook.get_filename())
+        filename = self.fix_filename(self.ebook.get_filename())
         item_data = {
             'name': filename,
             'description': 'A Project Gutenberg eBook',
