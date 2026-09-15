@@ -254,25 +254,9 @@ class OPDSFeed:
     def __init__(self):
         self._catalog = None
         self._feed_cache = {}  # key -> (expires, feed)
-        # Priority > 50 so the ConnectionPool plugin has started first.
-        cherrypy.engine.subscribe("start", self._warm_cache, priority=90)
-
-    def _warm_cache(self):
-        """Pre-build the cached browse feeds in the background so the first
-        visitor after a (re)start doesn't pay for them."""
-
-        def run():
-            try:
-                self.index()
-                self.bookshelves()
-                for cat in CuratedBookshelves:
-                    self._bookshelf_category_nav(cat.name)
-                    self._bookshelf_category_groups(cat.name)
-                cherrypy.log("OPDS cache warmed", context="OPDS")
-            except Exception as e:
-                cherrypy.log(f"OPDS warm-up error: {e}", severity=logging.WARNING)
-
-        threading.Thread(target=run, name="opds-warm", daemon=True).start()
+        # Serializes cache misses so concurrent requests for a cold key
+        # don't all run the same (slow) build at once.
+        self._cache_lock = threading.Lock()
 
     @property
     def catalog(self):
@@ -306,17 +290,22 @@ class OPDSFeed:
         *,
         store: Callable[[Dict], bool],
     ) -> Dict:
-        """Return a cached feed with a 12-hour TTL."""
+        """Return a cached feed with a 12-hour TTL. First request builds it."""
         hit = self._feed_cache.get(key)
         if hit and datetime.datetime.now() < hit[0]:
             return hit[1]
-        feed = build()
-        if store(feed):
-            self._feed_cache[key] = (
-                datetime.datetime.now() + self._CACHE_TTL,
-                feed,
-            )
-        return feed
+        with self._cache_lock:
+            # Re-check: another thread may have built it while we waited.
+            hit = self._feed_cache.get(key)
+            if hit and datetime.datetime.now() < hit[0]:
+                return hit[1]
+            feed = build()
+            if store(feed):
+                self._feed_cache[key] = (
+                    datetime.datetime.now() + self._CACHE_TTL,
+                    feed,
+                )
+            return feed
 
     def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
         """Top-downloaded sample for a shelf, excluding already-shown books."""
