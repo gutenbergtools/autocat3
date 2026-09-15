@@ -33,9 +33,6 @@ import BaseSearcher
 
 # pylint: disable=R0921
 
-http_adapter  = requests.adapters.HTTPAdapter ()
-https_adapter = requests.adapters.HTTPAdapter ()
-
 # Google Drive `bug´ see:
 # https://github.com/idan/oauthlib/commit/ca4811b3087f9d34754d3debf839e247593b8a39
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -80,14 +77,11 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
             redirect_uri = redirect_uri,
             **kwargs
         )
+
         self.client_secret = config[prefix + '_client_secret']
-        self.ebook = None
-
-        self.mount ("http://",  http_adapter)
-        self.mount ("https://", https_adapter)
 
 
-    def oauth_dance (self, kwargs):
+    def oauth_dance (self, code=None):
         """ Do the OAuth2 dance. """
 
         #
@@ -96,7 +90,7 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
         #
 
         if not self.token:
-            if 'code' not in kwargs:
+            if not code:
                 # oauth step 1:
                 # redirect the user to the Authorization Endpoint
                 log ('Building auth url ...')
@@ -112,7 +106,7 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
                 log ('Fetching access token ...')
                 self.fetch_token (self.oauth2_token_endpoint,
                                   client_secret = self.client_secret,
-                                  code = kwargs['code'])
+                                  code = code)
                 log ('Got access token.')
 
 
@@ -141,6 +135,7 @@ class CloudStorage (object):
     def __init__ (self):
         self.host = cherrypy.config['host']
         self.urlgen = urlgen
+        self.ebook = None
 
     # Enable sessions for this page and force no-caching by proxies
     @cherrypy.config(**{'tools.sessions.on': True, 'tools.expires.secs': 0, 'tools.expires.force': True})
@@ -152,10 +147,20 @@ class CloudStorage (object):
         # http://tools.ietf.org/html/rfc6749
         #
 
-        session = self.get_or_create_session ()
         if 'id' in kwargs:
-            session.ebook = EbookMetaData (kwargs)
-        if session.ebook is None:
+            # Load the desired ebook from the URL and set the cookie for
+            # the return from the OAuth dance
+            self.ebook = EbookMetaData(kwargs["id"], kwargs["filetype"])
+            cherrypy.response.cookie[self.cookie_ebook_id] = kwargs["id"]
+            cherrypy.response.cookie[self.cookie_ebook_filetype] = kwargs["filetype"]
+        elif self.cookie_ebook_id in cherrypy.request.cookie:
+            # Load the ebook from the user's cookies on the return from
+            # the OAuth dance
+            self.ebook = EbookMetaData(
+                cherrypy.request.cookie[self.cookie_ebook_id].value,
+                cherrypy.request.cookie[self.cookie_ebook_filetype].value
+            )
+        if self.ebook is None:
             raise cherrypy.HTTPError (400, "No eBook selected. Are your cookies enabled?")
 
         name = self.name
@@ -164,23 +169,25 @@ class CloudStorage (object):
             self._dialog (
                 _('Sorry. The file could not be sent to {name}.').format (name = name),
                 _('Error'))
-            self.redirect_done (session)
+            self.redirect_done ()
 
+        # Create the OAuth session (this is not the cherrypy session)
+        session = self.session_class()
         try:
-            session.oauth_dance (kwargs)
+            session.oauth_dance (kwargs.get("code"))
             log ("Sending file %s to %s" % (
-                session.ebook.get_source_url (), name))
+                self.ebook.get_source_url (), name))
 
-            with closing (self.request_ebook (session)) as r:
+            with closing (self.request_ebook ()) as r:
                 r.raise_for_status ()
                 self.upload_file (session, r)
 
             log ("File %s sent to %s" % (
-                session.ebook.get_source_url (), name))
+                self.ebook.get_source_url (), name))
             self._dialog (
                 _('The file has been sent to {name}.').format (name = name),
                 _('Sent to {name}').format (name = name))
-            self.redirect_done (session)
+            self.redirect_done ()
 
         except (OAuth2Error, ) as what:
             session.unauthorized (what)
@@ -192,34 +199,30 @@ class CloudStorage (object):
             raise cherrypy.HTTPError (500, str (what))
 
 
-    def upload_file (self, oauth_session, response):
+    def upload_file (self, session, response):
         """ Upload the file. """
 
         raise NotImplementedError
 
+    @property
+    def cookie_ebook_id(self):
+        return self.session_class.name_prefix + '_ebook_id'
 
-    def get_or_create_session (self):
-        """ Retrieve an ongoing cloud session or create a new one. """
+    @property
+    def cookie_ebook_filetype(self):
+        return self.session_class.name_prefix + '_ebook_filetype'
 
-        cherrypy.session.acquire_lock()
-        session_name = self.session_class.name_prefix + '_session'
-        session = cherrypy.session.get (session_name, self.session_class ())
-        cherrypy.session[session_name] = session
-        return session
+    def delete_cookies(self):
+        # Delete the user cookies that stored the ebook details
+        cherrypy.response.cookie[self.cookie_ebook_id] = 0
+        cherrypy.response.cookie[self.cookie_ebook_id]["expires"] = 0
+        cherrypy.response.cookie[self.cookie_ebook_filetype] = ""
+        cherrypy.response.cookie[self.cookie_ebook_filetype]["expires"] = 0
 
-
-    def delete_session (self):
-        """ Delete cloud session. """
-
-        session_name = self.session_class.name_prefix + '_session'
-        # cherrypy.session[session_name].close ()
-        del cherrypy.session[session_name]
-
-
-    def request_ebook (self, session):
+    def request_ebook (self):
         """ Return an open request object for the ebook file. """
 
-        url = session.ebook.get_source_url ()
+        url = self.ebook.get_source_url ()
         # Caveat: use requests.get, not session.get, because it is an insecure
         # transport. session.get would raise InsecureTransportError
         # turn off server encoding since we're going to re-stream the bytes
@@ -235,23 +238,28 @@ class CloudStorage (object):
         return self.re_filename.sub ('_', filename)
 
 
-    def redirect_done (self, session):
+    def redirect_done (self):
         """ Redirect user back to bibrec page. """
+        self.delete_cookies()
+
         raise cherrypy.HTTPRedirect (self.urlgen (
-            'bibrec', id = session.ebook.id, host = self.host))
+            'bibrec', id = self.ebook.id, host = self.host))
 
 
     def unauthorized (self, msg = 'Unauthorized'):
         """ Call on OAuth failure. """
+        self.delete_cookies()
+
         msg = str (msg) # msg may be exception class
         error_log (msg)
-        self.delete_session ()
         raise cherrypy.HTTPError (401, msg)
 
 
     @staticmethod
     def _dialog (message, title):
         """ Open a user-visible dialog on the next page. """
+        # Set the user response message in the cherrypy session
+        cherrypy.session.acquire_lock()
         cherrypy.session['user_dialog'] = (message, title)
 
 
@@ -270,13 +278,13 @@ class EbookMetaData (object):
         'pdf')
 
 
-    def __init__ (self, kwargs):
+    def __init__ (self, id, filetype):
         self.id = None
         self.filetype = None
 
         try :
-            self.id = int (kwargs['id'])
-            self.filetype = kwargs['filetype']
+            self.id = int (id)
+            self.filetype = filetype
             if self.filetype not in self.accepted_filetypes:
                 self.filetype = None
                 raise ValueError
