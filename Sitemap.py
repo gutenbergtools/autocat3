@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#  -*- mode: python; indent-tabs-mode: nil; -*- coding: iso-8859-1 -*-
+#  -*- mode: python; indent-tabs-mode: nil; -*- coding: utf-8 -*-
 
 """
 Sitemap.py
@@ -27,55 +27,55 @@ import BaseSearcher
 SITEMAP_SIZE = 1000   # max no. of urls to put into one sitemap
 
 
-class Sitemap (TemplatedPage.TemplatedPage):
+class Sitemap(TemplatedPage.TemplatedPage):
     """ Output Google sitemap. """
 
-    def index (self, **kwargs):
+    def index(self, **kwargs):
         """ Output sitemap. """
 
         urls = []
-        start = int (kwargs['page']) * SITEMAP_SIZE
+        start = int(kwargs['page']) * SITEMAP_SIZE
 
-        rows = BaseSearcher.SQLSearcher.execute (
+        rows = BaseSearcher.SQLSearcher.execute(
             'select pk from books where pk >= %(start)s and pk <  %(end)s order by pk',
-            { 'start': str (start), 'end': str (start + SITEMAP_SIZE) })
+            { 'start': str(start), 'end': str(start + SITEMAP_SIZE) })
 
-        os = BaseSearcher.OpenSearch ()
+        os = BaseSearcher.OpenSearch()
         host = cherrypy.config['host']
 
         for row in rows:
-            url = Struct ()
-            url.loc = os.url ('bibrec', id = row[0], host = host, format = None)
-            urls.append (url)
+            url = Struct()
+            url.loc = os.url('bibrec', id=row[0], host=host, format=None, protocol='https')
+            urls.append(url)
 
-        data = Struct ()
+        data = Struct()
         data.urls = urls
 
-        return self.output ('sitemap', data = data)
+        return self.output('sitemap', data=data)
 
 
-class SitemapIndex (TemplatedPage.TemplatedPage):
+class SitemapIndex(TemplatedPage.TemplatedPage):
     """ Output Google sitemap index. """
 
-    def index (self, **dummy_kwargs):
+    def index(self, **dummy_kwargs):
         """ Output sitemap index. """
 
         sitemaps = []
-        now = datetime.datetime.utcnow ().replace (microsecond = 0).isoformat () + 'Z'
+        now = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
 
         # 99999 is safeguard against bogus ebook numbers
-        lastbook = BaseSearcher.sql_get ('select max (pk) as lastbook from books where pk < 99999')
+        lastbook = BaseSearcher.sql_get('select max (pk) as lastbook from books where pk < 99999')
 
-        os = BaseSearcher.OpenSearch ()
+        os = BaseSearcher.OpenSearch()
         host = cherrypy.config['host']
 
-        for n in range (0, lastbook // SITEMAP_SIZE + 1):
-            sitemap = Struct ()
-            sitemap.loc = os.url ('sitemap_index', page = n, host = host, format = None)
+        for n in range(0, lastbook // SITEMAP_SIZE + 1):
+            sitemap = Struct()
+            sitemap.loc = os.url('sitemap_index', page=n, host=host, format=None)
             sitemap.lastmod = now
-            sitemaps.append (sitemap)
+            sitemaps.append(sitemap)
 
-        data = Struct ()
+        data = Struct()
         data.sitemaps = sitemaps
 
-        return self.output ('sitemap-index', data = data)
+        return self.output('sitemap-index', data=data)
