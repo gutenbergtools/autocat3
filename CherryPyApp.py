@@ -45,6 +45,7 @@ import MetricsPage
 import Sitemap
 import Formatters
 from errors import ErrorPage
+from OPDS2 import OPDSFeed, OPDS_MOUNT_CONFIG
 
 import Timer
 
@@ -173,7 +174,8 @@ def main():
         cherrypy.engine, params=GutenbergDatabase.get_connection_params(cherrypy.config))
     cherrypy.engine.pool.subscribe()
 
-    plugins.Timer(cherrypy.engine).subscribe()
+    timer = plugins.Timer(cherrypy.engine)
+    timer.subscribe()
 
     cherrypy.log("Daemonizing", context='ENGINE', severity=logging.INFO)
 
@@ -323,6 +325,13 @@ def main():
         d.connect('msdrive_callback', r'/ebooks/send/msdrive/',
                    controller=msdrive)
 
+    # OPDS 2.0
+    opds = OPDSFeed()
+    d.connect('opds', r'/opds/', controller=opds, action='index')
+    for action in ('search', 'bookshelves', 'bookshelf_groups', 'loccs',
+                   'subjects', 'also', 'publications'):
+        d.connect('opds_' + action, '/opds/' + action, controller=opds, action=action)
+
     # start http server
     #
 
@@ -337,6 +346,8 @@ def main():
                                   'tools.staticdir.dir': install_dir + "/gutenberg"}})
         app.merge({'/pics': {'tools.staticdir.on': True,
                              'tools.staticdir.dir': install_dir + "/pics"}})
+
+    app.merge(OPDS_MOUNT_CONFIG)
 
     return app
 
