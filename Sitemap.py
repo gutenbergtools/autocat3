@@ -30,6 +30,7 @@ SITEMAP_SIZE = 1000   # max no. of urls to put into one sitemap
 class Sitemap(TemplatedPage.TemplatedPage):
     """ Output Google sitemap. """
 
+    @cherrypy.tools.caching(delay=86400)
     def index(self, **kwargs):
         """ Output sitemap. """
 
@@ -57,6 +58,7 @@ class Sitemap(TemplatedPage.TemplatedPage):
 class SitemapIndex(TemplatedPage.TemplatedPage):
     """ Output Google sitemap index. """
 
+    @cherrypy.tools.caching(delay=86400)
     def index(self, **dummy_kwargs):
         """ Output sitemap index. """
 
