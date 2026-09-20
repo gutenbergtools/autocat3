@@ -61,8 +61,7 @@ class SitemapIndex(TemplatedPage.TemplatedPage):
         """ Output sitemap index. """
 
         sitemaps = []
-        now = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
-
+ 
         # 99999 is safeguard against bogus ebook numbers
         lastbook = BaseSearcher.sql_get('select max (pk) as lastbook from books where pk < 99999')
 
@@ -72,7 +71,6 @@ class SitemapIndex(TemplatedPage.TemplatedPage):
         for n in range(0, lastbook // SITEMAP_SIZE + 1):
             sitemap = Struct()
             sitemap.loc = os.url('sitemap_index', page=n, host=host, format=None)
-            sitemap.lastmod = now
             sitemaps.append(sitemap)
 
         data = Struct()
