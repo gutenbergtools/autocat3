@@ -106,3 +106,6 @@ venv.bak/
 # for devmode
 gutenberg/
 pics/
+
+# local gunicorn config
+local_gunicorn.py
