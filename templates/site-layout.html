@@ -15,6 +15,16 @@
       .icon   { background: transparent url(/pics/sprite.png) 0 0 no-repeat; }
       .page_content a.subtle_link:link {color:currentColor; text-decoration: none;}
       .page_content a.subtle_link:hover {color:#003366}
+      .page_content .dropdown-button { margin:0; }
+      .pg-shelf-menu { position:relative; display:inline-block; }
+      .pg-shelf-menu .dropdown-content { display:none; position:absolute; z-index:20; min-width:12em; background:#fff; border:1px solid #ccc; }
+      .pg-shelf-menu .dropdown-content a { display:block; padding:0.4em 0.8em; color:#000; text-decoration:none; }
+      .pg-shelf-menu.open .dropdown-content { display:block; }
+      #pg-shelf-books li img { height:4em; vertical-align:middle; margin-right:0.6em; }
+      .shelf-note { position:fixed; left:1em; bottom:1em; z-index:40; display:none; padding:0.45em 0.75em; color:#000; border:1px solid #d9d6c4; }
+      .shelf-note.added { display:block; background:#c8e6c9; }
+      .shelf-note.already { display:block; background:#fff3cd; }
+      #pg-shelf-export { width:100%; max-width:32em; margin-top:1em; }
     </style>
 
     <link rel="stylesheet" type="text/css" href="/gutenberg/gutenberg-globals.css?v=3"/>
@@ -76,6 +86,145 @@
     <div class="footer"  role="contentinfo" i18n:comment="On the footer of every page.">
     <xi:include href="footer.html" />
     </div>
+    <div id="shelf-note" class="shelf-note"></div>
+    <script>//<![CDATA[
+(function () {
+  var KEY = 'pg-shelves';
+  function load() {
+    try {
+      var data = JSON.parse(localStorage.getItem(KEY) || '{}');
+      return data && typeof data === 'object' ? data : {};
+    } catch (e) { return {}; }
+  }
+  function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
+  function idOf(book) { return typeof book === 'number' ? book : book.id; }
+  // true when this id was not on the shelf yet
+  function put(list, book) {
+    for (var i = 0; i < list.length; i++) {
+      if (idOf(list[i]) !== book.id) continue;
+      list[i] = book;
+      return false;
+    }
+    list.push(book);
+    return true;
+  }
+  function link(href, text) {
+    var a = document.createElement('a');
+    a.href = href;
+    a.textContent = text;
+    return a;
+  }
+  var noteTimer;
+  function note(kind) {
+    var el = document.getElementById('shelf-note');
+    el.className = 'shelf-note ' + kind;
+    el.textContent = kind === 'added' ? 'Added' : 'Already added';
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () { el.className = 'shelf-note'; }, 2200);
+  }
+  var menu = document.querySelector('.pg-shelf-menu');
+  if (menu) {
+    var drop = menu.querySelector('.dropdown-content');
+    var book = {
+      id: +menu.getAttribute('data-pg-id'),
+      title: menu.getAttribute('data-pg-title') || '',
+      author: menu.getAttribute('data-pg-author') || '',
+      cover: menu.getAttribute('data-pg-cover') || ''
+    };
+    Object.keys(load()).forEach(function (name) {
+      var a = link('#', name);
+      a.onclick = function (ev) {
+        ev.preventDefault();
+        var data = load();
+        data[name] = data[name] || [];
+        note(put(data[name], book) ? 'added' : 'already');
+        save(data);
+        menu.classList.remove('open');
+      };
+      drop.appendChild(a);
+    });
+    drop.appendChild(link('/ebooks/myshelves/', 'Make a shelf\u2026'));
+    menu.querySelector('button').onclick = function () { menu.classList.toggle('open'); };
+    document.addEventListener('click', function (ev) {
+      if (!menu.contains(ev.target)) menu.classList.remove('open');
+    });
+  }
+  var list = document.getElementById('pg-shelf-list');
+  if (!list) return;
+  var books = document.getElementById('pg-shelf-books');
+  var form = document.getElementById('pg-shelf-new');
+  var open = new URLSearchParams(location.search).get('shelf');
+  if (open) {
+    document.getElementById('pg-shelf-title').textContent = open;
+    list.hidden = true;
+    form.hidden = true;
+    var box = document.getElementById('pg-shelf-export');
+    function showExport() {
+      var rows = ['shelf,id,title,author'];
+      (load()[open] || []).forEach(function (book) {
+        rows.push([open, idOf(book), book.title || '', book.author || ''].map(function (value) {
+          return '"' + String(value).replace(/"/g, '""') + '"';
+        }).join(','));
+      });
+      box.value = rows.join('\n');
+    }
+    (load()[open] || []).forEach(function (book) {
+      var bookId = idOf(book);
+      var li = document.createElement('li');
+      if (book.cover) {
+        var img = document.createElement('img');
+        img.src = book.cover;
+        img.alt = '';
+        li.appendChild(img);
+      }
+      li.appendChild(link('/ebooks/' + bookId, book.title || ('Book ' + bookId)));
+      if (book.author) li.appendChild(document.createTextNode(' by ' + book.author));
+      if (book.title) li.appendChild(document.createTextNode(' ' + bookId));
+      var del = link('#', 'Delete');
+      del.onclick = function (ev) {
+        ev.preventDefault();
+        var data = load();
+        data[open] = (data[open] || []).filter(function (item) { return idOf(item) !== bookId; });
+        save(data);
+        li.remove();
+        showExport();
+      };
+      li.appendChild(document.createTextNode(' '));
+      li.appendChild(del);
+      books.appendChild(li);
+    });
+    showExport();
+    box.hidden = false;
+    return;
+  }
+  books.hidden = true;
+  Object.keys(load()).forEach(function (name) {
+    var li = document.createElement('li');
+    var del = link('#', 'Delete');
+    del.onclick = function (ev) {
+      ev.preventDefault();
+      if (!window.confirm('Delete ' + name + '?')) return;
+      var data = load();
+      delete data[name];
+      save(data);
+      li.remove();
+    };
+    li.appendChild(link('?shelf=' + encodeURIComponent(name), name));
+    li.appendChild(document.createTextNode(' '));
+    li.appendChild(del);
+    list.appendChild(li);
+  });
+  form.onsubmit = function (ev) {
+    ev.preventDefault();
+    var name = this.elements.shelf.value.replace(/\s+/g, ' ').trim();
+    if (!name) return;
+    var data = load();
+    if (!data[name]) data[name] = [];
+    save(data);
+    location.href = '?shelf=' + encodeURIComponent(name);
+  };
+})();
+    //]]></script>
   </py:def>
 
   <py:def function="prev_next_links">

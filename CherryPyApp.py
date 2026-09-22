@@ -37,6 +37,7 @@ import SuggestionsPage
 from SearchPage import BookSearchPage, AuthorSearchPage, SubjectSearchPage, BookshelfSearchPage, \
     AuthorPage, SubjectPage, BookshelfPage, AlsoDownloadedPage
 from BibrecPage import BibrecPage
+from MyShelvesPage import MyShelvesPage
 from AdvSearchPage import AdvSearchPage
 import CoverPages
 import EbookCount
@@ -241,6 +242,9 @@ def main():
 
     d.connect('bookshelf', r'/ebooks/bookshelf/{id:\d+}{.format}',
                controller=BookshelfPage(), conditions=dict(function=check_id))
+
+    d.connect('user_shelves', r'/ebooks/myshelves/',
+               controller=MyShelvesPage())
 
     d.connect('also', r'/ebooks/{id:\d+}/also/',
                controller=AlsoDownloadedPage(), conditions=dict(function=check_id))

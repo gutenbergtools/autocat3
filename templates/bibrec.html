@@ -133,7 +133,10 @@ Gutenberg metadata much faster than by scraping.
       </div>
 
 	<h1 itemprop="name" id="book_title">${os.title}</h1>
-
+      <div class="dropdown pg-shelf-menu noprint" data-pg-id="${os.id}" data-pg-title="${os.title}" data-pg-author="${os.shelf_author}" data-pg-cover="${os.cover_image_url or ''}">
+        <button type="button" class="dropdown-button">Add to shelf<span class="dropdown-icon">▼</span></button>
+        <div class="dropdown-content"></div>
+      </div>
 
       <div class="page-body">
         <div property="dcterms:publisher" itemprop="publisher" content="Project Gutenberg" />

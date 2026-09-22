@@ -111,8 +111,11 @@ class BibrecPage (Page.Page):
         os.entries.append (dc)
 
         # can we find some meaningful breadcrumbs ?
+        os.shelf_author = ''
         for a in dc.authors:
             if a.marcrel in ('aut', 'cre'):
+                if not os.shelf_author:
+                    os.shelf_author = dc.make_pretty_name(a.name)
                 book_cnt = BaseSearcher.sql_get(
                     "select count (*) from mn_books_authors where fk_authors = %(aid)s", aid = a.id)
                 if book_cnt > 1:

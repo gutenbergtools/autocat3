@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/"
+      xml:lang="${os.lang.replace('_', '-')}">
+
+  <xi:include href="site-layout.html" />
+
+  <head>
+    ${site_head()}
+    <title>${os.title} | Project Gutenberg</title>
+  </head>
+
+  <body>
+    <div class="container">
+      <xi:include href="menu.html" />
+      <div id="content" class="page_content">
+        <h1 id="pg-shelf-title">My bookshelves</h1>
+        <ul id="pg-shelf-list"></ul>
+        <ul id="pg-shelf-books"></ul>
+        <textarea id="pg-shelf-export" rows="8" cols="40" readonly="readonly" hidden="hidden"></textarea>
+        <form id="pg-shelf-new">
+          <input name="shelf" placeholder="Shelf name" />
+          <button type="submit">Make shelf</button>
+        </form>
+      </div>
+    </div>
+    ${site_footer()}
+  </body>
+</html>
