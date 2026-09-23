@@ -218,7 +218,7 @@ def get_app():
 
     if 'dropbox_client_id' in cherrypy.config:
         import Dropbox
-        dropbox = Dropbox.Dropbox()
+        dropbox = Dropbox.Dropbox
         cherrypy.log("Dropbox Client Id: %s" % cherrypy.config['dropbox_client_id'],
                       context='ENGINE', severity=logging.INFO)
         d.connect('dropbox_send', r'/ebooks/send/dropbox/{id:\d+}.{filetype}',
@@ -228,7 +228,7 @@ def get_app():
 
     if 'gdrive_client_id' in cherrypy.config:
         import GDrive
-        gdrive = GDrive.GDrive()
+        gdrive = GDrive.GDrive
         cherrypy.log("GDrive Client Id: %s" % cherrypy.config['gdrive_client_id'],
                       context='ENGINE', severity=logging.INFO)
         d.connect('gdrive_send', r'/ebooks/send/gdrive/{id:\d+}.{filetype}',
@@ -238,7 +238,7 @@ def get_app():
 
     if 'msdrive_client_id' in cherrypy.config:
         import MSDrive
-        msdrive = MSDrive.MSDrive()
+        msdrive = MSDrive.MSDrive
         cherrypy.log("MSDrive Client Id: %s" % cherrypy.config['msdrive_client_id'],
                       context='ENGINE', severity=logging.INFO)
         d.connect('msdrive_send', r'/ebooks/send/msdrive/{id:\d+}.{filetype}',
