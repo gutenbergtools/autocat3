@@ -12,7 +12,7 @@ import resource
 import threading
 
 import cherrypy
-from cherrypy.lib.sessions import RamSession
+from cherrypy.lib.sessions import MemcachedSession
 from Page import Page
 
 class MetricsPage (Page):
@@ -29,9 +29,19 @@ class MetricsPage (Page):
             "autocat3_memory_kb_children": resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss,
         }
 
-        if isinstance(cherrypy.serving.session, RamSession):
+        if isinstance(cherrypy.serving.session, MemcachedSession):
+            try:
+                # assume all entries in memcache are sessions
+                memcache_stats = MemcachedSession.cache.get_stats()
+
+                core_metrics = core_metrics | {
+                    "autocat3_sessions": int(memcache_stats[0][1]["curr_items"]),
+                }
+            except Exception:
+                pass
+        else:
             core_metrics = core_metrics | {
-                "autocat3_sessions": len(RamSession.cache),
+                "autocat3_sessions": len(cherrypy.serving.session),
             }
 
         http_server = cherrypy.server
