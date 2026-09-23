@@ -1,9 +1,8 @@
 # code moved from AdvSearchPage so it could be used in Basesearcher
 import cherrypy
-from sqlalchemy import or_, and_, select
+from sqlalchemy import select
 
-from libgutenberg.Models import (
-    Alias, Attribute, Author, Book, BookAuthor, Category, File, Lang, Locc, Subject)
+from libgutenberg.Models import Book, Category, Lang, Locc
 
 
 _LANGOPTIONS = ''

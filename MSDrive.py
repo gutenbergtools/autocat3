@@ -13,8 +13,6 @@ https://docs.microsoft.com/en-us/graph/api/driveitem-createuploadsession?view=gr
 
 from __future__ import unicode_literals
 
-from contextlib import closing
-
 import CloudStorage
 
 class MSDriveSession(CloudStorage.CloudOAuth2Session):
