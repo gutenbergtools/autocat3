@@ -12,7 +12,7 @@ import resource
 import threading
 
 import cherrypy
-from cherrypy.lib.sessions import RamSession
+from cherrypy.lib.sessions import MemcachedSession
 from Page import Page
 
 class MetricsPage (Page):
@@ -29,31 +29,44 @@ class MetricsPage (Page):
             "autocat3_memory_kb_children": resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss,
         }
 
-        if isinstance(cherrypy.serving.session, RamSession):
+        if isinstance(cherrypy.serving.session, MemcachedSession):
+            try:
+                # assume all entries in memcache are sessions
+                memcache_stats = MemcachedSession.cache.get_stats()
+
+                core_metrics = core_metrics | {
+                    "autocat3_sessions": int(memcache_stats[0][1]["curr_items"]),
+                }
+            except Exception:
+                pass
+        else:
             core_metrics = core_metrics | {
-                "autocat3_sessions": len(RamSession.cache),
+                "autocat3_sessions": len(cherrypy.serving.session),
             }
 
         http_server = cherrypy.server
-        http_server_metrics = {
-            "autocat3_httpserver_socket_queue_size": http_server.socket_queue_size,
-            "autocat3_httpserver_accepted_queue_size": http_server.accepted_queue_size,
-            "autocat3_httpserver_pool_minsize": http_server.thread_pool,
-            # we include thread_pool_max even though the value is currently completely
-            # meaningless https://github.com/cherrypy/cheroot/issues/190
-            "autocat3_httpserver_pool_maxsize": http_server.thread_pool_max,
-        }
-
-        # https://docs.cherrypy.dev/en/latest/_modules/cherrypy/_cpserver.html#Server
-        # This assumes we're using the default CherryPy cheroot HTTP server
-        if (hasattr(cherrypy.server.httpserver, "requests")):
-            http_server_pool = cherrypy.server.httpserver.requests
-            http_server_metrics = http_server_metrics | {
-                "autocat3_httpserver_pool_available": http_server_pool.idle,
-                "autocat3_httpserver_pool_size": len(http_server_pool._threads),
-                "autocat3_httpserver_pool_used": len(http_server_pool._threads) - http_server_pool.idle,
-                "autocat3_httpserver_pool_queued": http_server_pool.qsize,
+        if http_server.running:
+            http_server_metrics = {
+                "autocat3_httpserver_socket_queue_size": http_server.socket_queue_size,
+                "autocat3_httpserver_accepted_queue_size": http_server.accepted_queue_size,
+                "autocat3_httpserver_pool_minsize": http_server.thread_pool,
+                # we include thread_pool_max even though the value is currently completely
+                # meaningless https://github.com/cherrypy/cheroot/issues/190
+                "autocat3_httpserver_pool_maxsize": http_server.thread_pool_max,
             }
+
+            # https://docs.cherrypy.dev/en/latest/_modules/cherrypy/_cpserver.html#Server
+            # This assumes we're using the default CherryPy cheroot HTTP server
+            if (hasattr(cherrypy.server.httpserver, "requests")):
+                http_server_pool = cherrypy.server.httpserver.requests
+                http_server_metrics = http_server_metrics | {
+                    "autocat3_httpserver_pool_available": http_server_pool.idle,
+                    "autocat3_httpserver_pool_size": len(http_server_pool._threads),
+                    "autocat3_httpserver_pool_used": len(http_server_pool._threads) - http_server_pool.idle,
+                    "autocat3_httpserver_pool_queued": http_server_pool.qsize,
+                }
+        else:
+            http_server_metrics = {}
 
         # https://github.com/sqlalchemy/sqlalchemy/blob/d5c89a541f5233baf6b6a7498746820caa7b407f/lib/sqlalchemy/pool/impl.py
         if cherrypy.engine.pool.engine:
