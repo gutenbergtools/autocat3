@@ -395,7 +395,7 @@ class OpenSearch(object):
         self.user_dialog = ('', '')
         self.opensearch_support = 0 # 0 = none, 1 = full, 2 = fake(Stanza, Aldiko, ...)
         self.books_in_archive = babel.numbers.format_number(
-            books_in_archive, locale = str(cherrypy.response.i18n.locale))
+            books_in_archive, locale=str(cherrypy.response.i18n.locale))
         self.breadcrumbs  = [
             (_('Project Gutenberg'), _('Go to the Main page.'), '/'),
             (__('1 free eBook', '{count} free eBooks', books_in_archive).format(
@@ -413,7 +413,6 @@ class OpenSearch(object):
         self.user_agent = cherrypy.request.headers.get('User-Agent', '')
 
         cherrypy.request.os = self
-        s = cherrypy.session
         k = cherrypy.request.params
 
         host = cherrypy.request.headers.get('X-Forwarded-Host', cherrypy.config['host'])
@@ -441,12 +440,11 @@ class OpenSearch(object):
         # search_terms: this is used to carry the last query
         # to display in the search input box
 
-        self.search_terms = self.query or s.get('search_terms', '')
+        self.search_terms = self.query or ''
 
-        self.sort_order = k.get('sort_order') or s.get('sort_order') or USER_SORT_ORDERS[0]
+        self.sort_order = k.get('sort_order') or USER_SORT_ORDERS[0]
         if self.sort_order not in USER_SORT_ORDERS:
             raise cherrypy.HTTPError(400, 'Bad Request. Unknown sort order.')
-        s['sort_order'] = self.sort_order
 
         try:
             self.id = int(k.get('id') or '0')
@@ -498,7 +496,7 @@ class OpenSearch(object):
             'random': _("Random"),
             }
 
-        self.snippet_image_url = self.url('/pics/logo-144x144.png', host=self.file_host)
+        self.snippet_image_url = self.url('/pics/logo-144x144.png', host=self.file_host, protocol="https")
         self.og_type = 'website'
         self.class_ = ClassAttr()
         self.title_icon = 'search'
@@ -506,7 +504,7 @@ class OpenSearch(object):
         self.sort_orders = []
         self.alternate_sort_orders = []
 
-        lang = self.lang = s.get('_lang_', 'en_US')
+        lang = self.lang = str(cherrypy.response.i18n.locale) or 'en_US'
         if len(lang) == 2:
             lang = self.lang = self.lang_to_default_locale.get(lang, 'en_US')
         lang2 = self.lang[:2]
@@ -524,10 +522,6 @@ class OpenSearch(object):
         self.viewport = "width=device-width" # , initial-scale=1.0"
         self.touch_icon = '/gutenberg/apple-icon.png'
         self.touch_icon_precomposed = None # not yet used
-
-        if 'user_dialog' in s:
-            self.user_dialog = s['user_dialog']
-            del s['user_dialog']
 
         msg = k.get('msg')
         if msg is not None:
@@ -559,20 +553,16 @@ class OpenSearch(object):
         self.show_prev_page_link = self.start_index > 1
         self.show_next_page_link = (self.end_index < self.total_results)
 
-        self.desktop_search = self.url('search', format = None)
+        self.desktop_search = self.url('search', protocol='https')
 
         self.base_url = self.url(host = self.file_host, protocol='https')
 
         # for google, fb etc.
-        self.canonical_url = self.url_carry(host = self.file_host, format = None)
+        self.canonical_url = self.url_carry(host=self.file_host, protocol='https')
 
-        self.desktop_url = self.url_carry(host = self.desktop_host, format = None)
+        self.desktop_url = self.url_carry(host=self.desktop_host, protocol='https')
 
         self.osd_url = self.qualify('/catalog/osd-books.xml')
-
-        s = cherrypy.session
-        # write this late so pages can change it
-        s['search_terms'] = self.search_terms
 
 
     def url(self, *args, **params):
