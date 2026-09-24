@@ -154,7 +154,6 @@ class HTMLFormatter(XMLishFormatter):
                     txt_file.hidden = True
                     showncount -= 1
                 txt_file = file_
-                file_.hr_filetype = 'Plain Text'
             elif file_.compression == 'zip':
                 if file_.archive_path.startswith('cache/epub'):
                     file_.hr_filetype = 'Download HTML (zip)'
@@ -166,14 +165,7 @@ class HTMLFormatter(XMLishFormatter):
                     if htmlcount > 0:
                         file_.hidden = True
                     else:
-                        file_.hr_filetype = 'Read now!'
                         htmlcount += 1
-            elif filetype == 'epub.images':
-                file_.hr_filetype = 'EPUB (older e-readers)'
-            elif filetype == 'kindle.images':
-                file_.hr_filetype = 'Older Kindles'
-            elif filetype == 'epub.noimages':
-                file_.hr_filetype = 'EPUB (older e-readers, no images)'
             elif filetype in NO_DESKTOP_FILETYPES or filetype == '':
                 # if no filetype is available, we shouldn't show it
                 file_.hidden = True
@@ -183,7 +175,6 @@ class HTMLFormatter(XMLishFormatter):
                     file_.hidden = True
                 else:
                     txt_file = file_
-                    file_.hr_filetype = 'Plain Text'
             if not file_.hidden:
                 showncount += 1
 
