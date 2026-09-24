@@ -35,7 +35,6 @@ from libgutenberg.Models import (
     Alias, Attribute, Author, Book, BookAuthor, Category, File, Lang, Locc, Subject)
 
 import BaseSearcher
-from errors import ErrorPage
 from Page import Page
 from Formatters import formatters
 

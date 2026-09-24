@@ -35,7 +35,7 @@ from i18n_tool import ugettext as _
 from i18n_tool import ungettext as __
 
 import DublinCoreI18n
-from SupportedLocales import FB_LANGS, TWITTER_LANGS, GOOGLE_LANGS, PAYPAL_LANGS
+from SupportedLocales import TWITTER_LANGS, GOOGLE_LANGS, PAYPAL_LANGS
 
 VALID_PROTOCOLS = ('http', 'https')
 

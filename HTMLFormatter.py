@@ -16,17 +16,14 @@ from __future__ import unicode_literals
 
 import operator
 
-import cherrypy
 import genshi.output
 import re
 import six
-from six.moves import urllib
 
 from libgutenberg.MediaTypes import mediatypes as mt
 
 import BaseSearcher
 import BaseFormatter
-from i18n_tool import ugettext as _
 
 # filetypes ignored on desktop site
 NO_DESKTOP_FILETYPES = {'plucker', 'qioo', 'rdf', 'rst', 'rst.gen', 'rst.master', 'tei',
