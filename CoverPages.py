@@ -14,6 +14,8 @@ Serve cover images of most popular and latest ebooks.
 
 from __future__ import unicode_literals
 
+from datetime import date, timedelta
+
 import cherrypy
 import six
 from sqlalchemy import select
@@ -21,6 +23,8 @@ from sqlalchemy.sql import func
 
 from libgutenberg import GutenbergGlobals as gg
 from libgutenberg import DublinCore, DublinCoreMapping, Models
+
+LATEST_LAG_DAYS = 10
 
 
 
@@ -96,16 +100,21 @@ class CoverPages(object):
                 raise ValueError('bogus size')
             size = 'cover.%s' % size
 
+            query = select(Models.Book.pk).where(
+                Models.Book.pk == Models.File.fk_books,
+                Models.File.fk_filetypes == size,
+            )
             if order == 'popular':
                 order_by = Models.Book.downloads.desc()
             elif order == 'random':
                 order_by = func.random()
             else:
                 order_by = Models.Book.release_date.desc()
-            rows = session.execute(select(Models.Book.pk).where(
-                Models.Book.pk == Models.File.fk_books,
-                Models.File.fk_filetypes == size
-            ).order_by(order_by).limit(count)).scalars().all()
+                # Skip very recent releases so quality control and summary generation has time to land before display on homepage.
+                query = query.where(
+                    Models.Book.release_date <= date.today() - timedelta(days=LATEST_LAG_DAYS)
+                )
+            rows = session.execute(query.order_by(order_by).limit(count)).scalars().all()
 
             if rows:
                 return self.serve(rows, size, session)
