@@ -12,10 +12,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from .constants import (
-    BOOKSHELF_CATEGORY_PREFIX,
     Crosswalk,
     CuratedBookshelves,
-    LoCCMainClass,
     OrderBy,
     SearchField,
     SortDirection,
@@ -150,8 +148,8 @@ class CatalogQuery:
     def modified_after(self, date: str) -> "CatalogQuery":
         return self.filter("CAST(filemtime AS date) >= CAST({} AS date)", str(date))
 
-    def locc(self, code: Union[LoCCMainClass, str]) -> "CatalogQuery":
-        code = code.code if isinstance(code, LoCCMainClass) else str(code).upper()
+    def locc(self, code: str) -> "CatalogQuery":
+        code = str(code).upper()
         return self.filter(
             """
             EXISTS (
@@ -380,7 +378,6 @@ class Catalog:
     def __init__(self, engine):
         self.engine = engine
         self.Session = sessionmaker(bind=self.engine)
-        self._bookshelf_ids = None
 
     def query(self, crosswalk: Crosswalk = Crosswalk.OPDS) -> CatalogQuery:
         return CatalogQuery(crosswalk)
@@ -421,28 +418,9 @@ class Catalog:
             sql, params = q.build_count()
             return session.execute(text(sql), params).scalar() or 0
 
-    def bookshelf_ids(self) -> Dict[str, int]:
-        """Map of bookshelf name -> primary key, loaded once and cached."""
-        if self._bookshelf_ids is None:
-            with self.Session() as session:
-                rows = session.execute(
-                    text("SELECT pk, bookshelf FROM bookshelves")
-                ).fetchall()
-            self._bookshelf_ids = {r.bookshelf: r.pk for r in rows}
-        return self._bookshelf_ids
-
     def curated_shelves(self, cat: CuratedBookshelves) -> List[Tuple[int, str]]:
-        """Resolve a curated category to (shelf_id, label) pairs.
-
-        Labels missing from the current dataset are skipped.
-        """
-        ids = self.bookshelf_ids()
-        resolved = []
-        for label in cat.shelf_names:
-            pk = ids.get(BOOKSHELF_CATEGORY_PREFIX + label)
-            if pk is not None:
-                resolved.append((pk, label))
-        return resolved
+        """(shelf_id, label) pairs for a curated category."""
+        return list(cat.shelves)
 
     def bookshelf_counts(self, shelf_ids: List[int]) -> Dict[int, int]:
         """Book count per shelf (books present in mv_books_dc), in one query."""
@@ -677,18 +655,24 @@ class Catalog:
             logging.getLogger(__name__).exception("OPDS facet query failed")
             return {"subjects": None, "languages": None}
 
-    def get_locc_children(self, parent: Union[LoCCMainClass, str]) -> List[Dict]:
+    def get_locc_children(self, parent: str = "") -> List[Dict]:
         """Return LoCC children for parent (main classes when parent is empty)."""
-        if isinstance(parent, LoCCMainClass):
-            parent_code = parent.code
-        else:
-            parent_code = (parent or "").strip().upper()
+        parent_code = (parent or "").strip().upper()
 
         if not parent_code:
-            return [
-                {"code": item.code, "label": item.label}
-                for item in sorted(LoCCMainClass, key=lambda x: x.code)
-            ]
+            sql = text(
+                """
+                SELECT
+                    lc.pk AS code,
+                    lc.locc AS label
+                FROM loccs lc
+                WHERE char_length(lc.pk) = 1
+                ORDER BY lc.pk
+                """
+            )
+            with self.Session() as session:
+                rows = session.execute(sql).mappings().all()
+                return [{"code": r["code"], "label": r["label"]} for r in rows]
 
         if len(parent_code) != 1:
             return []

@@ -12,7 +12,7 @@ import cherrypy
 from sqlalchemy import create_engine
 
 from .catalog import Catalog
-from .constants import Crosswalk, Language, LoCCMainClass, OrderBy
+from .constants import Crosswalk, OrderBy
 from .publications import _set_publication_contributors, format_creators
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -69,8 +69,8 @@ class FilterTests(CatalogTestBase):
     def test_filters(self):
         cases = (
             ("etext()", self.c.query().etext(_KNOWN_ETEXT)[1, 10]),
-            ("lang()", self.c.query().lang(Language.DE.code)[1, 10]),
-            ("locc()", self.c.query().locc(LoCCMainClass.P)[1, 10]),
+            ("lang()", self.c.query().lang("de")[1, 10]),
+            ("locc()", self.c.query().locc("P")[1, 10]),
             ("author_id()", self.c.query().author_id(53)[1, 10]),
             ("subject_id()", self.c.query().subject_id(1)[1, 10]),
             ("bookshelf_id()", self.c.query().bookshelf_id(68)[1, 10]),
@@ -87,7 +87,7 @@ class FilterTests(CatalogTestBase):
             ),
             (
                 "locc + search",
-                self.c.query().locc(LoCCMainClass.P).search("Mystery")[1, 10],
+                self.c.query().locc("P").search("Mystery")[1, 10],
             ),
         )
         for name, query in cases:

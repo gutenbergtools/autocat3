@@ -13,10 +13,11 @@ import json
 
 import cherrypy
 
+from libgutenberg import GutenbergGlobals as gg
+
 from opds_catalog.constants import (
     Crosswalk,
     CuratedBookshelves,
-    Language,
     OrderBy,
     SearchField,
     SortDirection,
@@ -28,7 +29,9 @@ OPDS = Crosswalk.OPDS
 OPDS_SMALL = Crosswalk.OPDS_SMALL
 
 SAMPLE_LIMIT = 15
-# Most common Gutenberg languages first, remainder alphabetical by label
+# Most common Gutenberg languages first. Names come from the catalog
+# langs table (catalog.langname), same as search, with GutenbergGlobals
+# language_map as the fallback.
 _LANG_PRIORITY = [
     "en",
     "fr",
@@ -51,13 +54,20 @@ _LANG_PRIORITY = [
     "cs",
     "ja",
 ]
-LANGUAGES = [
-    {"code": lang.code, "label": lang.label}
-    for lang in Language
-    if lang.code in _LANG_PRIORITY
-]
-LANGUAGES.sort(key=lambda x: _LANG_PRIORITY.index(x["code"]))
-LANGUAGE_LABELS = {lang.code: lang.label for lang in Language}
+_language_map = gg.language_map()
+
+
+def _language_label(code: str) -> str:
+    """Language name from the catalog langs table, else language_map."""
+    try:
+        from catalog import langname
+
+        label = langname(code)
+    except Exception:
+        label = ""
+    if label and label != "Not a valid language":
+        return label
+    return _language_map.get(code, code) or code
 
 VALID_SORTS = set(OrderBy._value2member_map_.keys())
 OPDS_TYPE = "application/opds+json"
@@ -492,12 +502,13 @@ class OPDSFeed:
         ]
         if languages is not None:
             items = [
-                (item["code"], LANGUAGE_LABELS.get(item["code"], item["code"]),
-                 item.get("count"))
+                (item["code"], _language_label(item["code"]), item.get("count"))
                 for item in languages
             ]
         else:
-            items = [(item["code"], item["label"], None) for item in LANGUAGES]
+            items = [
+                (code, _language_label(code), None) for code in _LANG_PRIORITY
+            ]
 
         for code, label, count in items:
             link = _facet(

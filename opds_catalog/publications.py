@@ -12,9 +12,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import cherrypy
 
-from .constants import BOOKSHELF_CATEGORY_PREFIX, Crosswalk, LoCCMainClass
-
-_LOCC_LABELS = {item.code: item.label for item in LoCCMainClass}
+from .constants import BOOKSHELF_CATEGORY_PREFIX, Crosswalk
 
 # Readium Web Publication Manifest subject schemes
 SCHEME_LCC = "http://purl.org/dc/terms/LCC"
@@ -440,6 +438,21 @@ def _opds_bookshelf_subject_metadata(
     return subject_objs
 
 
+def _locc_label(code: str) -> str:
+    """LoCC name from the catalog loccs table (catalog.locname)."""
+    if not code:
+        return ""
+    try:
+        from catalog import locname
+
+        label = locname(code)
+    except Exception:
+        return ""
+    if not label or label == "Not a valid Classification":
+        return ""
+    return label
+
+
 def _opds_subject_metadata(
     raw_subjects: List[Dict[str, Any]], locc_codes: List[str]
 ) -> List[Dict[str, Any]]:
@@ -460,7 +473,7 @@ def _opds_subject_metadata(
         subject_objs.append(subj)
     for code in locc_codes:
         main_class = code[0].upper() if code else ""
-        label = _LOCC_LABELS.get(main_class, "")
+        label = _locc_label(main_class)
         name = f"{label}: {code}" if label else code
         subject_objs.append({
             "name": name,
