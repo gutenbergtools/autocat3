@@ -35,6 +35,26 @@ def is_a_summary(text):
             return True
     return False
 
+# this code should move to libgutenberg
+PGPREFIX = '979-8-238-'
+def pg_isbn(dc):
+    if dc.categories[0] != 'Text' or dc.rights.startswith('C'):
+        return ''
+    pgid = dc.project_gutenberg_id
+    pg_id = str(pgid).zfill(5)
+    sum = 82
+    for i in range(5):       
+        c = int(pg_id[i])
+        if i % 2: w = 1
+        else: w = 3 
+        sum += w * c
+    r = 10 - (sum % 10)
+    if r == 10: return PGPREFIX + pg_id + '-0'
+    else:
+        return PGPREFIX + pg_id + '-' + str(r)
+
+
+
 class BibrecPage (Page.Page):
     """ Implements the bibrec page. """
 
@@ -74,6 +94,7 @@ class BibrecPage (Page.Page):
         # add these fields so we won't have to test for their existence later
         dc.extra_info = None
         dc.url = None
+        dc.isbn = pg_isbn(dc)
         os.read_url = None
         os.html_read_url = None
         os.epub3_file = None

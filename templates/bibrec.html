@@ -392,6 +392,11 @@ Gutenberg metadata much faster than by scraping.
 		      <td>${e.project_gutenberg_id}</td>
 		    </tr>
 
+		    <tr py:if="e.isbn">
+		      <th>ISBN (HTML)</th>
+		      <td>${e.isbn}</td>
+		    </tr>
+
 		    <tr property="dcterms:issued" datatype="xsd:date" content="${e.update_date}">
 		      <th>Release Date</th>
 		      <td itemprop="datePublished">${e.hr_release_date}</td>
