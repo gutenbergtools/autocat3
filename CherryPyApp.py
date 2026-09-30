@@ -56,8 +56,9 @@ LOCAL_CONFIG = [os.path.expanduser('~/.autocat3'), '/etc/autocat3.conf']
 def error_page_404(status, message, traceback, version):
     resp = ErrorPage(status, message).index()
     
-    # signal that we needn't save the session
-    cherrypy.session.loaded = False
+    # signal that we needn't save the session if the page uses sessions
+    if hasattr(cherrypy, "session"):
+        cherrypy.session.loaded = False
     return resp
 
 
