@@ -129,31 +129,6 @@ sudo systemctl status autocat3.service
 create a "feature" branch on on the git repo, using either master or development as base.
 when your code is working, submit a pull request to master or development as appropriate.
 
-## updates
-# currently gutenberg-app1 is production deployment, gutenberg-appdev1 is dev deployment
-# to do a new deployment, first update from master 
-# DONT edit files on the deployment servers, they should always be updated from the git remote.
-
-su - autocat
-# or sudo su - autocat if you can sudo
-
-cd autocat3
-
-git fetch origin
-
-#for local development
-git checkout remotes/origin/dev
-
-do NOT develop on the following branches, update them from master.
-# for gutenberg-app1
-git checkout remotes/origin/prod
-# for gutenberg-appdev1
-git checkout remotes/origin/appdev
-
-pipenv install --ignore-pipfile
-
-sudo systemctl restart autocat3
-
 ## How to test
 
 the file test_links.html is provided for testing advanced search when running on 127.0.0.1:8000

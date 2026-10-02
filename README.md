@@ -34,6 +34,57 @@ Currently, we use the following steps to deploy autocat3 on a different server.
 
 Lots of Information on configuring Autocat3 is in configuring.txt
 
+## Deployment
+
+Development is done on branches and merged into `master` which is destined for
+deployment to `dev.gutenberg.org` (dev) and eventually to `www.gutenberg.org` (prod).
+We use tags to mark code for running on these systems to ensure that:
+1. the code we deploy and test on dev is what we deploy to prod
+2. we always know what code is deployed on a given server
+
+To tag code for deployment to dev:
+```bash
+git fetch origin
+# tag the commit you want on dev (the following assumes the head of master)
+git tag -f dev origin/master
+# push the updated tag to GitHub
+git push -f origin refs/tags/dev
+```
+
+Then on appdev1:
+```bash
+cd autocat3
+# fetch the contents of the origin repo
+git fetch origin
+# fetch and force-update local tags to match the origin repo
+git fetch -f --tags origin 
+git checkout dev
+```
+
+To tag code for deployment to prod to match dev:
+```bash
+git fetch origin
+git fetch -f --tags origin 
+# tag prod to match dev
+git tag -f prod refs/tags/dev
+# push the updated tag to GitHub
+git push -f origin refs/tags/prod
+```
+
+Then on app1:
+```bash
+cd autocat3
+# fetch the contents of the origin repo
+git fetch origin
+# fetch and force-update local tags to match the origin repo
+git fetch -f --tags origin
+git checkout prod
+```
+
+In both cases, ensure that the pipenv is up-to-date before restarting autocat3.
+```bash
+pipenv sync
+```
 
 Copyright 2009-2010 by Marcello Perathoner
 Copyright 2019-present by Project Gutenberg
