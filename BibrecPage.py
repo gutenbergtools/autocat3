@@ -36,6 +36,9 @@ def is_a_summary(text):
     return False
 
 # this code should move to libgutenberg
+# copied from https://github.com/Gluejar/regluit/blob/master/core/isbn.py
+# since the first 7 digits are all the same, we start on digit 8 to calculate the check digit
+
 PGPREFIX = '979-8-238-'
 def pg_isbn(dc):
     if dc.categories[0] != 'Text' or dc.rights.startswith('C'):
@@ -45,13 +48,13 @@ def pg_isbn(dc):
     sum = 82
     for i in range(5):       
         c = int(pg_id[i])
-        if i % 2: w = 1
-        else: w = 3 
+        w = 1 if i % 2 else 3 
         sum += w * c
     r = 10 - (sum % 10)
-    if r == 10: return PGPREFIX + pg_id + '-0'
+    if r == 10:
+        return f'{PGPREFIX}{pg_id}-0'
     else:
-        return PGPREFIX + pg_id + '-' + str(r)
+        return f'{PGPREFIX}{pg_id}-{r}'
 
 
 
