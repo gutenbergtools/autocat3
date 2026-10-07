@@ -43,8 +43,8 @@ class CoverPages(object):
         cherrypy.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         cherrypy.response.headers['Content-Language'] = 'en'
         s = ''
+        dc = DublinCoreMapping.DublinCoreObject(session=session, pooled=True)
         for book_id in books:
-            dc = DublinCoreMapping.DublinCoreObject(session=session, pooled=True)
             dc.load_from_database(book_id)
             cover = session.execute(select(Models.File.archive_path).where(
                 Models.File.fk_books == book_id,
