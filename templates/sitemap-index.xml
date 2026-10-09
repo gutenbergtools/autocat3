@@ -9,7 +9,6 @@
 
    <sitemap py:for="s in data.sitemaps">
       <loc>${s.loc}</loc>
-      <lastmod>${s.lastmod}</lastmod>
    </sitemap>
 
 </sitemapindex>
