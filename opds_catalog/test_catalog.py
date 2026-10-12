@@ -87,7 +87,7 @@ class FilterTests(CatalogTestBase):
             ),
             (
                 "locc + search",
-                self.c.query().locc("P").search("Mystery")[1, 10],
+                self.c.query().locc("PR").search("Mystery")[1, 10],
             ),
         )
         for name, query in cases:

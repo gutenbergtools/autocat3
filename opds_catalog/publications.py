@@ -11,6 +11,7 @@ from itertools import zip_longest
 from typing import Any, Callable, Dict, List, Optional
 
 import cherrypy
+from libgutenberg.DublinCore import DublinCore
 
 from .constants import BOOKSHELF_CATEGORY_PREFIX, Crosswalk
 
@@ -37,13 +38,9 @@ _COVER_SPECS = (
 # Text clean-up (MARC subfields, curly quotes, separators)
 # =============================================================================
 
-_RE_MARC_SUBFIELD = re.compile(r"\$[a-z]")
-_RE_MARC_SPSEP = re.compile(r"[\n ](,|:)([A-Za-z0-9])")
 _RE_CURLY_SINGLE = re.compile("[\u2018\u2019]")
 _RE_CURLY_DOUBLE = re.compile("[\u201c\u201d]")
 _RE_TITLE_SPLITTER = re.compile(r"\s*[;:]\s*")
-_RE_PARENS = re.compile(r"\(.*\)")
-_RE_MULTI_SPACE = re.compile(r"\s+")
 
 # Dict keys whose string values get MARC/quote clean-up in crosswalk output.
 _FIELDS_TO_FORMAT = frozenset(
@@ -61,15 +58,6 @@ _FIELDS_TO_FORMAT = frozenset(
 )
 
 
-def strip_marc_subfields(text: str) -> str:
-    """Strip MARC subfield markers ($a, $b, etc)."""
-    if not text or not isinstance(text, str):
-        return ""
-    text = _RE_MARC_SUBFIELD.sub("", text)
-    text = _RE_MARC_SPSEP.sub(r"\1 \2", text)
-    return text.strip()
-
-
 def normalize_text(text: str) -> str:
     """Straighten curly quotes, normalize title separators."""
     if not text or not isinstance(text, str):
@@ -84,7 +72,7 @@ def format_field(key: str, value: str, fields: frozenset = _FIELDS_TO_FORMAT) ->
     if not value or not isinstance(value, str):
         return ""
     if key in fields:
-        value = strip_marc_subfields(value)
+        value = DublinCore.strip_marc_subfields(value)
         value = normalize_text(value)
     return value.strip()
 
@@ -165,19 +153,9 @@ def _format_date_range(floor: Optional[int], ceil: Optional[int]) -> str:
     return str(floor)
 
 
-def _reverse_name(name: str) -> str:
-    """Reverse 'Twain, Mark' -> 'Mark Twain', dropping parenthesized text."""
-    if not name:
-        return ""
-    rev = " ".join(reversed(name.split(", ")))
-    rev = _RE_PARENS.sub("", rev)
-    rev = _RE_MULTI_SPACE.sub(" ", rev)
-    return rev.strip()
-
-
 def _format_creator(c: Dict[str, Any]) -> str:
     """'Mark Twain (1835-1910) [Editor]'; role omitted for authors."""
-    result = _reverse_name(c.get("name", ""))
+    result = DublinCore.make_pretty_name(c["name"])
     born = _format_date_range(c.get("born_floor"), c.get("born_ceil"))
     died = _format_date_range(c.get("died_floor"), c.get("died_ceil"))
     if born and died:
@@ -194,14 +172,7 @@ def _format_creator(c: Dict[str, Any]) -> str:
 
 def format_creators(creators: List[Dict[str, Any]]) -> str:
     """Oxford-comma list of creators: 'A', 'A and B', 'A, B, and C'."""
-    items = [_format_creator(c) for c in creators if c.get("name")]
-    if not items:
-        return ""
-    if len(items) == 1:
-        return items[0]
-    if len(items) == 2:
-        return f"{items[0]} and {items[1]}"
-    return f"{', '.join(items[:-1])}, and {items[-1]}"
+    return DublinCore.strunk([_format_creator(c) for c in creators if c.get("name")])
 
 
 # =============================================================================
