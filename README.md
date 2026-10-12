@@ -42,8 +42,10 @@ sudo mkdir -p /var/run/autocat
 ### 3. Clone the repository
 
 ```bash
-sudo su - autocat
+su - autocat # May need to add sudo depending on your system
 git clone https://github.com/gutenbergtools/autocat3.git
+# Or if from a branch/tag
+git clone -b <tag-name> https://github.com/gutenbergtools/autocat3.git # If you want to clone only that branch/tag, add --single-branch
 ```
 
 ### 4. Install dependencies
@@ -51,14 +53,16 @@ git clone https://github.com/gutenbergtools/autocat3.git
 pipenv reads the `Pipfile` and auto-detects Python 3.9 from pyenv. Setting `PIPENV_VENV_IN_PROJECT` puts the virtualenv in `.venv/` inside the project directory so the systemd service can find it.
 
 ```bash
+# Run as autocat user
 cd /var/lib/autocat/autocat3
-sudo -u autocat PIPENV_VENV_IN_PROJECT=1 pipenv install
+PIPENV_VENV_IN_PROJECT=1 pipenv install
 ```
 
 Verify:
 
 ```bash
-sudo -u autocat /var/lib/autocat/autocat3/.venv/bin/python --version
+# Run as autocat user
+/var/lib/autocat/autocat3/.venv/bin/python --version
 ```
 
 ### 5. Configure
