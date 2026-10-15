@@ -35,7 +35,6 @@ from libgutenberg.Models import (
     Alias, Attribute, Author, Book, BookAuthor, Category, File, Lang, Locc, Subject)
 
 import BaseSearcher
-from errors import ErrorPage
 from Page import Page
 from Formatters import formatters
 
@@ -52,8 +51,6 @@ MAX_RESULTS = 5000
 class AdvSearcher(BaseSearcher.OpenSearch):
     """ this object passes the context for the page renderer """
     def __init__(self):
-        # don't want searchterms from quick search
-        cherrypy.session.pop('search_terms', None)
         super().__init__()
         self.items_per_page = PAGESIZE
 

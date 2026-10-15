@@ -65,7 +65,7 @@ class ConnectionPool(plugins.SimplePlugin):
                                    max_overflow=max_overflow,
                                    timeout=timeout,
                                    recycle=recycle)
-        engine = create_engine(DUMMY_SQL_URL, echo=False, pool=self.pool)
+        engine = create_engine(DUMMY_SQL_URL, echo=False, pool=self.pool, isolation_level="AUTOCOMMIT")
         Session = sessionmaker(bind=engine)
         return engine, Session
 

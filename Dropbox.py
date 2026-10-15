@@ -49,7 +49,7 @@ class Dropbox (CloudStorage.CloudStorage):
         """
 
         parameters = {
-            'path': '/' + self.fix_filename (session.ebook.get_filename ()),
+            'path': '/' + self.fix_filename (self.ebook.get_filename ()),
             'autorename': True,
         }
         headers = {

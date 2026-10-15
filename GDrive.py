@@ -49,7 +49,7 @@ class GDrive (CloudStorage.CloudStorage):
         """ Upload a file to google drive. """
 
         file_metadata = {
-            'title': self.fix_filename (session.ebook.get_filename ()),
+            'title': self.fix_filename (self.ebook.get_filename ()),
             'description': 'A Project Gutenberg Ebook',
         }
         headers = {

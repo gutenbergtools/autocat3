@@ -13,8 +13,6 @@ https://docs.microsoft.com/en-us/graph/api/driveitem-createuploadsession?view=gr
 
 from __future__ import unicode_literals
 
-from contextlib import closing
-
 import CloudStorage
 
 class MSDriveSession(CloudStorage.CloudOAuth2Session):
@@ -44,7 +42,7 @@ class MSDrive(CloudStorage.CloudStorage):
 
     def upload_file(self, session, response):
         """ Upload a file to microsoft onedrive. """
-        filename = self.fix_filename(session.ebook.get_filename())
+        filename = self.fix_filename(self.ebook.get_filename())
         item_data = {
             'name': filename,
             'description': 'A Project Gutenberg eBook',

@@ -35,6 +35,29 @@ def is_a_summary(text):
             return True
     return False
 
+# this code should move to libgutenberg
+# copied from https://github.com/Gluejar/regluit/blob/master/core/isbn.py
+# since the first 7 digits are all the same, we start on digit 8 to calculate the check digit
+
+PGPREFIX = '979-8-238-'
+def pg_isbn(dc):
+    if dc.categories[0] != 'Text' or dc.rights.startswith('C'):
+        return ''
+    pgid = dc.project_gutenberg_id
+    pg_id = str(pgid).zfill(5)
+    sum = 82
+    for i in range(5):       
+        c = int(pg_id[i])
+        w = 1 if i % 2 else 3 
+        sum += w * c
+    r = 10 - (sum % 10)
+    if r == 10:
+        return f'{PGPREFIX}{pg_id}-0'
+    else:
+        return f'{PGPREFIX}{pg_id}-{r}'
+
+
+
 class BibrecPage (Page.Page):
     """ Implements the bibrec page. """
 
@@ -74,6 +97,7 @@ class BibrecPage (Page.Page):
         # add these fields so we won't have to test for their existence later
         dc.extra_info = None
         dc.url = None
+        dc.isbn = pg_isbn(dc)
         os.read_url = None
         os.html_read_url = None
         os.epub3_file = None
@@ -110,22 +134,17 @@ class BibrecPage (Page.Page):
 
         os.entries.append (dc)
 
-        s = cherrypy.session
-        last_visited = s.get ('last_visited', [])
-        last_visited.append (os.id)
-        s['last_visited'] = last_visited
-
         # can we find some meaningful breadcrumbs ?
         for a in dc.authors:
             if a.marcrel in ('aut', 'cre'):
-                book_cnt = BaseSearcher.sql_get (
+                book_cnt = BaseSearcher.sql_get(
                     "select count (*) from mn_books_authors where fk_authors = %(aid)s", aid = a.id)
                 if book_cnt > 1:
-                    os.breadcrumbs.append ((
-                        __('One by {author}', '{count} by {author}', book_cnt).format (
-                                count = book_cnt, author = dc.make_pretty_name (a.name)),
+                    os.breadcrumbs.append((
+                        __('One by {author}', '{count} by {author}', book_cnt).format(
+                                count=book_cnt, author=dc.make_pretty_name (a.name)),
                         _('Find more eBooks by the same author.'),
-                         os.url ('author', id = a.id)
+                         os.url('author', id=a.id, protocol='https')
                         ))
 
 
@@ -133,7 +152,7 @@ class BibrecPage (Page.Page):
             cat = BaseSearcher.Cat ()
             cat.title = _('Readers also downloaded')
             cat.rel = 'related'
-            cat.url = os.url ('also', id = os.id)
+            cat.url = os.url('also', id=os.id, protocol='https')
             cat.class_ += 'navlink grayed noprint'
             cat.icon = 'suggestion'
             cat.order = 30
@@ -148,7 +167,7 @@ class BibrecPage (Page.Page):
                     shelf_name = shelf_name[len('Category: '):]
                 cat.title = shelf_name
                 cat.rel = 'related'
-                cat.url = os.url ('bookshelf', id = bookshelf.id)
+                cat.url = os.url('bookshelf', id = bookshelf.id, protocol='https')
                 cat.class_ += 'navlink grayed'
                 cat.icon = 'bookshelf'
                 cat.order = 33
