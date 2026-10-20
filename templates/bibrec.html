@@ -256,32 +256,38 @@ Gutenberg metadata much faster than by scraping.
                         <div class="featured-format-tips">
                           <details class="device-tip">
                             <summary>Kindle → <span class="device-tip-action">Use Send-to-Kindle</span></summary>
-                            <ol>
-                              <li>Download the EPUB3 file above</li>
-                              <li>Upload it on the Amazon site your Kindle is registered with: <a href="https://www.amazon.com/sendtokindle" target="_blank" rel="noopener">amazon.com/sendtokindle</a> for the US, <a href="https://www.amazon.co.uk/sendtokindle" target="_blank" rel="noopener">amazon.co.uk/sendtokindle</a> for the UK etc.</li>
-                              <li>It appears on your Kindle and in the Kindle app</li>
-                            </ol>
-                            <p><a href="/help/reading_options.html#kindle">More help</a></p>
+                            <div class="device-tip-body">
+                              <ol>
+                                <li>Download the EPUB3 file above</li>
+                                <li>Upload it on the Amazon site your Kindle is registered with: <a href="https://www.amazon.com/sendtokindle" target="_blank" rel="noopener">amazon.com/sendtokindle</a> for the US, <a href="https://www.amazon.co.uk/sendtokindle" target="_blank" rel="noopener">amazon.co.uk/sendtokindle</a> for the UK etc.</li>
+                                <li>It appears on your Kindle and in the Kindle app</li>
+                              </ol>
+                              <p><a href="/help/reading_options.html#kindle">More help</a></p>
+                            </div>
                           </details>
                           <details class="device-tip">
                             <summary>Kobo, Nook etc. → <span class="device-tip-action">Transfer via USB</span></summary>
-                            <ol>
-                              <li>Download the EPUB3 file on your computer</li>
-                              <li>Connect your e-reader by USB and tap "Connect" on its screen</li>
-                              <li>Drag the file onto the e-reader drive</li>
-                            </ol>
-                            <p><a href="/help/reading_options.html#kobo-nook-etc">More help</a></p>
+                            <div class="device-tip-body">
+                              <ol>
+                                <li>Download the EPUB3 file on your computer</li>
+                                <li>Connect your e-reader by USB and tap "Connect" on its screen</li>
+                                <li>Drag the file onto the e-reader drive</li>
+                              </ol>
+                              <p><a href="/help/reading_options.html#kobo-nook-etc">More help</a></p>
+                            </div>
                           </details>
                           <details class="device-tip">
                             <summary>Phone, Tablet or Computer → <span class="device-tip-action">Online or Reading App</span></summary>
-                            <p py:if="os.html_read_url"><strong>Easiest:</strong> <a href="${os.html_read_url}">read online</a> in your browser. Nothing to install.</p>
-                            <p><strong>${'Or use' if os.html_read_url else 'Use'} a reading app:</strong></p>
-                            <ol>
-                              <li>Find and install one you like, for example Apple Books, ReadEra or Thorium Reader</li>
-                              <li>Download the EPUB3 file above</li>
-                              <li>Open it in the app</li>
-                            </ol>
-                            <p>More help: <a href="/help/reading_options.html#iphone--ipad">iPhone / iPad</a> · <a href="/help/reading_options.html#android">Android</a> · <a href="/help/reading_options.html#computer">Computer</a></p>
+                            <div class="device-tip-body">
+                              <p py:if="os.html_read_url"><strong>Easiest:</strong> <a href="${os.html_read_url}">read online</a> in your browser. Nothing to install.</p>
+                              <p><strong>${'Or use' if os.html_read_url else 'Use'} a reading app:</strong></p>
+                              <ol>
+                                <li>Find and install one you like, for example Apple Books, ReadEra or Thorium Reader</li>
+                                <li>Download the EPUB3 file above</li>
+                                <li>Open it in the app</li>
+                              </ol>
+                              <p>More help: <a href="/help/reading_options.html#iphone--ipad">iPhone / iPad</a> · <a href="/help/reading_options.html#android">Android</a> · <a href="/help/reading_options.html#computer">Computer</a></p>
+                            </div>
                           </details>
                         </div>
                       </div>
