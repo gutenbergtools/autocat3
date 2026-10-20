@@ -42,3 +42,4 @@ idna = "*"
 lxml = "*"
 gunicorn = {extras = ["gthread"], version = "*"}
 libgutenberg = "==0.11.7"
+gunicorn = {extras = ["gthread"], version = "*"}
