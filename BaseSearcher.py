@@ -208,6 +208,8 @@ class SQLStatement(object):
 
         sub = cls.sub
 
+        query = sub(r'(^|\s)-(?=[\w"(])', r'\1!', query)
+
         # strip most not (letter or digit)
         # \p{Z} : Separator
         # \p{P} : Punctuation
@@ -215,7 +217,10 @@ class SQLStatement(object):
         # \p{M} : Mark
         # \p{C} : Other
 
-        query = sub(r'[\p{Z}\p{P}\p{S}\p{M}\p{C}--.!|()#]', ' ', query)
+        query = sub(r'[\p{Z}\p{P}\p{S}\p{M}\p{C}--.!|()#"]', ' ', query)
+
+        if query.count('"') % 2:
+            query = query[::-1].replace('"', ' ', 1)[::-1]
 
         # strip operators adjacent to non-whitespace
         # if you want grouping you have to add space on both sides of the parens
@@ -226,7 +231,7 @@ class SQLStatement(object):
         query = sub(r'\s*[|!()]\s*', r' \g<0> ', query)
 
         # remove empty groups
-        query = sub(r'\s*\([.!|()#\s]+\)\s*', ' ', query)
+        query = sub(r'\s*\([.!|()#"*\s]+\)\s*', ' ', query)
         return ' '.join(query.split())
 
 
@@ -265,12 +270,18 @@ class SQLStatement(object):
                 balanced = balanced[::-1]
             return balanced
 
+        def phrase_sub(match_object):
+            """ Translate quoted phrase to tsvec syntax. """
+            words = sub(r'[.!|()#:*]', ' ', match_object.group(1)).split()
+            return ' (' + ' <-> '.join(words) + ') ' if words else ' '
+
         # Replace the user-visible prefixes with the internally used prefixes.
         query = sub(r'(\b\w+\.|#)(?=\w)', prefix_sub, query)
 
         # add wildcards to all words
         query = sub(r'\b(\p{L}+)(\s|$)', r'\1:*\2', query)
         query = query.replace('. ', ' ')
+        query = sub(r'"([^"]*)"', phrase_sub, query)
 
         # if parens aren't balanced, remove them
         query = balance(query)
@@ -280,7 +291,7 @@ class SQLStatement(object):
 
         # replace ' ' with ' & '
         query = ' '.join(query.split())
-        query = sub(r'(?<![|!(\s])\s+(?![|)])', ' & ', query)
+        query = sub(r'(?<![|!(>\s])\s+(?![|<)])', ' & ', query)
 
         return query
 
