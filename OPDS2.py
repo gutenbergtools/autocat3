@@ -5,13 +5,15 @@ OPDS 2.0 JSON feed for the Project Gutenberg catalog.
 """
 
 import datetime
+import json
+import logging
 import threading
+from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
-import logging
-import json
 
 import cherrypy
+from repoze.lru import ExpiringLRUCache
 
 from libgutenberg import GutenbergGlobals as gg
 
@@ -32,28 +34,7 @@ SAMPLE_LIMIT = 15
 # Most common Gutenberg languages first. Names come from the catalog
 # langs table (catalog.langname), same as search, with GutenbergGlobals
 # language_map as the fallback.
-_LANG_PRIORITY = [
-    "en",
-    "fr",
-    "de",
-    "fi",
-    "nl",
-    "it",
-    "pt",
-    "es",
-    "zh",
-    "la",
-    "el",
-    "grc",
-    "hu",
-    "sv",
-    "da",
-    "no",
-    "pl",
-    "ru",
-    "cs",
-    "ja",
-]
+_LANG_PRIORITY = "en fr de fi nl it pt es zh la el grc hu sv da no pl ru cs ja".split()
 _language_map = gg.language_map()
 
 
@@ -69,7 +50,8 @@ def _language_label(code: str) -> str:
         return label
     return _language_map.get(code, code) or code
 
-VALID_SORTS = set(OrderBy._value2member_map_.keys())
+
+VALID_SORTS = {o.value for o in OrderBy}
 OPDS_TYPE = "application/opds+json"
 OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
 # Only the user-facing search fields are advertised to clients. /opds/search
@@ -77,6 +59,16 @@ OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
 # bookshelf_id, and modified_since for internal/secret facet/scope carry-over, but those
 # are kept out of the template so clients don't surface them as search inputs.
 SEARCH_TEMPLATE = "/opds/search{?query,title,author}"
+
+# (sort, sort_order, title) for the "Sort By" facet, in display order.
+_SORT_FACETS = (
+    ("downloads", "desc", "Most Popular"),
+    ("release_date", "desc", "Newest"),
+    ("relevance", "", "Relevance"),  # only offered for text searches
+    ("title", "asc", "Title (A-Z)"),
+    ("author", "asc", "Author (A-Z)"),
+    ("random", "", "Random"),
+)
 
 
 # Helpers
@@ -112,6 +104,14 @@ def _link(rel: str, href: str, **extras) -> Dict:
     return {"rel": rel, "href": _url(href), "type": OPDS_TYPE, **extras}
 
 
+def _feed_links(self_href: str, up_href: str, search: bool = True) -> List[Dict]:
+    """self/start/up (and search) links shared by every non-root feed."""
+    links = [_link("self", self_href), _link("start", "/opds/"), _link("up", up_href)]
+    if search:
+        links.append(_link("search", SEARCH_TEMPLATE, templated=True))
+    return links
+
+
 OPDS_GZIP_MIME_TYPES = [
     "application/json",
     "application/opds+json",
@@ -141,9 +141,12 @@ OPDS_MOUNT_CONFIG = {
 }
 
 
-def _nav(href: str, title: str) -> Dict:
-    """Create a navigation item."""
-    return {"href": _url(href), "title": title, "type": OPDS_TYPE, "rel": "subsection"}
+def _nav(href: str, title: str, count: Optional[int] = None) -> Dict:
+    """Create a navigation item, with an item count when given."""
+    item = {"href": _url(href), "title": title, "type": OPDS_TYPE, "rel": "subsection"}
+    if count:
+        item["properties"] = {"numberOfItems": count}
+    return item
 
 
 def _navigation_group() -> Dict:
@@ -157,21 +160,14 @@ def _navigation_group() -> Dict:
     }
 
 
-def _facet(href: str, title: str, active: bool) -> Dict:
+def _facet(href: str, title: str, active: bool, count: Optional[int] = None) -> Dict:
     """Create a facet link. Includes 'rel': 'self' only if active."""
     link = {"href": _url(href), "type": OPDS_TYPE, "title": title}
     if active:
         link["rel"] = "self"
+    if count is not None:
+        link["properties"] = {"numberOfItems": count}
     return link
-
-
-def _make_page_url(endpoint: str, base: Dict, query: str = "") -> Callable[[int], str]:
-    """Create a page URL builder for pagination links."""
-
-    def page_url(p: int) -> str:
-        return _url(endpoint, {**base, "query": query, "page": p})
-
-    return page_url
 
 
 def _make_facet_url(endpoint: str, base: Dict) -> Callable[..., str]:
@@ -180,14 +176,7 @@ def _make_facet_url(endpoint: str, base: Dict) -> Callable[..., str]:
     def facet_url(q: str, lng: str, srt: str, so: str) -> str:
         return _url(
             endpoint,
-            {
-                **base,
-                "query": q,
-                "page": 1,
-                "lang": lng,
-                "sort": srt,
-                "sort_order": so,
-            },
+            {**base, "query": q, "page": 1, "lang": lng, "sort": srt, "sort_order": so},
         )
 
     return facet_url
@@ -238,9 +227,10 @@ def _sort_direction(order: str) -> Optional[SortDirection]:
     return {"asc": SortDirection.ASC, "desc": SortDirection.DESC}.get(order)
 
 
-def _daily_seed() -> int:
-    """Day number used to rotate shelves once per day."""
-    return datetime.date.today().toordinal()
+def _rotated(items: List) -> List:
+    """items rotated by the day number, so spotlights change once per day."""
+    k = datetime.date.today().toordinal() % len(items) if items else 0
+    return items[k:] + items[:k]
 
 
 def _book_id(pub: Dict) -> Optional[int]:
@@ -254,6 +244,11 @@ def _book_id(pub: Dict) -> Optional[int]:
     return None
 
 
+def _mark_seen(seen: set, pubs: List[Dict]) -> None:
+    """Record publication ids so later samples skip them."""
+    seen.update(bid for bid in map(_book_id, pubs) if bid is not None)
+
+
 # CherryPy Search API
 class OPDSFeed:
     """OPDS 2 feed. List/catalog endpoints use OPDS_SMALL; only publications()
@@ -263,7 +258,9 @@ class OPDSFeed:
 
     def __init__(self):
         self._catalog = None
-        self._feed_cache = {}  # key -> (expires, feed)
+        self._feed_cache = ExpiringLRUCache(
+            256, default_timeout=self._CACHE_TTL.total_seconds()
+        )
         # Serializes cache misses so concurrent requests for a cold key
         # don't all run the same (slow) build at once.
         self._cache_lock = threading.Lock()
@@ -279,12 +276,6 @@ class OPDSFeed:
         """Create a catalog query (audiobooks are already excluded by mv_books_dc)."""
         return self.catalog.query(crosswalk)
 
-    def _filter(self, q, lang: str):
-        """Apply common filters to query."""
-        if lang:
-            q.lang(lang)
-        return q
-
     def _sort(self, q, sort: str, sort_order: str):
         """Apply sorting to query."""
         if sort in VALID_SORTS:
@@ -293,28 +284,21 @@ class OPDSFeed:
             q.order_by(OrderBy.DOWNLOADS)
         return q
 
-    def _cache_feed(
-        self,
-        key: str,
-        build: Callable[[], Dict],
-        *,
-        store: Callable[[Dict], bool],
-    ) -> Dict:
-        """Return a cached feed with a 12-hour TTL. First request builds it."""
-        hit = self._feed_cache.get(key)
-        if hit and datetime.datetime.now() < hit[0]:
-            return hit[1]
+    def _cache_feed(self, key: str, build: Callable[[], Dict], *, required: str) -> Dict:
+        """Return a cached feed with a 12-hour TTL. First request builds it.
+
+        Only feeds with a non-empty `required` section are cached.
+        """
+        feed = self._feed_cache.get(key)
+        if feed is not None:
+            return feed
         with self._cache_lock:
             # Re-check: another thread may have built it while we waited.
-            hit = self._feed_cache.get(key)
-            if hit and datetime.datetime.now() < hit[0]:
-                return hit[1]
-            feed = build()
-            if store(feed):
-                self._feed_cache[key] = (
-                    datetime.datetime.now() + self._CACHE_TTL,
-                    feed,
-                )
+            feed = self._feed_cache.get(key)
+            if feed is None:
+                feed = build()
+                if feed.get(required):
+                    self._feed_cache.put(key, feed)
             return feed
 
     def _shelf_sample(self, shelf_id: int, seen: set, with_count: bool) -> Dict:
@@ -325,10 +309,7 @@ class OPDSFeed:
         result = self.catalog.execute(
             q.order_by(OrderBy.DOWNLOADS)[1, SAMPLE_LIMIT], with_count=with_count
         )
-        for pub in result.get("results", []):
-            bid = _book_id(pub)
-            if bid is not None:
-                seen.add(bid)
+        _mark_seen(seen, result.get("results", []))
         return result
 
     def _category_count(self, cat) -> int:
@@ -358,18 +339,92 @@ class OPDSFeed:
             return None
 
     # Feed Building
-    def _pagination_links(
-        self, url_fn: Callable, page: int, total_pages: int
-    ) -> List[Dict]:
-        """Build pagination links."""
-        links = []
+    def _results_feed(
+        self,
+        endpoint: str,
+        base: Dict,
+        result: Dict,
+        up_href: str,
+        *,
+        title: str = "Project Gutenberg",
+        query: str = "",
+        facets: Optional[List[Dict]] = None,
+        search_link: bool = True,
+    ) -> Dict:
+        """Paginated publications feed with self/up/pagination links."""
+
+        def page_url(p: int) -> str:
+            return _url(endpoint, {**base, "query": query, "page": p})
+
+        page, total_pages = result["page"], result["total_pages"]
+        links = _feed_links(page_url(page), up_href, search=search_link)
         if page > 1:
-            links.append(_link("first", url_fn(1)))
-            links.append(_link("previous", url_fn(page - 1)))
+            links += [_link("first", page_url(1)), _link("previous", page_url(page - 1))]
         if page < total_pages:
-            links.append(_link("next", url_fn(page + 1)))
-            links.append(_link("last", url_fn(total_pages)))
-        return links
+            links += [_link("next", page_url(page + 1)), _link("last", page_url(total_pages))]
+
+        feed = {
+            "metadata": {
+                "title": title,
+                "numberOfItems": result["total"],
+                "itemsPerPage": result["page_size"],
+                "currentPage": page,
+            },
+            "links": links,
+            "publications": result["results"],
+        }
+        if facets is not None:
+            feed["facets"] = facets
+        return feed
+
+    def _browse(
+        self,
+        endpoint: str,
+        key: Dict,
+        scope: Callable,
+        up_href: str,
+        what: str,
+        *,
+        page: int,
+        limit: int,
+        lang: str,
+        sort: str,
+        sort_order: str,
+        facet_scope: Optional[Dict] = None,
+        include_subjects: bool = True,
+    ) -> Dict:
+        """Books feed for one bookshelf / LoCC leaf / subject, with facets.
+
+        key is the endpoint's identifying param (e.g. {"id": 68}); scope
+        applies the matching filter to a catalog query.
+        """
+        try:
+            q = scope(self._query(OPDS_SMALL))
+            if lang:
+                q.lang(lang)
+            self._sort(q, sort, sort_order)
+            result = self.catalog.execute(q[page, limit])
+        except Exception as e:
+            cherrypy.log(f"Browse error ({what}): {e}")
+            return self._error_feed(
+                "Browse failed", f"Unable to load {what}.", _url(endpoint, key), up_href
+            )
+
+        base = {**key, "limit": limit, "lang": lang, "sort": sort, "sort_order": sort_order}
+        facet_counts = self.catalog.get_opds_facets(
+            scope, lang=lang, include_subjects=include_subjects
+        )
+        facets = self._facets(
+            _make_facet_url(endpoint, base),
+            "",
+            lang,
+            sort,
+            sort_order,
+            facet_counts["subjects"],
+            facet_counts["languages"],
+            facet_scope,
+        )
+        return self._results_feed(endpoint, base, result, up_href, facets=facets)
 
     # Error handling
 
@@ -388,13 +443,18 @@ class OPDSFeed:
                 "numberOfItems": 0,
                 "description": detail,
             },
-            "links": [
-                _link("self", self_href),
-                _link("start", "/opds/"),
-                _link("up", up_href),
-            ],
+            "links": _feed_links(self_href, up_href, search=False),
             "publications": [],
         }
+
+    def _category_not_found(self, category: str, self_href: str, up_href: str) -> Dict:
+        return self._error_feed(
+            "Category not found",
+            f"Bookshelf category {category} was not found.",
+            self_href,
+            up_href,
+            status=404,
+        )
 
     def _facets(
         self,
@@ -420,51 +480,14 @@ class OPDSFeed:
         """
         sort_links = [
             _facet(
-                url_fn(query, lang, "downloads", "desc"),
-                "Most Popular",
-                sort in ("downloads", ""),
-            ),
-            _facet(
-                url_fn(query, lang, "release_date", "desc"),
-                "Newest",
-                sort == "release_date",
-            ),
-        ]
-        if query:
-            sort_links.append(
-                _facet(
-                    url_fn(query, lang, "relevance", ""),
-                    "Relevance",
-                    sort == "relevance",
-                )
+                url_fn(query, lang, key, order),
+                title,
+                sort == key or (key == "downloads" and not sort),
             )
-        sort_links.extend(
-            [
-                _facet(
-                    url_fn(query, lang, "title", "asc"),
-                    "Title (A-Z)",
-                    sort == "title",
-                ),
-                _facet(
-                    url_fn(query, lang, "author", "asc"),
-                    "Author (A-Z)",
-                    sort == "author",
-                ),
-            ]
-        )
-        sort_links.append(
-            _facet(
-                url_fn(query, lang, "random", ""),
-                "Random",
-                sort == "random",
-            )
-        )
-        facets = [
-            {
-                "metadata": {"title": "Sort By"},
-                "links": sort_links,
-            }
+            for key, order, title in _SORT_FACETS
+            if key != "relevance" or query
         ]
+        facets = [{"metadata": {"title": "Sort By"}, "links": sort_links}]
 
         if subjects:
             facets.append(
@@ -497,29 +520,17 @@ class OPDSFeed:
     ) -> List[Dict]:
         """Language facet links. Dynamic (with counts) when `languages` is
         given, else the static common-language list."""
-        links = [
-            _facet(url_fn(query, "", sort, sort_order), "Any", not lang)
-        ]
-        if languages is not None:
-            items = [
-                (item["code"], _language_label(item["code"]), item.get("count"))
-                for item in languages
-            ]
-        else:
-            items = [
-                (code, _language_label(code), None) for code in _LANG_PRIORITY
-            ]
-
-        for code, label, count in items:
-            link = _facet(
-                url_fn(query, code, sort, sort_order),
-                label,
-                lang == code,
+        if languages is None:
+            languages = [{"code": code} for code in _LANG_PRIORITY]
+        return [_facet(url_fn(query, "", sort, sort_order), "Any", not lang)] + [
+            _facet(
+                url_fn(query, item["code"], sort, sort_order),
+                _language_label(item["code"]),
+                lang == item["code"],
+                item.get("count"),
             )
-            if count is not None:
-                link["properties"] = {"numberOfItems": count}
-            links.append(link)
-        return links
+            for item in languages
+        ]
 
     def _subject_links(
         self,
@@ -544,81 +555,44 @@ class OPDSFeed:
                 },
             )
 
-        links = [_facet(subject_url(), "Any", subject_id is None)]
-        for s in subjects:
-            link = _facet(
+        return [_facet(subject_url(), "Any", subject_id is None)] + [
+            _facet(
                 subject_url(subject_id=s["id"]),
                 s["name"],
                 subject_id == s["id"],
+                s["count"],
             )
-            link["properties"] = {"numberOfItems": s["count"]}
-            links.append(link)
-        return links
+            for s in subjects
+        ]
 
     # Index
     @cherrypy.expose
     def index(self, **_):
         """Root catalog."""
-        return self._cache_feed(
-            "index", self._build_index, store=lambda feed: bool(feed.get("groups"))
-        )
+        return self._cache_feed("index", self._build_index, required="groups")
 
     def _build_index(self):
         seen = set()
-        day = _daily_seed()
 
-        def _mark_seen(results):
-            for pub in results:
-                bid = _book_id(pub)
-                if bid is not None:
-                    seen.add(bid)
-
-        def _recently_added():
+        def _top_group(title: str, order: OrderBy):
             result = self.catalog.execute(
-                self._query(OPDS_SMALL).order_by(
-                    OrderBy.RELEASE_DATE, SortDirection.DESC
-                )[1, SAMPLE_LIMIT],
-            )
-            if result.get("results"):
-                _mark_seen(result["results"])
-                return {
-                    "metadata": {
-                        "title": "Recently Added",
-                        "numberOfItems": result["total"],
-                    },
-                    "links": [
-                        _link("self", "/opds/search?sort=release_date&sort_order=desc")
-                    ],
-                    "publications": result["results"],
-                }
-
-        def _most_popular():
-            result = self.catalog.execute(
-                self._query(OPDS_SMALL).order_by(OrderBy.DOWNLOADS)[
+                self._query(OPDS_SMALL).order_by(order, SortDirection.DESC)[
                     1, SAMPLE_LIMIT
                 ],
             )
             if result.get("results"):
-                _mark_seen(result["results"])
+                _mark_seen(seen, result["results"])
                 return {
-                    "metadata": {
-                        "title": "Most Popular",
-                        "numberOfItems": result["total"],
-                    },
+                    "metadata": {"title": title, "numberOfItems": result["total"]},
                     "links": [
-                        _link("self", "/opds/search?sort=downloads&sort_order=desc")
+                        _link("self", f"/opds/search?sort={order.value}&sort_order=desc")
                     ],
                     "publications": result["results"],
                 }
 
         def _category_group(cat):
             """Daily spotlight shelf (rotates by date), top picks, deduped."""
-            shelves = self.catalog.curated_shelves(cat)
-            if not shelves:
-                return
-
-            for offset in range(len(shelves)):
-                shelf_id, _shelf_name = shelves[(day + offset) % len(shelves)]
+            for shelf_id, _shelf_name in _rotated(self.catalog.curated_shelves(cat)):
                 try:
                     result = self._shelf_sample(shelf_id, seen, with_count=False)
                     if result.get("results"):
@@ -641,16 +615,16 @@ class OPDSFeed:
                         severity=logging.WARNING,
                     )
 
-        tasks = [_recently_added, _most_popular] + [
-            lambda c=cat: _category_group(c) for cat in CuratedBookshelves
-        ]
-
         groups = [_navigation_group()]
-        for fn in tasks:
+        for build in (
+            partial(_top_group, "Recently Added", OrderBy.RELEASE_DATE),
+            partial(_top_group, "Most Popular", OrderBy.DOWNLOADS),
+            *(partial(_category_group, cat) for cat in CuratedBookshelves),
+        ):
             try:
-                result = fn()
-                if result:
-                    groups.append(result)
+                group = build()
+                if group:
+                    groups.append(group)
             except Exception as e:
                 cherrypy.log(f"Index group error: {e}")
 
@@ -681,48 +655,52 @@ class OPDSFeed:
         page, limit = _paginate(page, limit)
 
         if id is not None:
-            return self._bookshelf_books(
-                int(id),
-                page,
-                limit,
-                lang,
-                sort,
-                sort_order,
+            shelf_id = int(id)
+            parent = next(
+                (cat.name for cat in CuratedBookshelves if shelf_id in dict(cat.shelves)),
+                None,
             )
+            return self._browse(
+                "/opds/bookshelves",
+                {"id": shelf_id},
+                lambda q: q.bookshelf_id(shelf_id),
+                f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves",
+                "bookshelf",
+                facet_scope={"bookshelf_id": shelf_id},
+                page=page, limit=limit, lang=lang, sort=sort, sort_order=sort_order,
+            )
+
         if category is not None:
-            return self._bookshelf_category_nav(category)
+            cat = CuratedBookshelves.__members__.get(category)
+            if not cat:
+                return self._category_not_found(
+                    category, f"/opds/bookshelves?category={category}", "/opds/bookshelves"
+                )
+            return self._cache_feed(
+                f"bookshelf_nav:{category}",
+                partial(self._build_bookshelf_category_navigation, cat),
+                required="navigation",
+            )
 
         return self._cache_feed(
-            "bookshelf_nav:_root",
-            self._build_bookshelf_navigation,
-            store=lambda feed: bool(feed.get("navigation")),
+            "bookshelf_nav:_root", self._build_bookshelf_navigation, required="navigation"
         )
 
     def _build_bookshelf_navigation(self) -> Dict:
         """Build curated bookshelf category navigation."""
-        nav = []
-        for cat in CuratedBookshelves:
-            nav_item = _nav(f"/opds/bookshelves?category={cat.name}", cat.genre)
-            nav_item["properties"] = {"numberOfItems": len(cat.shelf_names)}
-            nav.append(nav_item)
-
         return {
             "metadata": {
                 "title": "Project Gutenberg",
                 "numberOfItems": len(CuratedBookshelves),
             },
-            "links": [
-                _link("self", "/opds/bookshelves"),
-                _link("start", "/opds/"),
-                _link("up", "/opds/"),
-                _link("search", SEARCH_TEMPLATE, templated=True),
+            "links": _feed_links("/opds/bookshelves", "/opds/"),
+            "navigation": [
+                _nav(f"/opds/bookshelves?category={cat.name}", cat.genre, len(cat.shelf_names))
+                for cat in CuratedBookshelves
             ],
-            "navigation": nav,
         }
 
-    def _build_bookshelf_category_navigation(
-        self, category: str, cat: CuratedBookshelves
-    ) -> Dict:
+    def _build_bookshelf_category_navigation(self, cat: CuratedBookshelves) -> Dict:
         """Build sub-shelf navigation for a curated category."""
         shelves = self.catalog.curated_shelves(cat)
         try:
@@ -730,119 +708,15 @@ class OPDSFeed:
         except Exception as e:
             cherrypy.log(f"Bookshelf nav count error: {e}", severity=logging.WARNING)
             counts = {}
-        nav = []
-        for sid, sname in shelves:
-            nav_item = _nav(f"/opds/bookshelves?id={sid}", sname)
-            if counts.get(sid):
-                nav_item["properties"] = {"numberOfItems": counts[sid]}
-            nav.append(nav_item)
-
+        nav = [
+            _nav(f"/opds/bookshelves?id={sid}", sname, counts.get(sid))
+            for sid, sname in shelves
+        ]
         return {
-            "metadata": {
-                "title": "Project Gutenberg",
-                "numberOfItems": len(nav),
-            },
-            "links": [
-                _link("self", f"/opds/bookshelves?category={category}"),
-                _link("start", "/opds/"),
-                _link("up", "/opds/bookshelves"),
-                _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
+            "metadata": {"title": "Project Gutenberg", "numberOfItems": len(nav)},
+            "links": _feed_links(f"/opds/bookshelves?category={cat.name}", "/opds/bookshelves"),
             "navigation": nav,
         }
-
-    def _bookshelf_books(
-        self,
-        shelf_id: int,
-        page: int,
-        limit: int,
-        lang: str,
-        sort: str,
-        sort_order: str,
-    ):
-        """Browse books in a bookshelf."""
-        parent = None
-        for cat in CuratedBookshelves:
-            if any(sid == shelf_id for sid, _ in self.catalog.curated_shelves(cat)):
-                parent = cat.name
-                break
-
-        try:
-            q = self._query(OPDS_SMALL).bookshelf_id(shelf_id)
-            self._filter(q, lang)
-            self._sort(q, sort, sort_order)
-            result = self.catalog.execute(q[page, limit])
-        except Exception as e:
-            cherrypy.log(f"Bookshelf error: {e}")
-            return self._error_feed(
-                "Browse failed",
-                "Unable to load bookshelf.",
-                f"/opds/bookshelves?id={shelf_id}",
-                status=500,
-            )
-
-        base = {
-            "id": shelf_id,
-            "limit": limit,
-            "lang": lang,
-            "sort": sort,
-            "sort_order": sort_order,
-        }
-        page_url = _make_page_url("/opds/bookshelves", base)
-        facet_url = _make_facet_url("/opds/bookshelves", base)
-
-        facet_counts = self.catalog.get_opds_facets(
-            lambda q: q.bookshelf_id(shelf_id), lang=lang
-        )
-
-        up = f"/opds/bookshelves?category={parent}" if parent else "/opds/bookshelves"
-        feed = {
-            "metadata": {
-                "title": "Project Gutenberg",
-                "numberOfItems": result["total"],
-                "itemsPerPage": result["page_size"],
-                "currentPage": result["page"],
-            },
-            "links": [
-                _link("self", page_url(result["page"])),
-                _link("start", "/opds/"),
-                _link("up", up),
-                _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
-            "publications": result["results"],
-            "facets": self._facets(
-                facet_url,
-                "",
-                lang,
-                sort,
-                sort_order,
-                facet_counts["subjects"],
-                facet_counts["languages"],
-                {"bookshelf_id": shelf_id},
-            ),
-        }
-        feed["links"].extend(
-            self._pagination_links(page_url, result["page"], result["total_pages"])
-        )
-        return feed
-
-    def _bookshelf_category_nav(self, category: str):
-        """Browse Bookshelves: sub-shelf links only (no publication previews)."""
-        found = next((cat for cat in CuratedBookshelves if cat.name == category), None)
-        if not found:
-            return self._error_feed(
-                "Category not found",
-                f"Bookshelf category {category} was not found.",
-                f"/opds/bookshelves?category={category}",
-                "/opds/bookshelves",
-                status=404,
-            )
-
-        return self._cache_feed(
-            f"bookshelf_nav:{category}",
-            lambda: self._build_bookshelf_category_navigation(category, found),
-            store=lambda feed: bool(feed.get("navigation")),
-        )
 
     @cherrypy.expose
     def bookshelf_groups(self, category: Optional[str] = None, **_):
@@ -855,71 +729,49 @@ class OPDSFeed:
                 "/opds/",
                 status=400,
             )
-        return self._bookshelf_category_groups(category)
-
-    def _bookshelf_category_groups(self, category: str):
-        """List shelves in a category with daily spotlight samples (cached)."""
-        found = next((cat for cat in CuratedBookshelves if cat.name == category), None)
-        if not found:
-            return self._error_feed(
-                "Category not found",
-                f"Bookshelf category {category} was not found.",
-                f"/opds/bookshelf_groups?category={category}",
-                "/opds/",
-                status=404,
+        cat = CuratedBookshelves.__members__.get(category)
+        if not cat:
+            return self._category_not_found(
+                category, f"/opds/bookshelf_groups?category={category}", "/opds/"
             )
-
-        def build():
-            seen = set()
-            day = _daily_seed()
-            shelves = self.catalog.curated_shelves(found)
-            if not shelves:
-                return {"groups": []}
-            rotated = [shelves[(day + i) % len(shelves)] for i in range(len(shelves))]
-            # One grouped count for all shelves instead of a COUNT(*) OVER()
-            # window in each sample query (which forced a full scan per shelf).
-            counts = self.catalog.bookshelf_counts([sid for sid, _ in shelves])
-            groups = []
-            for sid, sname in rotated:
-                try:
-                    result = self._shelf_sample(sid, seen, with_count=False)
-                    if result.get("results"):
-                        groups.append(
-                            {
-                                "metadata": {
-                                    "title": sname,
-                                    "numberOfItems": counts.get(sid, 0),
-                                },
-                                "links": [
-                                    _link("self", f"/opds/bookshelves?id={sid}")
-                                ],
-                                "publications": result["results"],
-                            }
-                        )
-                except Exception as e:
-                    cherrypy.log(
-                        f"Bookshelf sample error {sid}: {e}",
-                        context="OPDS",
-                        severity=logging.WARNING,
-                    )
-
-            return {
-                "metadata": {
-                    "title": "Project Gutenberg",
-                    "numberOfItems": len(found.shelf_names),
-                },
-                "links": [
-                    _link("self", f"/opds/bookshelf_groups?category={category}"),
-                    _link("start", "/opds/"),
-                    _link("up", "/opds/"),
-                    _link("search", SEARCH_TEMPLATE, templated=True),
-                ],
-                "groups": groups,
-            }
-
         return self._cache_feed(
-            f"cat:{category}", build, store=lambda feed: bool(feed.get("groups"))
+            f"cat:{category}", partial(self._build_bookshelf_groups, cat), required="groups"
         )
+
+    def _build_bookshelf_groups(self, cat: CuratedBookshelves) -> Dict:
+        """List shelves in a category with daily spotlight samples."""
+        seen = set()
+        shelves = self.catalog.curated_shelves(cat)
+        # One grouped count for all shelves instead of a COUNT(*) OVER()
+        # window in each sample query (which forced a full scan per shelf).
+        counts = self.catalog.bookshelf_counts([sid for sid, _ in shelves])
+        groups = []
+        for sid, sname in _rotated(shelves):
+            try:
+                result = self._shelf_sample(sid, seen, with_count=False)
+                if result.get("results"):
+                    groups.append(
+                        {
+                            "metadata": {"title": sname, "numberOfItems": counts.get(sid, 0)},
+                            "links": [_link("self", f"/opds/bookshelves?id={sid}")],
+                            "publications": result["results"],
+                        }
+                    )
+            except Exception as e:
+                cherrypy.log(
+                    f"Bookshelf sample error {sid}: {e}",
+                    context="OPDS",
+                    severity=logging.WARNING,
+                )
+
+        return {
+            "metadata": {
+                "title": "Project Gutenberg",
+                "numberOfItems": len(cat.shelf_names),
+            },
+            "links": _feed_links(f"/opds/bookshelf_groups?category={cat.name}", "/opds/"),
+            "groups": groups,
+        }
 
     # LoCC
     @cherrypy.expose
@@ -946,18 +798,22 @@ class OPDSFeed:
         if children:
             return self._cache_feed(
                 f"locc_nav:{parent or '_root'}",
-                lambda: self._build_locc_navigation(parent, children),
-                store=lambda feed: bool(feed.get("navigation")),
+                partial(self._build_locc_navigation, parent, children),
+                required="navigation",
             )
 
-        return self._locc_books(
-            parent, page, limit, lang, sort, sort_order
+        return self._browse(
+            "/opds/loccs",
+            {"parent": parent},
+            lambda q: q.locc(parent),
+            "/opds/loccs",
+            "LoCC leaf",
+            facet_scope={"locc": parent},
+            page=page, limit=limit, lang=lang, sort=sort, sort_order=sort_order,
         )
 
     def _build_locc_navigation(self, parent: str, children: List) -> Dict:
-        """Build LoCC category navigation."""
-        children.sort(key=lambda x: (len(x.get("code", "")), x.get("code", "")))
-
+        """Build LoCC category navigation (children arrive sorted by code)."""
         nav = []
         for child in children:
             code = child["code"]
@@ -967,113 +823,27 @@ class OPDSFeed:
                 if sep:
                     label = rest.strip()
             count = self._locc_nav_item_count(code)
-            if not count:
-                continue
-            nav_item = _nav(f"/opds/loccs?parent={code}", label)
-            nav_item["properties"] = {"numberOfItems": count}
-            nav.append(nav_item)
+            if count:
+                nav.append(_nav(f"/opds/loccs?parent={code}", label, count))
 
         return {
             "metadata": {"title": "Project Gutenberg", "numberOfItems": len(nav)},
-            "links": [
-                _link(
-                    "self", f"/opds/loccs?parent={parent}" if parent else "/opds/loccs"
-                ),
-                _link("start", "/opds/"),
-                _link("up", "/opds/loccs" if parent else "/opds/"),
-                _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
+            "links": _feed_links(
+                f"/opds/loccs?parent={parent}" if parent else "/opds/loccs",
+                "/opds/loccs" if parent else "/opds/",
+            ),
             "navigation": nav,
         }
-
-    def _locc_books(
-        self,
-        parent: str,
-        page: int,
-        limit: int,
-        lang: str,
-        sort: str,
-        sort_order: str,
-    ):
-        """Browse books in a LoCC leaf."""
-        try:
-            q = self._query(OPDS_SMALL).locc(parent)
-            self._filter(q, lang)
-            self._sort(q, sort, sort_order)
-            result = self.catalog.execute(q[page, limit])
-        except Exception as e:
-            cherrypy.log(f"LoCC browse error: {e}")
-            return self._error_feed(
-                "Browse failed",
-                "Unable to load LoCC leaf.",
-                f"/opds/loccs?parent={parent}",
-                "/opds/loccs",
-                status=500,
-            )
-
-        base = {
-            "parent": parent,
-            "limit": limit,
-            "lang": lang,
-            "sort": sort,
-            "sort_order": sort_order,
-        }
-        page_url = _make_page_url("/opds/loccs", base)
-        facet_url = _make_facet_url("/opds/loccs", base)
-
-        facet_counts = self.catalog.get_opds_facets(
-            lambda q: q.locc(parent), lang=lang
-        )
-
-        feed = {
-            "metadata": {
-                "title": "Project Gutenberg",
-                "numberOfItems": result["total"],
-                "itemsPerPage": result["page_size"],
-                "currentPage": result["page"],
-            },
-            "links": [
-                _link("self", page_url(result["page"])),
-                _link("start", "/opds/"),
-                _link("up", "/opds/loccs"),
-                _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
-            "publications": result["results"],
-            "facets": self._facets(
-                facet_url,
-                "",
-                lang,
-                sort,
-                sort_order,
-                facet_counts["subjects"],
-                facet_counts["languages"],
-                {"locc": parent},
-            ),
-        }
-        feed["links"].extend(
-            self._pagination_links(page_url, result["page"], result["total_pages"])
-        )
-        return feed
 
     # Subjects
 
     def _build_subjects_index(self) -> Dict:
-        subjects = sorted(
-            self.catalog.list_subjects(), key=lambda x: x["book_count"], reverse=True
-        )[:100]
+        subjects = self.catalog.list_subjects(limit=100)
         return {
             "metadata": {"title": "Project Gutenberg", "numberOfItems": len(subjects)},
-            "links": [
-                _link("self", "/opds/subjects"),
-                _link("start", "/opds/"),
-                _link("up", "/opds/"),
-                _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
+            "links": _feed_links("/opds/subjects", "/opds/"),
             "navigation": [
-                {
-                    **_nav(f"/opds/subjects?id={s['id']}", s["name"]),
-                    "properties": {"numberOfItems": s["book_count"]},
-                }
+                _nav(f"/opds/subjects?id={s['id']}", s["name"], s["book_count"])
                 for s in subjects
             ],
         }
@@ -1092,86 +862,19 @@ class OPDSFeed:
         """Subject navigation."""
         page, limit = _paginate(page, limit)
 
-        if id is not None:
-            return self._subject_books(
-                int(id),
-                page,
-                limit,
-                lang,
-                sort,
-                sort_order,
-            )
+        if id is None:
+            return self._build_subjects_index()
 
-        return self._build_subjects_index()
-
-    def _subject_books(
-        self,
-        subject_id: int,
-        page: int,
-        limit: int,
-        lang: str,
-        sort: str,
-        sort_order: str,
-    ):
-        """Browse books for a subject."""
-        try:
-            q = self._query(OPDS_SMALL).subject_id(subject_id)
-            self._filter(q, lang)
-            self._sort(q, sort, sort_order)
-            result = self.catalog.execute(q[page, limit])
-        except Exception as e:
-            cherrypy.log(f"Subject error: {e}")
-            return self._error_feed(
-                "Browse failed",
-                "Unable to load subject.",
-                f"/opds/subjects?id={subject_id}",
-                "/opds/subjects",
-                status=500,
-            )
-
-        base = {
-            "id": subject_id,
-            "limit": limit,
-            "lang": lang,
-            "sort": sort,
-            "sort_order": sort_order,
-        }
-        page_url = _make_page_url("/opds/subjects", base)
-        facet_url = _make_facet_url("/opds/subjects", base)
-
-        facet_counts = self.catalog.get_opds_facets(
+        subject_id = int(id)
+        return self._browse(
+            "/opds/subjects",
+            {"id": subject_id},
             lambda q: q.subject_id(subject_id),
-            lang=lang,
+            "/opds/subjects",
+            "subject",
             include_subjects=False,
+            page=page, limit=limit, lang=lang, sort=sort, sort_order=sort_order,
         )
-
-        feed = {
-            "metadata": {
-                "title": "Project Gutenberg",
-                "numberOfItems": result["total"],
-                "itemsPerPage": result["page_size"],
-                "currentPage": result["page"],
-            },
-            "links": [
-                _link("self", page_url(result["page"])),
-                _link("start", "/opds/"),
-                _link("up", "/opds/subjects"),
-                _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
-            "publications": result["results"],
-            "facets": self._facets(
-                facet_url,
-                "",
-                lang,
-                sort,
-                sort_order,
-                languages=facet_counts["languages"],
-            ),
-        }
-        feed["links"].extend(
-            self._pagination_links(page_url, result["page"], result["total_pages"])
-        )
-        return feed
 
     # Also downloaded
 
@@ -1181,9 +884,7 @@ class OPDSFeed:
         page, limit = _paginate(page, limit)
         try:
             result = self.catalog.execute(
-                self._query(OPDS_SMALL).also_downloaded(int(id))[
-                    page, limit
-                ]
+                self._query(OPDS_SMALL).also_downloaded(int(id))[page, limit]
             )
         except Exception as e:
             cherrypy.log(f"Also downloaded error: {e}")
@@ -1195,26 +896,14 @@ class OPDSFeed:
                 status=500,
             )
 
-        base = {"id": id, "limit": limit}
-        page_url = _make_page_url("/opds/also", base)
-        feed = {
-            "metadata": {
-                "title": "Readers also downloaded",
-                "numberOfItems": result["total"],
-                "itemsPerPage": result["page_size"],
-                "currentPage": result["page"],
-            },
-            "links": [
-                _link("self", page_url(result["page"])),
-                _link("start", "/opds/"),
-                _link("up", f"/opds/publications?id={id}"),
-            ],
-            "publications": result["results"],
-        }
-        feed["links"].extend(
-            self._pagination_links(page_url, result["page"], result["total_pages"])
+        return self._results_feed(
+            "/opds/also",
+            {"id": id, "limit": limit},
+            result,
+            f"/opds/publications?id={id}",
+            title="Readers also downloaded",
+            search_link=False,
         )
-        return feed
 
     # Publications
 
@@ -1274,8 +963,7 @@ class OPDSFeed:
                 scope, lang=lang, subject_id=subject_id
             )
 
-            q = self._query(OPDS_SMALL)
-            scope(q)
+            q = scope(self._query(OPDS_SMALL))
             if lang:
                 q.lang(lang)
             if subject_id is not None:
@@ -1305,8 +993,6 @@ class OPDSFeed:
             "bookshelf_id": bookshelf_id,
             "modified_since": modified_since,
         }
-        page_url = _make_page_url("/opds/search", base, query)
-        facet_url = _make_facet_url("/opds/search", base)
 
         # Scope carried when narrowing to a Top Subject (subject_id is set by the
         # facet itself, so it's excluded here to allow switching subjects).
@@ -1320,31 +1006,13 @@ class OPDSFeed:
             "modified_since": modified_since,
         }
         facets = self._facets(
-            facet_url, query, lang, sort, sort_order,
+            _make_facet_url("/opds/search", base), query, lang, sort, sort_order,
             facet_counts["subjects"], facet_counts["languages"],
             search_scope, subject_id=subject_id,
         )
-
-        feed = {
-            "metadata": {
-                "title": "Project Gutenberg",
-                "numberOfItems": result["total"],
-                "itemsPerPage": result["page_size"],
-                "currentPage": result["page"],
-            },
-            "links": [
-                _link("self", page_url(result["page"])),
-                _link("start", "/opds/"),
-                _link("up", "/opds/"),
-                _link("search", SEARCH_TEMPLATE, templated=True),
-            ],
-            "publications": result["results"],
-            "facets": facets,
-        }
-        feed["links"].extend(
-            self._pagination_links(page_url, result["page"], result["total_pages"])
+        return self._results_feed(
+            "/opds/search", base, result, "/opds/", query=query, facets=facets
         )
-        return feed
 
 
 if __name__ == "__main__":
@@ -1368,19 +1036,6 @@ if __name__ == "__main__":
         params=GutenbergDatabase.get_connection_params(cherrypy.config),
     )
     cherrypy.engine.pool.subscribe()
-
-    @cherrypy.tools.register("before_finalize")
-    def cors():
-        cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
-        cherrypy.response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        cherrypy.response.headers["Access-Control-Allow-Headers"] = (
-            "Content-Type, Accept"
-        )
-        cherrypy.response.headers["Access-Control-Max-Age"] = "86400"
-        if cherrypy.request.method == "OPTIONS":
-            cherrypy.response.status = 200
-            cherrypy.response.body = b""
-            cherrypy.request.handler = None
 
     cherrypy.tree.mount(OPDSFeed(), "/opds", {"/": OPDS_MOUNT_CONFIG["/opds"]})
     try:

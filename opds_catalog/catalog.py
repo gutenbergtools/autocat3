@@ -8,8 +8,29 @@ mv_books_dc materialized view.
 import logging
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import (
+    Column,
+    Date,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+    cast,
+    column,
+    exists,
+    func,
+    literal,
+    literal_column,
+    null,
+    select,
+    table,
+    text,
+    true,
+    union_all,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR
+from sqlalchemy.sql.expression import Select
 
 from .constants import (
     Crosswalk,
@@ -25,37 +46,122 @@ __all__ = [
     "CatalogQuery",
 ]
 
+# =============================================================================
+# Tables
+# =============================================================================
+
+_metadata = MetaData()
+
+mv_books_dc = Table(
+    "mv_books_dc",
+    _metadata,
+    Column("book_id", Integer, primary_key=True),
+    Column("title", Text),
+    Column("tsvec", TSVECTOR),
+    Column("downloads", Integer),
+    Column("release_date", Date),
+    Column("copyrighted", Integer),
+    Column("book_text", Text),
+    Column("lang_codes", ARRAY(Text)),
+    Column("locc_codes", ARRAY(String)),
+    Column("creator_ids", ARRAY(Integer)),
+    Column("creator_names", ARRAY(String)),
+    Column("creator_roles", ARRAY(String)),
+    Column("creator_born_floor", ARRAY(Integer)),
+    Column("creator_born_ceil", ARRAY(Integer)),
+    Column("creator_died_floor", ARRAY(Integer)),
+    Column("creator_died_ceil", ARRAY(Integer)),
+    Column("subject_ids", ARRAY(Integer)),
+    Column("subject_names", ARRAY(String)),
+    Column("bookshelf_ids", ARRAY(Integer)),
+    Column("bookshelf_names", ARRAY(Text)),
+    Column("dcmitypes", ARRAY(Text)),
+    Column("publisher", Text),
+    Column("summary", ARRAY(Text)),
+    Column("reading_level", Text),
+    Column("format_filenames", ARRAY(String)),
+    Column("format_filetypes", ARRAY(String)),
+    Column("format_hr_filetypes", ARRAY(String)),
+    Column("format_mediatypes", ARRAY(String)),
+    Column("format_extents", ARRAY(Integer)),
+    Column("filemtime"),
+)
+_mv = mv_books_dc.c
+
+_mn_books_authors = table("mn_books_authors", column("fk_books"), column("fk_authors"))
+_mn_books_subjects = table("mn_books_subjects", column("fk_books"), column("fk_subjects"))
+_mn_books_bookshelves = table(
+    "mn_books_bookshelves", column("fk_books"), column("fk_bookshelves")
+)
+_mn_books_loccs = table("mn_books_loccs", column("fk_books"), column("fk_loccs"))
+_subjects = table("subjects", column("pk"), column("subject"))
+_loccs = table("loccs", column("pk"), column("locc"))
+_also_downloads = table(
+    "also_downloads", column("id"), column("fk_books"), schema="scores"
+)
+
 # (tsvector expression, plain text expression) per searchable field
 _FIELD_COLS = {
-    SearchField.BOOK: ("tsvec", "book_text"),
-    SearchField.TITLE: ("to_tsvector('english', title)", "title"),
+    SearchField.BOOK: (_mv.tsvec, _mv.book_text),
+    SearchField.TITLE: (func.to_tsvector("english", _mv.title), _mv.title),
     SearchField.AUTHOR: (
-        "to_tsvector('english', array_to_string(creator_names, ' '))",
-        "array_to_string(creator_names, ' ')",
+        func.to_tsvector("english", func.array_to_string(_mv.creator_names, " ")),
+        func.array_to_string(_mv.creator_names, " "),
     ),
 }
 
+# (column, default direction, nulls last)
 _ORDER_COLUMNS = {
-    OrderBy.DOWNLOADS: ("downloads", SortDirection.DESC, None),
-    OrderBy.TITLE: ("title", SortDirection.ASC, None),
-    OrderBy.AUTHOR: ("creator_names[1]", SortDirection.ASC, "LAST"),
-    OrderBy.RELEASE_DATE: ("CAST(release_date AS date)", SortDirection.DESC, "LAST"),
-    OrderBy.FILEMTIME: ("filemtime", SortDirection.DESC, "LAST"),
-    OrderBy.RANDOM: ("RANDOM()", None, None),
+    OrderBy.DOWNLOADS: (_mv.downloads, SortDirection.DESC, False),
+    OrderBy.TITLE: (_mv.title, SortDirection.ASC, False),
+    OrderBy.AUTHOR: (_mv.creator_names[1], SortDirection.ASC, True),
+    OrderBy.RELEASE_DATE: (_mv.release_date, SortDirection.DESC, True),
+    OrderBy.FILEMTIME: (_mv.filemtime, SortDirection.DESC, True),
 }
 
-_SELECT = """book_id, title, downloads, CAST(release_date AS text) AS release_date, copyrighted, lang_codes,
-    creator_ids, creator_names, creator_roles,
-    creator_born_floor, creator_born_ceil, creator_died_floor, creator_died_ceil,
-    subject_ids, subject_names, bookshelf_ids, bookshelf_names,
-    locc_codes, dcmitypes, publisher, summary,
-    reading_level, format_filenames, format_filetypes,
-    format_hr_filetypes, format_mediatypes, format_extents"""
+_OPDS_SMALL_COLUMNS = [
+    _mv.book_id, _mv.title, _mv.lang_codes,
+    _mv.creator_ids, _mv.creator_names, _mv.creator_roles,
+    _mv.format_filenames, _mv.format_filetypes, _mv.format_hr_filetypes,
+    _mv.format_mediatypes, _mv.format_extents,
+]
 
-_SELECT_OPDS_SMALL = """book_id, title, lang_codes,
-    creator_ids, creator_names, creator_roles,
-    format_filenames, format_filetypes, format_hr_filetypes,
-    format_mediatypes, format_extents"""
+_OPDS_COLUMNS = [
+    _mv.book_id, _mv.title, _mv.downloads,
+    cast(_mv.release_date, Text).label("release_date"),
+    _mv.copyrighted, _mv.lang_codes,
+    _mv.creator_ids, _mv.creator_names, _mv.creator_roles,
+    _mv.creator_born_floor, _mv.creator_born_ceil,
+    _mv.creator_died_floor, _mv.creator_died_ceil,
+    _mv.subject_ids, _mv.subject_names, _mv.bookshelf_ids, _mv.bookshelf_names,
+    _mv.locc_codes, _mv.dcmitypes, _mv.publisher, _mv.summary,
+    _mv.reading_level, _mv.format_filenames, _mv.format_filetypes,
+    _mv.format_hr_filetypes, _mv.format_mediatypes, _mv.format_extents,
+]
+
+
+def _linked(link, fk: str, value, book_id=_mv.book_id):
+    """EXISTS a row in link table `link` tying book_id to `value` via `fk`."""
+    return exists().where(link.c.fk_books == book_id, link.c[fk] == value)
+
+
+def _also_downloaded_counts(book_id: int):
+    """Subquery d(pk, dl): books co-downloaded with book_id and how often."""
+    ad = _also_downloads
+    sessions = select(ad.c.id).where(ad.c.fk_books == book_id).subquery("sessions")
+    other = _also_downloads.alias("other")
+    per_session = (
+        select(other.c.fk_books, func.count().label("cnt"))
+        .where(other.c.id == sessions.c.id, other.c.fk_books != book_id)
+        .group_by(other.c.fk_books)
+        .lateral("r")
+    )
+    return (
+        select(per_session.c.fk_books.label("pk"), func.sum(per_session.c.cnt).label("dl"))
+        .select_from(sessions.join(per_session, true()))
+        .group_by(per_session.c.fk_books)
+        .subquery("d")
+    )
 
 
 # =============================================================================
@@ -71,16 +177,13 @@ class CatalogQuery:
     """
 
     def __init__(self, crosswalk: Crosswalk = Crosswalk.OPDS):
-        # (sql, params, rank_col, text_col)
-        self._search = []  # type: List[Tuple[str, Dict, str, str]]
-        self._fuzzy = False
-        self._filters = []  # type: List[Tuple[str, Dict]]
+        self._search = []  # type: List[Tuple[str, SearchField]]
+        self._filters = []  # type: List
         self._order = OrderBy.DOWNLOADS
         self._sort_dir = None  # type: Optional[SortDirection]
         self._page = 1
         self._page_size = 25
         self._crosswalk = crosswalk
-        self._param_counter = 0
         self._also_downloaded_for = None  # type: Optional[int]
 
     def __getitem__(self, key: Union[int, Tuple]) -> "CatalogQuery":
@@ -99,108 +202,42 @@ class CatalogQuery:
         self._sort_dir = direction
         return self
 
-    def _new_param(self, value: object) -> Tuple[str, Dict]:
-        pname = f"__p{self._param_counter}"
-        self._param_counter += 1
-        return pname, {pname: value}
-
-    def filter(self, sql_template: str, *values: object) -> "CatalogQuery":
-        """Add a filter; each {} in the template becomes a bound parameter."""
-        params = {}  # type: Dict
-        placeholders = []  # type: List[str]
-        for v in values:
-            pname, p = self._new_param(v)
-            params.update(p)
-            placeholders.append(f":{pname}")
-        sql = sql_template.format(*placeholders)
-        self._filters.append((sql, params))
+    def filter(self, clause) -> "CatalogQuery":
+        """Add a SQLAlchemy boolean clause over mv_books_dc."""
+        self._filters.append(clause)
         return self
 
     def search(self, txt: str, field: SearchField = SearchField.BOOK) -> "CatalogQuery":
         txt = (txt or "").strip()
-        if not txt:
-            return self
-        fts_col, text_col = _FIELD_COLS[field]
-        pname, p = self._new_param(txt)
-        sql = f"{fts_col} @@ websearch_to_tsquery('english', :{pname})"
-        self._search.append((sql, p, fts_col, text_col))
+        if txt:
+            self._search.append((txt, field))
         return self
 
     def _can_fallback(self) -> bool:
-        return bool(self._search) and not self._fuzzy
-
-    def _use_fuzzy(self) -> None:
-        """Switch search clauses from tsvector to trigram search."""
-        self._search = [
-            (f":{next(iter(p))} <% {text_col}", p, text_col, text_col)
-            for _, p, _, text_col in self._search
-        ]
-        self._fuzzy = True
+        return bool(self._search)
 
     # Filters
 
     def etext(self, nr: int) -> "CatalogQuery":
-        return self.filter("book_id = {}", int(nr))
+        return self.filter(_mv.book_id == int(nr))
 
     def lang(self, code: str) -> "CatalogQuery":
-        return self.filter("lang_codes @> ARRAY[CAST({} AS text)]", code.lower())
+        return self.filter(_mv.lang_codes.contains([code.lower()]))
 
     def modified_after(self, date: str) -> "CatalogQuery":
-        return self.filter("CAST(filemtime AS date) >= CAST({} AS date)", str(date))
+        return self.filter(cast(_mv.filemtime, Date) >= cast(str(date), Date))
 
     def locc(self, code: str) -> "CatalogQuery":
-        code = str(code).upper()
-        return self.filter(
-            """
-            EXISTS (
-                SELECT 1
-                FROM mn_books_loccs mbl
-                JOIN loccs lc ON lc.pk = mbl.fk_loccs
-                WHERE mbl.fk_books = book_id
-                  AND lc.pk = {}
-            )
-            """,
-            code,
-        )
+        return self.filter(_linked(_mn_books_loccs, "fk_loccs", str(code).upper()))
 
     def author_id(self, aid: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            EXISTS (
-                SELECT 1
-                FROM mn_books_authors mba
-                WHERE mba.fk_books = book_id
-                  AND mba.fk_authors = {}
-            )
-            """,
-            int(aid),
-        )
+        return self.filter(_linked(_mn_books_authors, "fk_authors", int(aid)))
 
     def subject_id(self, sid: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            EXISTS (
-                SELECT 1
-                FROM mn_books_subjects mbs
-                WHERE mbs.fk_books = book_id
-                  AND mbs.fk_subjects = {}
-            )
-            """,
-            int(sid),
-        )
+        return self.filter(_linked(_mn_books_subjects, "fk_subjects", int(sid)))
 
     def bookshelf_id(self, bid: int) -> "CatalogQuery":
-        return self.filter(
-            """
-            EXISTS (
-                SELECT 1
-                FROM mn_books_bookshelves mbb
-                WHERE mbb.fk_books = book_id
-                  AND mbb.fk_bookshelves = {}
-            )
-            """,
-            int(bid),
-        )
+        return self.filter(_linked(_mn_books_bookshelves, "fk_bookshelves", int(bid)))
 
     def also_downloaded(self, book_id: int) -> "CatalogQuery":
         """Books co-downloaded with the given ebook (scores.also_downloads)."""
@@ -209,162 +246,74 @@ class CatalogQuery:
 
     def where(self, sql: str, **params) -> "CatalogQuery":
         """Add raw SQL filter condition. BE CAREFUL WHEN USING!"""
-        for k in params.keys():
-            if k.startswith("__p"):
-                raise ValueError(
-                    "Parameter name reserved by search engine: starts with '__p'"
-                )
-        self._filters.append((sql, params))
-        return self
+        return self.filter(text(sql).bindparams(**params))
 
     # SQL building
 
-    def _params(self) -> Dict[str, object]:
-        params = {}
-        for _, p, _, _ in self._search:
-            params.update(p)
-        for _, p in self._filters:
-            params.update(p)
-        return params
+    def _search_clauses(self, fuzzy: bool) -> List:
+        clauses = []
+        for txt, field in self._search:
+            fts_col, text_col = _FIELD_COLS[field]
+            if fuzzy:
+                clauses.append(literal(txt).bool_op("<%")(text_col))
+            else:
+                clauses.append(
+                    fts_col.bool_op("@@")(func.websearch_to_tsquery("english", txt))
+                )
+        return clauses
 
-    def _order_sql(self, params: Dict) -> str:
+    def _order_by(self, fuzzy: bool) -> List:
         if self._order == OrderBy.RELEVANCE and self._search:
-            _, p, col, _ = self._search[-1]
-            val = next(iter(p.values())) if p else ""
-            params["rank_q"] = str(val).replace("%", "")
-            if self._fuzzy:
-                return f"word_similarity(:rank_q, {col}) DESC, downloads DESC"
-            return f"ts_rank_cd({col}, websearch_to_tsquery('english', :rank_q)) DESC, downloads DESC"
+            txt, field = self._search[-1]
+            fts_col, text_col = _FIELD_COLS[field]
+            rank_q = txt.replace("%", "")
+            if fuzzy:
+                rank = func.word_similarity(rank_q, text_col)
+            else:
+                rank = func.ts_rank_cd(fts_col, func.websearch_to_tsquery("english", rank_q))
+            return [rank.desc(), _mv.downloads.desc()]
 
         if self._order == OrderBy.RANDOM:
-            return "RANDOM()"
+            return [func.random()]
 
         if self._order not in _ORDER_COLUMNS:
-            return "downloads DESC"
+            return [_mv.downloads.desc()]
 
-        col, default_dir, nulls = _ORDER_COLUMNS[self._order]
+        col, default_dir, nulls_last = _ORDER_COLUMNS[self._order]
         direction = self._sort_dir or default_dir
-        clause = f"{col} {direction.value.upper()}"
-        if nulls:
-            clause += f" NULLS {nulls}"
-        return clause
+        clause = col.desc() if direction == SortDirection.DESC else col.asc()
+        return [clause.nulls_last() if nulls_last else clause]
 
-    def _where_parts(self) -> Tuple[Optional[str], Optional[str]]:
-        search_sql = " AND ".join(s[0] for s in self._search) if self._search else None
-        filter_sql = " AND ".join(f[0] for f in self._filters) if self._filters else None
-        return search_sql, filter_sql
-
-    def _where_sql(self, param_prefix: str = "") -> Tuple[str, Dict]:
-        """WHERE clause and bind params (for facet CTEs)."""
-        params = self._params()
-        search_sql, filter_sql = self._where_parts()
-        where_parts = [p for p in (search_sql, filter_sql) if p]
-        if not where_parts:
-            return "", dict(params)
-
-        if param_prefix:
-            mapping = {old: f"{param_prefix}{old}" for old in params}
-            new_params = {mapping[k]: v for k, v in params.items()}
-            remapped_parts = []
-            for part in where_parts:
-                s = part
-                for old in sorted(mapping, key=len, reverse=True):
-                    s = s.replace(f":{old}", f":{mapping[old]}")
-                remapped_parts.append(s)
-            return f"WHERE {' AND '.join(remapped_parts)}", new_params
-
-        return f"WHERE {' AND '.join(where_parts)}", dict(params)
-
-    def _result_select(self) -> str:
-        if self._crosswalk == Crosswalk.OPDS_SMALL:
-            return _SELECT_OPDS_SMALL
-        return _SELECT
-
-    def build(self, *, with_count: bool = False) -> Tuple[str, Dict]:
-        params = self._params()
-        limit, offset = self._page_size, (self._page - 1) * self._page_size
-        total_col = ", COUNT(*) OVER() AS total_count" if with_count else ""
-        select_cols = self._result_select()
-
+    def _select(self, *cols, fuzzy: bool = False) -> Select:
+        """SELECT cols for this query, ordered but not paginated."""
         if self._also_downloaded_for is not None:
-            params["__also_dl_for"] = self._also_downloaded_for
-            sql = (
-                f"SELECT {select_cols}{total_col} FROM ("
-                " SELECT r.fk_books AS pk, sum(r.cnt) AS dl"
-                " FROM (SELECT id FROM scores.also_downloads"
-                " WHERE fk_books = :__also_dl_for) sessions"
-                " CROSS JOIN LATERAL ("
-                " SELECT fk_books, count(*)::bigint AS cnt"
-                " FROM scores.also_downloads"
-                " WHERE id = sessions.id"
-                " AND fk_books != :__also_dl_for"
-                " GROUP BY fk_books"
-                " ) r GROUP BY r.fk_books"
-                ") d JOIN mv_books_dc ON book_id = d.pk"
-                " ORDER BY d.dl DESC"
-                f" LIMIT {limit} OFFSET {offset}"
-            )
-            return sql, params
-
-        order = self._order_sql(params)
-        search_sql, filter_sql = self._where_parts()
-
-        if search_sql and filter_sql:
-            # Search first (index scan), then filters over the matched rows.
-            sql = (
-                f"SELECT {select_cols}{total_col} FROM (SELECT * FROM mv_books_dc WHERE {search_sql}) t "
-                f"WHERE {filter_sql} ORDER BY {order} LIMIT {limit} OFFSET {offset}"
-            )
-        elif search_sql:
-            sql = (
-                f"SELECT {select_cols}{total_col} FROM mv_books_dc WHERE {search_sql} "
-                f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
-            )
-        elif filter_sql:
-            sql = (
-                f"SELECT {select_cols}{total_col} FROM mv_books_dc WHERE {filter_sql} "
-                f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
-            )
-        else:
-            sql = (
-                f"SELECT {select_cols}{total_col} FROM mv_books_dc "
-                f"ORDER BY {order} LIMIT {limit} OFFSET {offset}"
-            )
-
-        return sql, params
-
-    def build_count(self) -> Tuple[str, Dict]:
-        params = self._params()
-        if self._also_downloaded_for is not None:
-            params["__also_dl_for"] = self._also_downloaded_for
+            d = _also_downloaded_counts(self._also_downloaded_for)
             return (
-                "SELECT COUNT(*) FROM ("
-                " SELECT r.fk_books AS pk"
-                " FROM (SELECT id FROM scores.also_downloads"
-                " WHERE fk_books = :__also_dl_for) sessions"
-                " CROSS JOIN LATERAL ("
-                " SELECT fk_books"
-                " FROM scores.also_downloads"
-                " WHERE id = sessions.id"
-                " AND fk_books != :__also_dl_for"
-                " GROUP BY fk_books"
-                " ) r GROUP BY r.fk_books"
-                ") d"
-            ), params
-
-        search_sql, filter_sql = self._where_parts()
-
-        if search_sql and filter_sql:
-            return (
-                f"SELECT COUNT(*) FROM (SELECT * FROM mv_books_dc WHERE {search_sql}) t"
-                f" WHERE {filter_sql}",
-                params,
+                select(*cols)
+                .select_from(d.join(mv_books_dc, _mv.book_id == d.c.pk))
+                .order_by(d.c.dl.desc())
             )
-        elif search_sql:
-            return f"SELECT COUNT(*) FROM mv_books_dc WHERE {search_sql}", params
-        elif filter_sql:
-            return f"SELECT COUNT(*) FROM mv_books_dc WHERE {filter_sql}", params
-        return "SELECT COUNT(*) FROM mv_books_dc", params
+        return (
+            select(*cols)
+            .select_from(mv_books_dc)
+            .where(*self._search_clauses(fuzzy), *self._filters)
+            .order_by(*self._order_by(fuzzy))
+        )
+
+    def build(self, *, with_count: bool = False, fuzzy: bool = False) -> Select:
+        cols = list(
+            _OPDS_SMALL_COLUMNS if self._crosswalk == Crosswalk.OPDS_SMALL else _OPDS_COLUMNS
+        )
+        if with_count:
+            cols.append(func.count().over().label("total_count"))
+        return (
+            self._select(*cols, fuzzy=fuzzy)
+            .limit(self._page_size)
+            .offset((self._page - 1) * self._page_size)
+        )
+
+    def build_count(self) -> Select:
+        return self._select(func.count()).order_by(None)
 
 
 # =============================================================================
@@ -377,7 +326,6 @@ class Catalog:
 
     def __init__(self, engine):
         self.engine = engine
-        self.Session = sessionmaker(bind=self.engine)
 
     def query(self, crosswalk: Crosswalk = Crosswalk.OPDS) -> CatalogQuery:
         return CatalogQuery(crosswalk)
@@ -388,13 +336,12 @@ class Catalog:
         with_count=False skips the window total ('total' comes back None);
         use it for preview feeds that don't paginate.
         """
-        with self.Session() as session:
-            sql, params = q.build(with_count=with_count)
-            rows = session.execute(text(sql), params).fetchall()
+        with self.engine.connect() as conn:
+            rows = conn.execute(q.build(with_count=with_count)).fetchall()
             if q._can_fallback() and not rows:
-                q._use_fuzzy()
-                sql, params = q.build(with_count=with_count)
-                rows = session.execute(text(sql), params).fetchall()
+                rows = conn.execute(
+                    q.build(with_count=with_count, fuzzy=True)
+                ).fetchall()
 
         if with_count:
             total = rows[0].total_count if rows else 0
@@ -414,9 +361,8 @@ class Catalog:
 
     def count(self, q: CatalogQuery) -> int:
         """Count results without fetching."""
-        with self.Session() as session:
-            sql, params = q.build_count()
-            return session.execute(text(sql), params).scalar() or 0
+        with self.engine.connect() as conn:
+            return conn.execute(q.build_count()).scalar() or 0
 
     def curated_shelves(self, cat: CuratedBookshelves) -> List[Tuple[int, str]]:
         """(shelf_id, label) pairs for a curated category."""
@@ -426,183 +372,120 @@ class Catalog:
         """Book count per shelf (books present in mv_books_dc), in one query."""
         if not shelf_ids:
             return {}
-        sql = text(
-            """
-            SELECT mbb.fk_bookshelves AS id, COUNT(*) AS n
-            FROM mn_books_bookshelves mbb
-            JOIN mv_books_dc b ON b.book_id = mbb.fk_books
-            WHERE mbb.fk_bookshelves = ANY(:ids)
-            GROUP BY mbb.fk_bookshelves
-            """
+        mbb = _mn_books_bookshelves
+        stmt = (
+            select(mbb.c.fk_bookshelves.label("id"), func.count().label("n"))
+            .select_from(mbb.join(mv_books_dc, _mv.book_id == mbb.c.fk_books))
+            .where(mbb.c.fk_bookshelves.in_(list(shelf_ids)))
+            .group_by(mbb.c.fk_bookshelves)
         )
-        with self.Session() as session:
-            rows = session.execute(sql, {"ids": list(shelf_ids)}).fetchall()
+        with self.engine.connect() as conn:
+            rows = conn.execute(stmt).fetchall()
         return {r.id: r.n for r in rows}
 
-    def list_subjects(self) -> List[Dict]:
-        """All subjects with at least one book: {'id', 'name', 'book_count'}."""
-        sql = """
-            SELECT
-                s.pk AS id,
-                s.subject AS name,
-                COUNT(mbs.fk_books) AS book_count
-            FROM subjects s
-            LEFT JOIN mn_books_subjects mbs
-                ON s.pk = mbs.fk_subjects
-            GROUP BY
-                s.pk,
-                s.subject
-            HAVING
-                COUNT(mbs.fk_books) > 0
-            ORDER BY
-                book_count DESC,
-                s.subject
-        """
-        with self.Session() as session:
-            rows = session.execute(text(sql)).fetchall()
+    def list_subjects(self, limit: Optional[int] = None) -> List[Dict]:
+        """Subjects with at least one book, most books first: {'id', 'name', 'book_count'}."""
+        s, mbs = _subjects, _mn_books_subjects
+        book_count = func.count(mbs.c.fk_books)
+        stmt = (
+            select(s.c.pk.label("id"), s.c.subject.label("name"), book_count.label("book_count"))
+            .select_from(s.join(mbs, s.c.pk == mbs.c.fk_subjects))
+            .group_by(s.c.pk, s.c.subject)
+            .order_by(book_count.desc(), s.c.subject)
+            .limit(limit)
+        )
+        with self.engine.connect() as conn:
+            rows = conn.execute(stmt).fetchall()
             return [
                 {"id": r.id, "name": r.name, "book_count": r.book_count} for r in rows
             ]
 
     def get_subject_name(self, subject_id: int) -> Optional[str]:
-        with self.Session() as session:
-            return session.execute(
-                text("SELECT subject FROM subjects WHERE pk = :id"),
-                {"id": subject_id},
-            ).scalar()
+        stmt = select(_subjects.c.subject).where(_subjects.c.pk == subject_id)
+        with self.engine.connect() as conn:
+            return conn.execute(stmt).scalar()
 
     def get_facets_for_query(
         self,
-        subject_q: CatalogQuery,
-        language_q: Optional[CatalogQuery] = None,
+        scope_q: CatalogQuery,
         *,
+        lang: str = "",
+        subject_id: Optional[int] = None,
         subject_limit: Optional[int] = None,
         language_limit: Optional[int] = None,
         include_subjects: bool = True,
         include_languages: bool = True,
     ) -> Dict[str, List[Dict]]:
-        """Subject and language facets in one round-trip.
+        """Subject and language facets over scope_q in one round-trip.
 
-        subject_q includes active lang (if any), not subject_id.
-        language_q includes subject_id (if any), not lang.
+        Each facet ignores its own selection: subject counts are narrowed
+        by lang, language counts by subject_id.
         """
         if not include_subjects and not include_languages:
             return {"subjects": [], "languages": []}
 
-        if language_q is None:
-            language_q = subject_q
-
-        sub_where, sub_params = subject_q._where_sql()
-        lang_where, lang_params = language_q._where_sql()
-        dual_base = sub_where != lang_where or sub_params != lang_params
-        if dual_base and include_languages:
-            lang_where, lang_params = language_q._where_sql("lq_")
-
-        params = {}
-        if include_subjects:
-            params.update(sub_params)
-        if include_languages:
-            params.update(lang_params)
-        cte_parts = []
-        subject_from = ""
-        language_from = ""
-
-        if include_subjects and include_languages and not dual_base:
-            cte_parts.append(
-                f"""matched_books AS (
-                SELECT book_id, lang_codes
-                FROM mv_books_dc
-                {sub_where}
-            )"""
-            )
-            subject_from = language_from = "matched_books mb"
-        else:
-            if include_subjects:
-                cte_parts.append(
-                    f"""subject_books AS (
-                    SELECT book_id
-                    FROM mv_books_dc
-                    {sub_where}
-                )"""
-                )
-                subject_from = "subject_books mb"
-            if include_languages:
-                cte_parts.append(
-                    f"""language_books AS (
-                    SELECT book_id, lang_codes
-                    FROM mv_books_dc
-                    {lang_where}
-                )"""
-                )
-                language_from = "language_books mb"
-
-        subject_limit_clause = ""
-        if subject_limit is not None:
-            params["subject_limit"] = max(1, int(subject_limit))
-            subject_limit_clause = "LIMIT :subject_limit"
-
-        language_limit_clause = ""
-        if language_limit is not None:
-            params["language_limit"] = max(1, int(language_limit))
-            language_limit_clause = "LIMIT :language_limit"
-
+        scoped = scope_q._select(_mv.book_id, _mv.lang_codes).order_by(None).cte("scoped")
         parts = []
+
         if include_subjects:
-            parts.append(
-                f"""(
-                SELECT
-                    'subject' AS facet,
-                    s.pk::text AS key,
-                    s.subject AS label,
-                    COUNT(*) AS count
-                FROM {subject_from}
-                JOIN mn_books_subjects mbs
-                    ON mbs.fk_books = mb.book_id
-                JOIN subjects s
-                    ON s.pk = mbs.fk_subjects
-                GROUP BY
-                    s.pk,
-                    s.subject
-                ORDER BY
-                    count DESC
-                {subject_limit_clause}
-            )"""
+            s, mbs = _subjects, _mn_books_subjects
+            subjects = (
+                select(
+                    literal_column("'subject'").label("facet"),
+                    cast(s.c.pk, Text).label("key"),
+                    s.c.subject.label("label"),
+                    func.count().label("count"),
+                )
+                .select_from(
+                    scoped.join(mbs, mbs.c.fk_books == scoped.c.book_id).join(
+                        s, s.c.pk == mbs.c.fk_subjects
+                    )
+                )
+                .group_by(s.c.pk, s.c.subject)
+                .order_by(func.count().desc())
             )
+            if lang:
+                subjects = subjects.where(scoped.c.lang_codes.contains([lang.lower()]))
+            if subject_limit is not None:
+                subjects = subjects.limit(max(1, int(subject_limit)))
+            parts.append(subjects)
+
         if include_languages:
-            parts.append(
-                f"""(
-                SELECT
-                    'language' AS facet,
-                    lang AS key,
-                    NULL::text AS label,
-                    COUNT(*) AS count
-                FROM {language_from},
-                    unnest(mb.lang_codes) AS lang
-                GROUP BY
-                    lang
-                ORDER BY
-                    count DESC
-                {language_limit_clause}
-            )"""
+            langs = select(func.unnest(scoped.c.lang_codes).label("lang"))
+            if subject_id is not None:
+                langs = langs.where(
+                    _linked(_mn_books_subjects, "fk_subjects", int(subject_id),
+                            book_id=scoped.c.book_id)
+                )
+            langs = langs.subquery("langs")
+            languages = (
+                select(
+                    literal_column("'language'").label("facet"),
+                    langs.c.lang.label("key"),
+                    cast(null(), Text).label("label"),
+                    func.count().label("count"),
+                )
+                .group_by(langs.c.lang)
+                .order_by(func.count().desc())
             )
+            if language_limit is not None:
+                languages = languages.limit(max(1, int(language_limit)))
+            parts.append(languages)
 
-        sql = f"""
-            WITH {", ".join(cte_parts)}
-            {" UNION ALL ".join(parts)}
-        """
+        stmt = union_all(*parts) if len(parts) > 1 else parts[0]
 
-        subjects = []
-        languages = []
-        with self.Session() as session:
-            for row in session.execute(text(sql), params).fetchall():
-                if row.facet == "subject":
-                    subjects.append(
-                        {"id": int(row.key), "name": row.label, "count": row.count}
+        subjects_out = []
+        languages_out = []
+        with self.engine.connect() as conn:
+            for row in conn.execute(stmt).mappings():
+                if row["facet"] == "subject":
+                    subjects_out.append(
+                        {"id": int(row["key"]), "name": row["label"], "count": row["count"]}
                     )
                 else:
-                    languages.append({"code": row.key, "count": row.count})
+                    languages_out.append({"code": row["key"], "count": row["count"]})
 
-        return {"subjects": subjects, "languages": languages}
+        return {"subjects": subjects_out, "languages": languages_out}
 
     def get_opds_facets(
         self,
@@ -618,15 +501,10 @@ class Catalog:
         Subjects use scope + lang; languages use scope + subject_id.
         """
         try:
-            subject_q = scope_fn(self.query())
-            if include_subjects and lang:
-                subject_q.lang(lang)
-            language_q = scope_fn(self.query())
-            if subject_id is not None:
-                language_q.subject_id(subject_id)
             data = self.get_facets_for_query(
-                subject_q,
-                language_q,
+                scope_fn(self.query()),
+                lang=lang,
+                subject_id=subject_id,
                 subject_limit=subject_limit,
                 include_subjects=include_subjects,
             )
@@ -658,46 +536,20 @@ class Catalog:
     def get_locc_children(self, parent: str = "") -> List[Dict]:
         """Return LoCC children for parent (main classes when parent is empty)."""
         parent_code = (parent or "").strip().upper()
+        lc = _loccs
+        stmt = select(lc.c.pk.label("code"), lc.c.locc.label("label"))
 
         if not parent_code:
-            sql = text(
-                """
-                SELECT
-                    lc.pk AS code,
-                    lc.locc AS label
-                FROM loccs lc
-                WHERE char_length(lc.pk) = 1
-                ORDER BY lc.pk
-                """
-            )
-            with self.Session() as session:
-                rows = session.execute(sql).mappings().all()
-                return [{"code": r["code"], "label": r["label"]} for r in rows]
-
-        if len(parent_code) != 1:
+            stmt = stmt.where(func.char_length(lc.c.pk) == 1).order_by(lc.c.pk)
+        elif len(parent_code) == 1:
+            stmt = stmt.where(
+                lc.c.pk.like(f"{parent_code}%"),
+                lc.c.pk != parent_code,
+                exists().where(_mn_books_loccs.c.fk_loccs == lc.c.pk),
+            ).order_by(func.char_length(lc.c.pk), lc.c.pk)
+        else:
             return []
 
-        sql = text(
-            """
-            SELECT
-                lc.pk AS code,
-                lc.locc AS label
-            FROM loccs lc
-            WHERE lc.pk LIKE :pattern
-              AND lc.pk != :parent
-              AND EXISTS (
-                SELECT 1
-                FROM mn_books_loccs mbl
-                WHERE mbl.fk_loccs = lc.pk
-              )
-            ORDER BY
-                char_length(lc.pk),
-                lc.pk
-            """
-        )
-
-        with self.Session() as session:
-            rows = session.execute(
-                sql, {"pattern": f"{parent_code}%", "parent": parent_code}
-            ).mappings().all()
+        with self.engine.connect() as conn:
+            rows = conn.execute(stmt).mappings().all()
             return [{"code": r["code"], "label": r["label"]} for r in rows]
