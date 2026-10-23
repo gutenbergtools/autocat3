@@ -51,8 +51,6 @@ Gutenberg metadata much faster than by scraping.
        title="Send to Dropbox." rel="nofollow"><span class="icon icon_dropbox" /></a>
     <a py:if="file_.gdrive_url" href="${file_.gdrive_url}"
        title="Send to Google Drive." rel="nofollow"><span class="icon icon_gdrive" /></a>
-    <a py:if="file_.msdrive_url" href="${file_.msdrive_url}"
-       title="Send to OneDrive." rel="nofollow"><span class="icon icon_msdrive" /></a>
   </py:def>
 
   <!-- One row per non-featured download format. Reused by the EPUB3-present and no-EPUB3 layouts below. -->
@@ -68,7 +66,7 @@ Gutenberg metadata much faster than by scraping.
            datatype="dcterms:IMT">${file_.hr_filetype}</a>
       </div>
       <div class="other-format-actions noprint">
-        <py:if test="file_.dropbox_url or file_.gdrive_url or file_.msdrive_url">${cloud_actions(file_)}</py:if>
+        <py:if test="file_.dropbox_url or file_.gdrive_url">${cloud_actions(file_)}</py:if>
         <span class="other-format-size">${file_.hr_extent}</span>
       </div>
     </div>
