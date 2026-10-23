@@ -208,8 +208,6 @@ class SQLStatement(object):
 
         sub = cls.sub
 
-        query = sub(r'(^|\s)-(?=[\w"(])', r'\1!', query)
-
         # strip most not (letter or digit)
         # \p{Z} : Separator
         # \p{P} : Punctuation
