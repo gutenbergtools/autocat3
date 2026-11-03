@@ -112,20 +112,12 @@ def _link(rel: str, href: str, **extras) -> Dict:
     return {"rel": rel, "href": _url(href), "type": OPDS_TYPE, **extras}
 
 
-OPDS_GZIP_MIME_TYPES = [
-    "application/json",
-    "application/opds+json",
-    "application/opds-publication+json",
-]
-
 # Path config for the main app (merge as-is).
 OPDS_MOUNT_CONFIG = {
     "/opds": {
         "tools.response_headers.on": True,
         "tools.json_in.on": True,
         "tools.json_out.on": True,
-        "tools.gzip.on": True,
-        "tools.gzip.mime_types": OPDS_GZIP_MIME_TYPES,
         "tools.I18nTool.on": False,
         "tools.sessions.on": False,
         "error_page.404": _json_error_page,
