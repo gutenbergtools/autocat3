@@ -1,7 +1,9 @@
 import multiprocessing
 
 wsgi_app = "wsgi:app"
-bind = "0.0.0.0:8000"
+
+# this binds on all IPv4 and IPv6 addresses (if any)
+bind = "[::]:8000"
 
 # See https://gunicorn.org/design/ for info on worker_class / workers / threads
 worker_class = "gthread"
@@ -15,7 +17,7 @@ postgres_max_connections = (300 - 50) // 2
 total_max_workers = postgres_max_connections // 2
 
 # use all available CPUs
-workers = min(total_max_workers, multiprocessing.cpu_count())
+workers = min(total_max_workers, multiprocessing.cpu_count() * 2)
 
 # Don't run fewer than 1 thread, or more than 32. More than 32 results in
 # GIL contention based on benchmarking.
@@ -24,6 +26,10 @@ threads = min(max(total_max_workers // workers, 1), 32)
 # limit the total number of connections
 backlog = 512
 worker_connections = 1000
+
+# recycle workers after some number of requests to mitigate memory issues
+max_requests = 1024 * 128
+max_requests_jitter = 1024
 
 # where to write access and error logs
 accesslog = "/var/lib/autocat/log/access.log"
