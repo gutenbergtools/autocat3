@@ -25,6 +25,7 @@ def makelangs():
             _LANGLOTS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> | '
         elif langnum > 0:
             _LANGLESS += f'<a href="{lang_link}" title="{lang[1]} ({langnum})">{lang[1]}</a> | '
+    session.close()
     return _LANGS
 
 def langoptions():
@@ -61,6 +62,7 @@ def catname(catpk):
         session = cherrypy.engine.pool.Session()
         for cat in session.query(Category).all():
             _cats[cat.pk] = cat.category
+        session.close()
     try:
         catpk = int(catpk)
     except ValueError:
@@ -75,4 +77,5 @@ def locname(id):
         session = cherrypy.engine.pool.Session()
         for loc in session.query(Locc).all():
             _locs[loc.id] = loc.locc
+        session.close()
     return _locs.get(id.upper(), 'Not a valid Classification')

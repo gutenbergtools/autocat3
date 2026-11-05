@@ -93,10 +93,10 @@ class CloudOAuth2Session (requests_oauthlib.OAuth2Session): # pylint: disable=R0
             if not code:
                 # oauth step 1:
                 # redirect the user to the Authorization Endpoint
-                log ('Building auth url ...')
+                #log ('Building auth url ...')
                 auth_url, dummy_state = self.authorization_url (
                     self.oauth2_auth_endpoint)
-                log ('Redirecting user to auth endpoint ...')
+                #log ('Redirecting user to auth endpoint ...')
                 raise cherrypy.HTTPRedirect (auth_url)
 
             else:
