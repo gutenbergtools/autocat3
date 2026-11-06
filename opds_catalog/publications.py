@@ -24,13 +24,12 @@ _OPDS_FEED_TYPE = "application/opds+json"
 _OPDS_PUBLICATION_TYPE = "application/opds-publication+json"
 _OPDS_ACQUISITION_REL = "http://opds-spec.org/acquisition/open-access"
 
-# PG-generated cover JPEGs (fixed output sizes from ebookconverter). Every
-# book with an epub3.images file also has both covers, always at
-# /cache/epub/{id}/pg{id}.cover.{size}.jpg, so they are derived from the
-# book id rather than materialized in mv_books_dc.
+# PG-generated cover JPEGs. Every book with an epub3.images file also has both
+# covers at /cache/epub/{id}/pg{id}.cover.{size}.jpg. Pixel size is not stored
+# and varies, so width/height are omitted (optional in OPDS 2).
 _COVER_SPECS = (
-    ("medium", 200, 288, "http://opds-spec.org/image"),
-    ("small", 66, 95, "http://opds-spec.org/image/thumbnail"),
+    ("medium", "http://opds-spec.org/image"),
+    ("small", "http://opds-spec.org/image/thumbnail"),
 )
 
 
@@ -512,11 +511,9 @@ def _opds_cover_images(book_id, formats: List[Dict[str, Any]]) -> List[Dict[str,
         {
             "href": _gutenberg_url(f"/cache/epub/{book_id}/pg{book_id}.cover.{size}.jpg"),
             "type": "image/jpeg",
-            "width": width,
-            "height": height,
             "rel": rel,
         }
-        for size, width, height, rel in _COVER_SPECS
+        for size, rel in _COVER_SPECS
     ]
 
 
