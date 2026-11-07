@@ -1266,7 +1266,8 @@ class OPDSFeed:
                 scope, lang=lang, subject_id=subject_id
             )
 
-            q = self._query(OPDS_SMALL)
+            # Full metadata when sorting by filemtime (for scrapers).
+            q = self._query(OPDS if sort == "filemtime" else OPDS_SMALL)
             scope(q)
             if lang:
                 q.lang(lang)
